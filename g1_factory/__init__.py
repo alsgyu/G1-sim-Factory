@@ -1,1 +1,1 @@
-"""G1 factory: fixed-path locomotion baseline and optional VLN integration."""
+"""G1 semantic Warehouse + Office navigation and optional VLN integration."""

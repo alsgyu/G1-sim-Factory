@@ -1,64 +1,111 @@
-# Coordinates: metres; yaw: radians. Spawn and route coordinates are bay-local.
-# The four grid cells form physical rooms, joined by a 3 m cross corridor.
+# All positions are world coordinates, in metres. Yaw is radians.
+# One shared campus: a 48 x 32 m warehouse and a 24 x 24 m office.
+# Warehouse quadrants have different functions, NOT laboratory ownership.
 layout:
-  bay_size: [8.0, 8.0]
-  corridor_width: 3.0
-  wall_thickness: 0.15
-  wall_height: 2.6
-  door_width: 2.4
-  floor_margin: 1.0
+  warehouse_bounds: [-24, -16, 24, 16]
+  office_bounds: [28, -12, 52, 12]
+  corridor_width: 4.0
+  wall_thickness: 0.2
+  wall_height: 6.0
   robot_clearance: 0.55
 simulation:
   timestep: 0.002
   floor_friction: [1.0, 0.005, 0.0001]
 temperature:
-  # A labelled, synthetic field for sensor/task plumbing; NOT thermal physics.
+  # Synthetic readings for task/sensor evaluation, NOT thermal physics.
   ambient_c: 23.0
   temporal_amplitude_c: 0.3
   period_s: 120.0
-bays:
-  - id: lab_a
-    lab: Laboratory A
-    grid: [0, 0]
-    spawn: [-1.5, -2.0, 0.0]
-    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
-    shelves: &shelves
-      - id: west
-        position: [-2.5, 1.8]
-        size: [1.5, 0.65, 1.8]
-        yaw: 0.0
-      - id: east
-        position: [2.5, 1.8]
-        size: [1.5, 0.65, 1.8]
-        yaw: 0.0
-    sensors: &sensors
-      - id: thermometer
-        position: [-3.87, 0.8, 1.5]
-    hotspots: &hotspots
-      - position: [-3.0, 0.8]
-        amplitude_c: 8.0
-        sigma_m: 1.2
-  - id: lab_b
-    lab: Laboratory B
-    grid: [1, 0]
-    spawn: [-1.5, -2.0, 0.0]
-    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
-    shelves: *shelves
-    sensors: *sensors
-    hotspots: *hotspots
-  - id: lab_c
-    lab: Laboratory C
-    grid: [0, 1]
-    spawn: [-1.5, -2.0, 0.0]
-    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
-    shelves: *shelves
-    sensors: *sensors
-    hotspots: *hotspots
-  - id: lab_d
-    lab: Laboratory D
-    grid: [1, 1]
-    spawn: [-1.5, -2.0, 0.0]
-    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
-    shelves: *shelves
-    sensors: *sensors
-    hotspots: *hotspots
+zones:
+  - id: material_storage
+    label: Material storage
+    kind: warehouse
+    bounds: [-24, 2, -2, 16]
+    center: [-12, 8]
+    goal: [-12, 3.8]
+    shelves:
+      - {id: r01, position: [-21, 8], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r02, position: [-16, 8], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r03, position: [-11, 8], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r04, position: [-6, 8], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r05, position: [-21, 12.6], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r06, position: [-16, 12.6], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r07, position: [-11, 12.6], size: [3.5, 1.6, 4.8], yaw: 0.0}
+      - {id: r08, position: [-6, 12.6], size: [3.5, 1.6, 4.8], yaw: 0.0}
+    sensors:
+      - {id: rack_temperature, position: [-23.75, 7.0, 1.5]}
+    hotspots:
+      - {position: [-22.0, 7.0], amplitude_c: 4.0, sigma_m: 2.0}
+  - id: assembly_line
+    label: Assembly line
+    kind: warehouse
+    bounds: [2, 2, 24, 16]
+    center: [12, 8]
+    goal: [12, 3.8]
+    sensors:
+      - {id: machine_temperature, position: [23.75, 9.0, 1.5]}
+    hotspots:
+      - {position: [20.0, 8.0], amplitude_c: 8.0, sigma_m: 2.5}
+  - id: inspection
+    label: Quality inspection
+    kind: warehouse
+    bounds: [-24, -16, -2, -2]
+    center: [-12, -8]
+    goal: [-12, -3.8]
+    sensors:
+      - {id: inspection_temperature, position: [-23.75, -7.0, 1.5]}
+    hotspots: []
+  - id: charging
+    label: Charging station
+    kind: warehouse
+    bounds: [2, -16, 24, -2]
+    center: [12, -8]
+    goal: [12, -3.8]
+    sensors:
+      - {id: battery_temperature, position: [23.75, -10.0, 1.5]}
+    hotspots:
+      - {position: [21.0, -13.0], amplitude_c: 6.0, sigma_m: 2.5}
+  - id: office_workstations
+    label: Engineering workstations
+    kind: office
+    bounds: [28, 2, 38, 12]
+    center: [33, 7]
+    goal: [34, 4]
+    sensors:
+      - {id: room_temperature, position: [28.25, 3.0, 1.5]}
+  - id: office_meeting
+    label: Meeting room
+    kind: office
+    bounds: [42, 2, 52, 12]
+    center: [47, 7]
+    goal: [46, 4]
+    sensors:
+      - {id: room_temperature, position: [51.75, 3.0, 1.5]}
+  - id: office_lounge
+    label: Staff lounge
+    kind: office
+    bounds: [28, -12, 38, -2]
+    center: [33, -7]
+    goal: [34, -4]
+    sensors:
+      - {id: room_temperature, position: [28.25, -3.0, 1.5]}
+  - id: office_control
+    label: Operations control
+    kind: office
+    bounds: [42, -12, 52, -2]
+    center: [47, -7]
+    goal: [46, -4]
+    sensors:
+      - {id: room_temperature, position: [51.75, -3.0, 1.5]}
+scenarios:
+  warehouse_tour: [material_storage, assembly_line, inspection, charging]
+  office_tour: [office_workstations, office_meeting, office_lounge, office_control]
+  warehouse_to_office: [charging, office_workstations]
+  full_tour: [material_storage, assembly_line, inspection, charging, office_workstations, office_meeting, office_lounge, office_control]
+# Independent experiments share the same semantic map; laboratories do not
+# partition physical warehouse space. Each run has its own output directory.
+labs:
+  lab_a: {scenario: warehouse_tour}
+  lab_b: {scenario: office_tour}
+  lab_c: {scenario: warehouse_to_office}
+  lab_d: {scenario: full_tour}

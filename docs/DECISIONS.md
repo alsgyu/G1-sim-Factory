@@ -12,6 +12,13 @@
 새로운 보행 정책은 학습하지 않음. 기존 정책의 입력인 몸체 좌표계 `(vx, vy, yaw_rate)`만 waypoint 추종기로 제공.
 로봇 위치를 매 프레임 덮어쓰지 않음. 초기 reset 이후 모든 이동은 관절 토크·접촉 물리 결과.
 
+## 공간·실험 구분
+
+- 한 장면에 48×32m Warehouse 4기능 구역과 24×24m Office 4개 방.
+- 연구실 이름은 독립 실험의 시나리오 프리셋. 물리 구역의 의미와 분리.
+- 구역 간 이동은 중앙 통로를 지나는 고정 그래프. 새 경로 계획 연구는 `routes.py` 교체로 분리.
+- 데스크톱 GUI는 MuJoCo 뷰어에 상태·경로 표시를 추가. 별도 웹 애플리케이션은 불필요.
+
 ## 보행: Unitree 공식 pretrained G1
 
 - 저장소: [unitree_rl_gym](https://github.com/unitreerobotics/unitree_rl_gym).
