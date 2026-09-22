@@ -6,7 +6,7 @@
 
 | 항목 | 구성 |
 |---|---|
-| 실행 환경 | Ubuntu 22.04 / 24.04 · Python 3.10–3.12 · MuJoCo 3.3.7 |
+| 실행 환경 | Ubuntu 22.04 / 24.04 · Python 3.10–3.12 · MuJoCo 3.5.0 |
 | 로봇 | Unitree 공식 G1 모델 + 사전학습 보행 정책 |
 | 보행 | 다리 12관절 토크 제어 · 상체 고정 · 기본 실행 CPU 가능 |
 | Warehouse | **48×32m** · 자재 창고 / 조립 라인 / 검사 구역 / 충전 구역 |
@@ -59,6 +59,7 @@ python -m g1_factory.run --zone-route material_storage assembly_line inspection 
 | `1` / `2` / `3` | 전체 장면 / G1 따라가기 / G1 1인칭 |
 | `Space` | 일시정지·재개 |
 | 화면 정보 | 실행 모드 · 시나리오 · 현재 구역 · waypoint 진행 · 최근 NaVILA 응답 |
+| 오른쪽 위 미니맵 | 전체 8구역·통로·경로 · 주황색 G1 위치·방향 · 현재 좌표 |
 | 초기 시점 | `--camera overview`, `follow` 또는 `ego`; 기본 `follow` |
 | 화면 없는 실행 | `--headless` |
 

@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "g1-factory-sim"
-version = "0.2.0"
+version = "0.2.1"
 description = "Unitree G1 semantic Warehouse and Office simulation with optional NaVILA"
 requires-python = ">=3.10,<3.13"
-dependencies = ["mujoco==3.3.7", "numpy>=1.26,<3", "PyYAML>=6.0,<7", "Pillow>=10,<13", "torch==2.7.1"]
+dependencies = ["mujoco==3.5.0", "numpy>=1.26,<3", "PyYAML>=6.0,<7", "Pillow>=10,<13", "torch==2.7.1"]
 
 [project.optional-dependencies]
 test = ["pytest==8.4.2"]

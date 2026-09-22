@@ -69,6 +69,11 @@ def main(argv=None):
         print(json.dumps({"scenarios": config["scenarios"], "labs": config.get("labs", {}),
                           "zones": [{"id": z["id"], "label": z["label"]} for z in config["zones"]]}, indent=2))
         return 0
+    if not args.headless and tuple(int(part) for part in mujoco.__version__.split(".")[:2]) < (3, 5):
+        raise SystemExit(
+            "GUI requires MuJoCo >=3.5.0 to avoid an overlay/keyboard deadlock. "
+            "From the repository root, run: python -m pip install -e '.[test]'"
+        )
     if args.duration is not None and (args.duration <= 0 or not np.isfinite(args.duration)):
         raise SystemExit("--duration must be finite and positive")
     if args.navila_url and not args.instruction:

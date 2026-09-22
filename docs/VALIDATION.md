@@ -1,5 +1,17 @@
 # Warehouse + Office 검증 결과
 
+## 뷰어 수정 추가 검증 · MuJoCo 3.5.0
+
+- `1/2/3` 키와 HUD 갱신이 겹치는 교착 원인 확인. 공식 3.5.0의 `WaitForAtomicNoGil` 수정 적용. 3.3.7/3.4.0 GUI 실행 시 업그레이드 안내.
+- [이전 바인딩](https://github.com/google-deepmind/mujoco/blob/3.3.7/python/mujoco/simulate.cc), [수정된 바인딩](https://github.com/google-deepmind/mujoco/blob/3.5.0/python/mujoco/simulate.cc).
+- 오른쪽 위 전체 맵: 8구역·통로·장애물·경로·목표·G1 위치/방향. 10Hz 갱신, 창 크기 변경과 선반 배치 변경 반영.
+- 실제 MuJoCo 모델·장면과 캡처용 viewer 대역으로 키 전환, 일시정지, 좌표·방향, 화면 배치, 크기 변경, 오버레이 잠금 범위 검증.
+- `python -m pytest -q`: **79 passed** (뷰어·미니맵 17개 포함).
+- 3.5.0에서 `warehouse_to_office` 재실행: 완주 91.84초, RMSE 0.217m, 목표 오차 0.296m, 충돌·넘어짐 0회.
+- 실제 GLFW 창에서의 키 입력은 미검증. 컨테이너가 UNIX 소켓 생성을 차단하여 Xvfb 실행 불가. 위 테스트는 네이티브 렌더링 스레드의 교착 재현 테스트를 대신하지 않음.
+
+## 기존 전체 경로 검증 · MuJoCo 3.3.7
+
 실행일: 2026-09-22. Ubuntu 24.04 컨테이너, Python 3.12, MuJoCo 3.3.7, Torch 2.7.1+cpu.
 
 ## 실제 G1 보행

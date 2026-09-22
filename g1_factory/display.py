@@ -1,16 +1,20 @@
 """MuJoCo's native viewer: G1 follow camera, episode HUD and route overlay.
 
-This module changes only ``viewer.cam``, ``viewer.user_scn`` and viewer text.
+This module changes only viewer cameras, decorative geometry and overlays.
 RGB/depth cameras used by a navigation policy remain free of debug overlays.
 Keyboard callbacks queue events; the simulation thread owns camera/scene edits.
 """
 from __future__ import annotations
 
 from queue import Empty, SimpleQueue
+import math
+import time
 from typing import Sequence
 
 import mujoco
 import numpy as np
+
+from .minimap import MiniMap
 
 
 class ViewerDisplay:
@@ -32,6 +36,9 @@ class ViewerDisplay:
         self._events = SimpleQueue()
         self._camera_dirty = True
         self._pelvis = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
+        self._minimap = None
+        self._last_overlay_update = -math.inf
+        self._viewport = None
 
     def key_callback(self, keycode: int) -> None:
         """GLFW callback: enqueue only, without touching simulation state."""
@@ -109,6 +116,17 @@ class ViewerDisplay:
             if self.camera_mode == "follow":
                 viewer.cam.lookat[:] = robot
             self._draw_path(viewer.user_scn, path, next_target)
+        viewport = viewer.viewport
+        if viewport is None:  # The window may close after the loop's is_running check.
+            return
+        viewport_key = (viewport.left, viewport.bottom, viewport.width, viewport.height)
+        now = time.monotonic()
+        # Overlays need only 10 Hz, including while paused. Camera/route updates
+        # above retain the simulation's normal display cadence.
+        if now - self._last_overlay_update < 0.1 and viewport_key == self._viewport:
+            return
+        self._last_overlay_update = now
+        self._viewport = viewport_key
         target = "--" if next_target is None else f"({float(next_target[0]):.1f}, {float(next_target[1]):.1f}) m"
         distance = "--" if next_target is None else f"{np.linalg.norm(robot[:2] - np.asarray(next_target)[:2]):.2f} m"
         left = "Mode\nScenario\nZone\nSimulation\nWaypoints\nNext target\nTarget distance\nCamera\nState"
@@ -117,15 +135,42 @@ class ViewerDisplay:
             f"{data.time:.1f} s", f"{waypoint_index} / {waypoint_count}" if waypoint_count else "model actions",
             target, distance, self.camera_mode, "PAUSED" if self.paused else self._ascii(status),
         ])
-        bottom = "1 Overview   2 Follow G1   3 Ego   SPACE Pause/resume\nMouse: orbit / pan / zoom   ESC: close viewer"
+        bottom = "1 Overview   2 Follow G1   3 Ego   SPACE Pause/resume\nMouse: orbit / pan / zoom   Close: window X"
         if instruction:
             bottom += "\nInstruction: " + self._ascii(instruction, 110)
         if last_vln_text:
             bottom += "\nVLN action: " + self._ascii(last_vln_text, 110)
+        # These setters wait for the render thread: never hold viewer.lock here.
+        # MuJoCo >=3.5.0 releases the GIL during that wait, so GLFW's Python key
+        # callback can run. 3.3.7/3.4.0 can deadlock when an overlay is pending.
         viewer.set_texts([
             (mujoco.mjtFontScale.mjFONTSCALE_100, mujoco.mjtGridPos.mjGRID_TOPLEFT, left, right),
             (mujoco.mjtFontScale.mjFONTSCALE_100, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT, bottom, ""),
         ])
+        self._draw_minimap(viewer, data, robot, viewport, path, next_target)
+
+    def _draw_minimap(self, viewer, data, robot, viewport, path, next_target):
+        margin = 12
+        width = min(360, viewport.width - 2 * margin)
+        height = min(230, viewport.height - 2 * margin)
+        if width < 240 or height < 180:
+            viewer.clear_images()
+            return
+        if self._minimap is None or (self._minimap.width, self._minimap.height) != (width, height):
+            self._minimap = MiniMap(self.metadata, width=width, height=height)
+        if self._pelvis >= 0:
+            rotation = data.xmat[self._pelvis]
+            yaw = math.atan2(rotation[3], rotation[0])
+        else:
+            w, x, y, z = data.qpos[3:7]
+            yaw = math.atan2(2 * (w*z + x*y), 1 - 2 * (y*y + z*z))
+        frame = self._minimap.render(robot[:2], yaw, path=path, next_target=next_target)
+        rectangle = mujoco.MjrRect(
+            viewport.left + viewport.width - width - margin,
+            viewport.bottom + viewport.height - height - margin,
+            width, height,
+        )
+        viewer.set_images([(rectangle, frame)])
 
     def _draw_path(self, scene, path, next_target) -> None:
         scene.ngeom = 0
