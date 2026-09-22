@@ -1,0 +1,134 @@
+{
+  "source": "https://github.com/unitreerobotics/unitree_rl_gym",
+  "commit": "276801e46c5d433564f24658bac64f254b7d2d4b",
+  "files": {
+    "LICENSE": {
+      "git_blob_sha1": "9ad8f6dbb0d51bf0eb345fbe02a616f484b3e0d2",
+      "size": 1561
+    },
+    "deploy/deploy_mujoco/configs/g1.yaml": {
+      "git_blob_sha1": "db18fdfa78fe142c4d23d4bd5bccfcc4101c55fe",
+      "size": 737
+    },
+    "deploy/pre_train/g1/motion.pt": {
+      "git_blob_sha1": "91a042aa76f6f3ec0f47b6b8839ba9ce2ca060c9",
+      "size": 145745
+    },
+    "resources/robots/g1_description/g1_12dof.xml": {
+      "git_blob_sha1": "5f7354bca2cae8ef867c2b14bcd46c94f0f10fc3",
+      "size": 15579
+    },
+    "resources/robots/g1_description/meshes/head_link.STL": {
+      "git_blob_sha1": "2ee5fba15de3ccd4c31774bc7a66de7aeefab770",
+      "size": 932784
+    },
+    "resources/robots/g1_description/meshes/left_ankle_pitch_link.STL": {
+      "git_blob_sha1": "69de8490184afc698f633e34bb74e65351bd4689",
+      "size": 71184
+    },
+    "resources/robots/g1_description/meshes/left_ankle_roll_link.STL": {
+      "git_blob_sha1": "8864e9f98103190883d1ba027aba5469925f2bca",
+      "size": 653384
+    },
+    "resources/robots/g1_description/meshes/left_elbow_link.STL": {
+      "git_blob_sha1": "1a96d99ba469960173129084ab6dd3bf8a732a71",
+      "size": 88784
+    },
+    "resources/robots/g1_description/meshes/left_hip_pitch_link.STL": {
+      "git_blob_sha1": "5b751c767ecf03b29c707b19f1faf5367e8d33d2",
+      "size": 181684
+    },
+    "resources/robots/g1_description/meshes/left_hip_roll_link.STL": {
+      "git_blob_sha1": "778437ffe61731915fa4cb7cf2390e9cbe738c43",
+      "size": 192184
+    },
+    "resources/robots/g1_description/meshes/left_hip_yaw_link.STL": {
+      "git_blob_sha1": "383093ab96ed3a099ab79f5d6ed144fc0b7067a9",
+      "size": 296284
+    },
+    "resources/robots/g1_description/meshes/left_knee_link.STL": {
+      "git_blob_sha1": "f2e98e54e8f1980eb62ad25c7a838044c23bbadf",
+      "size": 854884
+    },
+    "resources/robots/g1_description/meshes/left_shoulder_pitch_link.STL": {
+      "git_blob_sha1": "e698311fb12d3f22f018b668c40dab667c39b8d3",
+      "size": 176784
+    },
+    "resources/robots/g1_description/meshes/left_shoulder_roll_link.STL": {
+      "git_blob_sha1": "80bca84aca41137f8270fb35e263dcc5d9658e43",
+      "size": 400284
+    },
+    "resources/robots/g1_description/meshes/left_shoulder_yaw_link.STL": {
+      "git_blob_sha1": "281e699055ffafe094f52a440547eb4b64f83bfa",
+      "size": 249184
+    },
+    "resources/robots/g1_description/meshes/left_wrist_roll_rubber_hand.STL": {
+      "git_blob_sha1": "8fa435b66cf9d81df34423c752452ea2c7d90479",
+      "size": 3484884
+    },
+    "resources/robots/g1_description/meshes/logo_link.STL": {
+      "git_blob_sha1": "e9792098504b64b359fbffa983373e5e6fa1b50a",
+      "size": 243384
+    },
+    "resources/robots/g1_description/meshes/pelvis.STL": {
+      "git_blob_sha1": "691a779b9c9f4c97f48eaa9edf9eb336ca3b4411",
+      "size": 1060884
+    },
+    "resources/robots/g1_description/meshes/pelvis_contour_link.STL": {
+      "git_blob_sha1": "42434339abf5a0a3816f890389e3e61af3b1e03c",
+      "size": 1805184
+    },
+    "resources/robots/g1_description/meshes/right_ankle_pitch_link.STL": {
+      "git_blob_sha1": "e77d8a2fe1e5d56fac049833d254d6ffa4f6b350",
+      "size": 71184
+    },
+    "resources/robots/g1_description/meshes/right_ankle_roll_link.STL": {
+      "git_blob_sha1": "d4261dd7ccf39dd9c54cad37c1982f1d50e6fccc",
+      "size": 653784
+    },
+    "resources/robots/g1_description/meshes/right_elbow_link.STL": {
+      "git_blob_sha1": "f259e3812efb9985d6463c04d3e8a4b53793a699",
+      "size": 88784
+    },
+    "resources/robots/g1_description/meshes/right_hip_pitch_link.STL": {
+      "git_blob_sha1": "998a0a0f5c248b217cf82c5088d6d365d9654ecd",
+      "size": 181284
+    },
+    "resources/robots/g1_description/meshes/right_hip_roll_link.STL": {
+      "git_blob_sha1": "47b2eebdd36c7289679eebb9583c65a15514e194",
+      "size": 192684
+    },
+    "resources/robots/g1_description/meshes/right_hip_yaw_link.STL": {
+      "git_blob_sha1": "371856427c7cc31ae7463c83f00ef6652c72d672",
+      "size": 296284
+    },
+    "resources/robots/g1_description/meshes/right_knee_link.STL": {
+      "git_blob_sha1": "76d21a3d81e4e34520c5d6b3f28d7e43c1874364",
+      "size": 852284
+    },
+    "resources/robots/g1_description/meshes/right_shoulder_pitch_link.STL": {
+      "git_blob_sha1": "3f5b4ed47ade68e83f617ef3fd65cb810e9b0e07",
+      "size": 176784
+    },
+    "resources/robots/g1_description/meshes/right_shoulder_roll_link.STL": {
+      "git_blob_sha1": "179d61753d48b3a55165b81ded2c14e84deb81c2",
+      "size": 401884
+    },
+    "resources/robots/g1_description/meshes/right_shoulder_yaw_link.STL": {
+      "git_blob_sha1": "2ba6076a8853edac5e3e17cffd2c256318e88d92",
+      "size": 249984
+    },
+    "resources/robots/g1_description/meshes/right_wrist_roll_rubber_hand.STL": {
+      "git_blob_sha1": "c365aa9d8cafb8a96d2f58fe53a83727bb7427c8",
+      "size": 3481584
+    },
+    "resources/robots/g1_description/meshes/torso_link_23dof_rev_1_0.STL": {
+      "git_blob_sha1": "079aa8124f279cd40a50d23c2f061dd82ccc16c6",
+      "size": 7825434
+    },
+    "resources/robots/g1_description/scene.xml": {
+      "git_blob_sha1": "d0e3c0adcd6f31f87664ed18ce3020aab95ba6b7",
+      "size": 859
+    }
+  }
+}

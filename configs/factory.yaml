@@ -1,0 +1,64 @@
+# Coordinates: metres; yaw: radians. Spawn and route coordinates are bay-local.
+# The four grid cells form physical rooms, joined by a 3 m cross corridor.
+layout:
+  bay_size: [8.0, 8.0]
+  corridor_width: 3.0
+  wall_thickness: 0.15
+  wall_height: 2.6
+  door_width: 2.4
+  floor_margin: 1.0
+  robot_clearance: 0.55
+simulation:
+  timestep: 0.002
+  floor_friction: [1.0, 0.005, 0.0001]
+temperature:
+  # A labelled, synthetic field for sensor/task plumbing; NOT thermal physics.
+  ambient_c: 23.0
+  temporal_amplitude_c: 0.3
+  period_s: 120.0
+bays:
+  - id: lab_a
+    lab: Laboratory A
+    grid: [0, 0]
+    spawn: [-1.5, -2.0, 0.0]
+    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
+    shelves: &shelves
+      - id: west
+        position: [-2.5, 1.8]
+        size: [1.5, 0.65, 1.8]
+        yaw: 0.0
+      - id: east
+        position: [2.5, 1.8]
+        size: [1.5, 0.65, 1.8]
+        yaw: 0.0
+    sensors: &sensors
+      - id: thermometer
+        position: [-3.87, 0.8, 1.5]
+    hotspots: &hotspots
+      - position: [-3.0, 0.8]
+        amplitude_c: 8.0
+        sigma_m: 1.2
+  - id: lab_b
+    lab: Laboratory B
+    grid: [1, 0]
+    spawn: [-1.5, -2.0, 0.0]
+    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
+    shelves: *shelves
+    sensors: *sensors
+    hotspots: *hotspots
+  - id: lab_c
+    lab: Laboratory C
+    grid: [0, 1]
+    spawn: [-1.5, -2.0, 0.0]
+    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
+    shelves: *shelves
+    sensors: *sensors
+    hotspots: *hotspots
+  - id: lab_d
+    lab: Laboratory D
+    grid: [1, 1]
+    spawn: [-1.5, -2.0, 0.0]
+    waypoints: [[1.5, -2.0], [1.5, 0.0], [-1.5, 0.0], [-1.5, -2.0]]
+    shelves: *shelves
+    sensors: *sensors
+    hotspots: *hotspots
