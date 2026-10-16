@@ -14,6 +14,10 @@
       "git_blob_sha1": "91a042aa76f6f3ec0f47b6b8839ba9ce2ca060c9",
       "size": 145745
     },
+    "resources/robots/g1_description/g1_12dof.urdf": {
+      "git_blob_sha1": "c312bf7e7dddbd934d9c1bd663047a5ddc97e255",
+      "size": 28696
+    },
     "resources/robots/g1_description/g1_12dof.xml": {
       "git_blob_sha1": "5f7354bca2cae8ef867c2b14bcd46c94f0f10fc3",
       "size": 15579

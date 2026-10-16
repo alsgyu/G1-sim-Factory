@@ -6,3 +6,4 @@ models
 outputs
 **/__pycache__
 .pytest_cache
+.hf_cache

@@ -103,6 +103,25 @@ def check_vlm(url: str, model: str):
     call = client.chat("Reply with JSON only.", 'What colour is the square? {"colour": "..."}', [image], max_tokens=40)
     report("PASS" if "red" in call.text.lower() else "WARN", "VLM image round trip",
            f"{call.latency_s:.2f} s warm, request {call.request_bytes} B, reply {call.text.strip()[:60]!r}")
+    # The VLN's look-around sends four camera views at once (~1,050 tokens per image on Ollama).
+    try:
+        call = client.chat("Reply with JSON only.", 'How many images? {"count": ...}', [image]*4, max_tokens=20)
+        report("PASS", "VLM four-image request (look-around)",
+               f"{call.latency_s:.2f} s, {call.prompt_tokens or '?'} prompt tokens")
+    except Exception as exc:
+        report("FAIL", "VLM four-image request (look-around)",
+               f"{exc}; Ollama: set OLLAMA_CONTEXT_LENGTH=8192 (docs/UBUNTU_ISAAC.md 1.4), vLLM: --max-model-len >= 8192")
+
+
+def check_isaac():
+    """Files the Isaac Sim 5.1 path needs (the container itself is checked by run_isaac_sim.sh --smoke-test)."""
+    for path, how in ((ROOT/"outputs/isaac/campus.usd", "python3 scripts/export_campus_usd.py --out outputs/isaac"),
+                      (ROOT/"outputs/isaac/campus_meta.json", "python3 scripts/export_campus_usd.py --out outputs/isaac"),
+                      (ROOT/"external/unitree_rl_gym/resources/robots/g1_description/g1_12dof.urdf",
+                       "python3 scripts/fetch_assets.py"),
+                      (ROOT/"configs/fastdds.xml", "git pull")):
+        report("PASS" if path.is_file() else "WARN", f"Isaac file {path.relative_to(ROOT)}",
+               "present" if path.is_file() else f"missing (MuJoCo runs without it): {how}")
 
 
 def main():
@@ -114,6 +133,7 @@ def main():
     args = parser.parse_args()
     check_ros()
     check_sim(args.frames)
+    check_isaac()
     if not args.skip_vlm:
         check_vlm(args.vlm_url, args.vlm_model)
     print(f"{results.count('PASS')} PASS, {results.count('WARN')} WARN, {results.count('FAIL')} FAIL")

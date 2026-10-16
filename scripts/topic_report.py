@@ -31,8 +31,11 @@ PAYLOAD = {
     "/sim/status": "JSON (구역·충돌·넘어짐·RTF·처리시간)",
     "/clock": "sim time",
     "/cmd_vel": "vx, vy, yaw rate",
-    "/goal_pose": "map 좌표 목표 자세",
-    "/vln/subgoals": "하위목표 자세 목록",
+    "/goal_pose": "map 좌표 목표 자세 (oracle 기준선 전용)",
+    "/vln/subgoals": "하위목표 자세 목록 (oracle 기준선 전용)",
+    "/vln/decision_image": "JPEG q80 640×480, VLM 입력 영상 + 번호 웨이포인트",
+    "/vln/nav_request": "JSON 단계 계획·대상·명판 글자 / 취소",
+    "/vln/nav_status": "JSON VLN 결정·단계 완료·대상 위치·도착",
 }
 
 

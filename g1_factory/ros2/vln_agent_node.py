@@ -1,11 +1,14 @@
-"""/vln_agent: layer 1 of the hierarchical VLN stack (VLM reasoning + visual checks).
+"""/vln_agent: task executive and layer 1 of the hierarchical VLN stack.
 
-External agent --/vln/instruction--> VLM task plan (place ids from the semantic
-map) --/goal_pose--> planner --/plan--> follower --/cmd_vel--> G1 policy.
-After the last subgoal the VLM locates the target in the head-camera image,
-the robot re-approaches it using aligned depth + TF, and the VLM answers the
-check question. Progress and results go back on /vln/feedback and
-/vln/inspection_image. VLM calls run in a worker thread; the node keeps spinning.
+planner_mode:=vln (default, the VLN):
+  external agent --/vln/instruction--> VLM decomposes the instruction into steps
+  over annotated regions --/vln/nav_request--> /vln_navigator (layer 2: picks
+  waypoints from camera images + instruction) --/plan--> /path_follower -->
+  /cmd_vel --> G1 policy. On "arrived" the VLM answers the check question.
+planner_mode:=oracle | rule (baselines, not VLN): target place looked up in the
+  semantic map (by VLM or alias matching) and sent to /global_planner (A*).
+Progress and results go back on /vln/feedback and /vln/inspection_image. VLM
+calls run in a worker thread; the node keeps spinning.
 """
 from __future__ import annotations
 
@@ -29,6 +32,8 @@ from tf2_ros import Buffer, TransformListener
 from g1_factory.grounding import GroundingError, SemanticMap, ground_instruction
 from g1_factory.scene import load_config
 from g1_factory.vlm import HierarchicalVLM, VLMClient, encode_jpeg
+from g1_factory.vln_navigator import NavStep, NavTask, decompose
+import uuid
 from g1_factory.ros2 import messages as M
 from g1_factory.ros2.qos import TOPICS
 
@@ -39,12 +44,18 @@ class VLNAgentNode(Node):
     def __init__(self):
         super().__init__("vln_agent")
         p = self.declare_parameter
-        self.mode = p("planner_mode", "vlm").value  # vlm | rule
-        self.smap = SemanticMap.load(load_config(ROOT/"configs/factory.yaml"),
-                                     p("semantic_map", str(ROOT/"configs/semantic_map.yaml")).value)
-        self.vlm = HierarchicalVLM(VLMClient(p("vlm_url", "http://127.0.0.1:11434/v1").value,
-                                             p("vlm_model", "qwen3-vl:8b-instruct").value,
-                                             timeout=float(p("vlm_timeout_s", 180.0).value)), self.smap)
+        mode = p("planner_mode", "vln").value
+        self.mode = {"vlm": "oracle"}.get(mode, mode)
+        if self.mode not in ("vln", "oracle", "rule"):
+            raise ValueError("planner_mode must be vln, oracle or rule")
+        config = load_config(ROOT/"configs/factory.yaml")
+        self.smap = SemanticMap.load(config, p("semantic_map", str(ROOT/"configs/semantic_map.yaml")).value)
+        self.regions = {z["id"]: z["bounds"] for z in config["zones"]}
+        self.region_labels = {z["id"]: z["label"] for z in config["zones"]}
+        self.client = VLMClient(p("vlm_url", "http://127.0.0.1:11434/v1").value,
+                                p("vlm_model", "qwen3-vl:8b-instruct").value,
+                                timeout=float(p("vlm_timeout_s", 180.0).value))
+        self.vlm = HierarchicalVLM(self.client, self.smap)
         self.standoff = float(p("inspect_standoff_m", 1.4).value)
         self.look_around_deg = float(p("look_around_deg", 40.0).value)
         self.settle = float(p("settle_s", 1.0).value)
@@ -53,15 +64,19 @@ class VLNAgentNode(Node):
         sub = lambda name, msg, cb: self.create_subscription(msg, name, cb, TOPICS[name][1])
         sub("/vln/instruction", String, self.on_instruction)
         sub("/nav/status", String, self.on_nav_status)
+        sub("/vln/nav_status", String, self.on_vln_status)
         sub("/odom", Odometry, self.on_odom)
         sub("/camera/camera/color/image_raw", Image, self.on_rgb)
         sub("/camera/camera/aligned_depth_to_color/image_raw", Image, self.on_depth)
         sub("/camera/camera/color/camera_info", CameraInfo, self.on_info)
         pub = lambda name, msg: self.create_publisher(msg, name, TOPICS[name][1])
-        self.pub_goal = pub("/goal_pose", PoseStamped)
         self.pub_feedback = pub("/vln/feedback", String)
-        self.pub_subgoals = pub("/vln/subgoals", PoseArray)
         self.pub_evidence = pub("/vln/inspection_image", CompressedImage)
+        if self.mode == "vln":
+            self.pub_nav_request = pub("/vln/nav_request", String)
+        else:  # map-lookup baselines: target poses go to the A* global_planner
+            self.pub_goal = pub("/goal_pose", PoseStamped)
+            self.pub_subgoals = pub("/vln/subgoals", PoseArray)
         self.pool = ThreadPoolExecutor(1)
         self.rgb = self.info = self.pose = None
         self.depths = deque(maxlen=8)  # pair each RGB frame with the depth frame of the same stamp
@@ -102,11 +117,55 @@ class VLNAgentNode(Node):
             self.feedback("preempted", message="new instruction received")
         self.reset_task()
         self.instruction, self.state, self.t_accept = text, "planning", self.now()
+        self.task_id = str((data or {}).get("task_id") or uuid.uuid4().hex[:8])
         self.feedback("accepted", instruction=(data or {}).get("instruction", text) if data else text)
-        if self.mode == "rule":
+        if self.mode == "vln":
+            self.job_kind, self.job = "decompose", self.pool.submit(self._decompose, data, text)
+        elif self.mode == "rule":
             self.job_kind, self.job = "plan", self.pool.submit(self._rule_plan, text)
         else:
             self.job_kind, self.job = "plan", self.pool.submit(self.vlm.plan_task, text)
+
+    def _decompose(self, data, text):
+        """Layer 1 for the VLN: explicit `steps` from the agent, or VLM decomposition."""
+        if data and "steps" in data:
+            steps = [NavStep(str(s["goal"]), s.get("region")) for s in data["steps"]]
+            bad = [s.region for s in steps if s.region is not None and s.region not in self.regions]
+            if not steps or bad:
+                raise ValueError(f"steps need goals and known regions; unknown: {bad}")
+            task = NavTask(str(data.get("instruction", "")) or steps[-1].goal, steps,
+                           str(data.get("target", steps[-1].goal)), str(data.get("question", "")),
+                           str(data.get("language", "")), str(data.get("target_label", "")))
+            return task, {"source": "external_steps"}
+        instruction = data.get("instruction", "") if data else text
+        if not str(instruction).strip():
+            raise ValueError("the VLN needs an `instruction` or `steps`; `subgoals` (map places/coordinates) "
+                             "are only followed by planner_mode:=oracle")
+        task, meta = decompose(self.client, instruction, self.regions, self.region_labels)
+        return task, {"source": "vlm", **meta}
+
+    def on_vln_status(self, msg: String):
+        status = json.loads(msg.data)
+        if self.mode != "vln" or status.get("request_id") != self.task_id or self.state != "vln_navigating":
+            return
+        state = status.get("state")
+        if state == "decision":
+            self.vlm_log.append({"source": "navigate", "latency_s": status.get("vlm_latency_s"),
+                                 "request_bytes": status.get("request_bytes"), "action": status.get("action"),
+                                 "raw": status.get("raw")})
+            self.feedback("decision", **{k: status.get(k) for k in ("action", "thought", "waypoint", "waypoint_xy",
+                                                                     "waypoint_region", "step", "plate", "note", "pose",
+                                                                     "vlm_latency_s")})
+        elif state in ("step_done", "target_located", "detour", "blocked"):
+            if status.get("target_xy"):
+                self.target_xy = status["target_xy"]
+            self.feedback(state, **{k: v for k, v in status.items() if k not in ("request_id", "state", "sim_time_s")})
+        elif state == "arrived":
+            self.target_xy = status.get("target_xy") or self.target_xy
+            self.feedback("arrived", decisions=status.get("decisions"), final_pose=status.get("final_pose"))
+            self.state, self.phase, self.arrival = "settling", "inspect", float(status.get("sim_time_s", self.now()))
+        elif state == "failed":
+            self.fail(f"navigation failed: {status.get('message', '')}")
 
     def _rule_plan(self, text):
         task = ground_instruction(text, self.smap)
@@ -130,19 +189,21 @@ class VLNAgentNode(Node):
         self.goal_id, self.goal, self.nav_events, self.retries = None, None, [], 0
         self.instruction, self.phase, self.views, self.arrival = "", "", [], None
         self.result, self.last_plan, self.vlm_log = None, None, []
-        self.t_accept, self.target_xy = 0.0, None
+        self.t_accept, self.target_xy, self.task_id = 0.0, None, None
         # Drop any running VLM job: its result belongs to the previous task.
         self.job, self.job_kind = None, None
 
     def feedback(self, state, **fields):
-        task_id = self.task.task_id if self.task else None
+        task_id = self.task_id
         self.pub_feedback.publish(String(data=json.dumps({"task_id": task_id, "state": state,
                                                           "sim_time_s": round(self.now(), 3), **fields},
                                                          ensure_ascii=False)))
 
     def hold_position(self):
-        """Stop and hold the current pose (a goal at the robot's own pose)."""
-        if self.pose is not None:
+        """Stop and hold the current pose (VLN: the navigator holds; oracle/rule: a goal at the own pose)."""
+        if self.mode == "vln":
+            self.pub_nav_request.publish(String(data=json.dumps({"cancel": True})))
+        elif self.pose is not None:
             self.pub_goal.publish(M.pose_stamped(self.now(), "map", *self.pose))
 
     def send_goal(self, x, y, yaw, phase):
@@ -181,7 +242,23 @@ class VLNAgentNode(Node):
             self.after_settle()
 
     def on_job(self, kind, value):
-        if kind == "plan":
+        if kind == "decompose":
+            task, meta = value
+            self.task, self.meta = task, {"target": task.target, "question": task.question,
+                                          "language": task.language, "place": task.target}
+            self.vlm_log.append({"source": "decompose", **{k: meta.get(k) for k in
+                                 ("latency_s", "request_bytes", "response_bytes", "raw")}})
+            self.feedback("planned", parser=meta.get("source"), steps=[{"goal": s.goal, "region": s.region}
+                                                                       for s in task.steps],
+                          target=task.target, target_label=task.target_label, question=task.question,
+                          vlm_latency_s=meta.get("latency_s"))
+            self.pub_nav_request.publish(String(data=json.dumps({"request_id": self.task_id, "task": {
+                "instruction": task.instruction, "target": task.target, "question": task.question,
+                "language": task.language, "target_label": task.target_label,
+                "steps": [{"goal": s.goal, "region": s.region} for s in task.steps]}},
+                ensure_ascii=False)))
+            self.state = "vln_navigating"
+        elif kind == "plan":
             task, meta = value
             self.task, self.meta = task, meta
             if not task.ok:
@@ -360,7 +437,7 @@ class VLNAgentNode(Node):
         self.feedback("inspecting", question=self.meta.get("question"))
         instruction = self.task.instruction or self.instruction
         question, language = self.meta.get("question", ""), self.meta.get("language", "")
-        place = self.task.subgoals[-1].label if self.task and self.task.subgoals else ""
+        place = self.meta.get("place") or (self.task.subgoals[-1].label if getattr(self.task, "subgoals", None) else "")
         self.job_kind = "inspect"
         self.job = self.pool.submit(lambda: (*self.vlm.inspect(rgb, instruction, question, language, place), jpeg))
 

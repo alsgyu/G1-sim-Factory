@@ -67,6 +67,21 @@ class RGBDCamera:
         self._gl.free()
 
 
+def mid360_directions(n: int, frame: int, elevation_rad=(math.radians(-52.0), math.radians(7.0))) -> np.ndarray:
+    """Unit ray directions (sensor frame) of one MID-360-like frame.
+
+    Golden-ratio sequence shifted every frame, so coverage keeps growing over time
+    (non-repetitive scanning); uniform over the elevation band of the sphere.
+    Shared by the MuJoCo ray caster and the Isaac Sim depth-camera emulation.
+    """
+    k = np.arange(n, dtype=np.float64)+frame*n
+    az = 2*np.pi*((k*0.6180339887498949) % 1.0)-np.pi
+    u = (k*0.7548776662466927+0.5) % 1.0
+    lo, hi = np.sin(elevation_rad[0]), np.sin(elevation_rad[1])
+    el = np.arcsin(lo+(hi-lo)*u)
+    return np.stack([np.cos(el)*np.cos(az), np.cos(el)*np.sin(az), np.sin(el)], axis=1)
+
+
 class Mid360Lidar:
     """Non-repetitive 360 deg scan, ``points_per_scan`` rays per frame, ray cast in MuJoCo.
 
@@ -100,17 +115,14 @@ class Mid360Lidar:
         self._groups = np.array([1, 1, 1, 0, 1, 1], dtype=np.uint8)
         self._pool = ThreadPoolExecutor(max(1, threads))
         self._threads = max(1, threads)
+        # mj_multiRay allocates scratch on the mjData stack, so concurrent calls must not share an mjData:
+        # each thread casts on its own copy holding just the geom poses the ray caster reads.
+        self._datas = [mujoco.MjData(model) for _ in range(self._threads)]
         rgba = model.geom_rgba[:, :3].mean(axis=1)
         self._reflectivity = np.clip(20+200*rgba, 0, 255).astype(np.float32)
 
     def _directions(self):
-        # Golden-ratio sequence shifted every frame: coverage keeps growing over time.
-        k = np.arange(self.n, dtype=np.float64)+self.frame*self.n
-        az = 2*np.pi*((k*0.6180339887498949) % 1.0)-np.pi
-        u = (k*0.7548776662466927+0.5) % 1.0
-        lo, hi = np.sin(self.elevation[0]), np.sin(self.elevation[1])
-        el = np.arcsin(lo+(hi-lo)*u)  # uniform over the sphere band
-        return np.stack([np.cos(el)*np.cos(az), np.cos(el)*np.sin(az), np.sin(el)], axis=1)
+        return mid360_directions(self.n, self.frame, self.elevation)
 
     def scan(self, data):
         """Return (xyz in sensor frame (M,3) float32, reflectivity (M,), ring line (M,) uint8, index (M,))."""
@@ -122,10 +134,14 @@ class Mid360Lidar:
         dist = np.full(self.n, -1.0)
         bounds = np.linspace(0, self.n, self._threads+1).astype(int)
 
-        def cast(lo, hi):
-            mujoco.mj_multiRay(self.model, data, origin, world[lo:hi].ravel(), self._groups, 1, -1,
+        for local_data in self._datas:
+            local_data.geom_xpos[:] = data.geom_xpos
+            local_data.geom_xmat[:] = data.geom_xmat
+
+        def cast(k, lo, hi):
+            mujoco.mj_multiRay(self.model, self._datas[k], origin, world[lo:hi].ravel(), self._groups, 1, -1,
                                geomid[lo:hi], dist[lo:hi], None, hi-lo, self.max_range)
-        list(self._pool.map(lambda b: cast(*b), zip(bounds[:-1], bounds[1:])))
+        list(self._pool.map(lambda b: cast(*b), zip(range(self._threads), bounds[:-1], bounds[1:])))
         hit = (geomid >= 0) & (dist >= self.min_range)
         hit[hit] &= ~self._robot_geom[geomid[hit]]
         idx = np.nonzero(hit)[0]

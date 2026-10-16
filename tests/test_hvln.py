@@ -76,6 +76,24 @@ def test_every_semantic_place_is_reachable_with_clearance(campus, smap):
         assert (costmap.distance[rows, cols] >= costmap.lethal_radius).all()
 
 
+def test_evaluation_footprints_cover_the_real_objects(campus, smap):
+    """Every VLN task target has a footprint that contains real scene geometry; distances are to its outline."""
+    import yaml
+    meta, _ = campus
+    centres = [((b[0]+b[2])/2, (b[1]+b[3])/2) for b in (o["bounds"] for o in meta["obstacles"])]
+    tasks = yaml.safe_load((ROOT/"configs/vln_tasks.yaml").read_text(encoding="utf-8"))["tasks"]
+    for name, task in tasks.items():
+        place = smap.places[task["expected_place"]]
+        assert place.footprints, f"{name}: {place.id} needs a footprint for footprint-based evaluation"
+        for x1, y1, x2, y2 in place.footprints:
+            assert any(x1 <= cx <= x2 and y1 <= cy <= y2 for cx, cy in centres), f"{place.id}: empty footprint"
+        assert place.distance_to_object(*place.pose[:2]) < 2.5  # its viewing pose would count as success
+    conveyor = smap.places["assembly_conveyor"]
+    assert conveyor.distance_to_object(13.2, 7.74) == 0.0                     # on conveyor A
+    assert conveyor.distance_to_object(13.45, 6.27) == pytest.approx(1.15)    # in front of A
+    assert conveyor.distance_to_object(10.0, 13.5) == pytest.approx(0.62)     # behind B
+
+
 def test_lidar_obstacle_not_in_map_blocks_path_and_replan_avoids_it(campus):
     meta, costmap = campus
     costmap = CostMap(costmap.grid)  # fresh dynamic layer

@@ -56,7 +56,8 @@ class ExternalAgentNode(Node):
         self.timeout = float(p("timeout_s", 900.0).value)                   # simulation seconds
         self.stall_timeout = float(p("stall_timeout_wall_s", 120.0).value)  # wall seconds without /clock progress
         self.send_after = float(p("send_after_s", 3.0).value)
-        self.success_radius = float(p("success_radius_m", 1.5).value)
+        self.success_radius = float(p("success_radius_m", 2.5).value)  # VLN: robot to the object's footprint
+        self.grounding_radius = float(p("grounding_radius_m", 1.0).value)  # VLN: localized target to footprint
         self.condition = p("condition", "").value
         self.seed = int(p("seed", 0).value)
         smap = SemanticMap.load(load_config(ROOT/"configs/factory.yaml"))
@@ -67,6 +68,7 @@ class ExternalAgentNode(Node):
         self.pub = self.create_publisher(String, "/vln/instruction", TOPICS["/vln/instruction"][1])
         sub("/vln/feedback", String, self.on_feedback)
         sub("/vln/inspection_image", CompressedImage, self.on_image)
+        sub("/vln/decision_image", CompressedImage, self.on_decision_image)
         sub("/odom", Odometry, self.on_odom)
         sub("/sim/status", String, self.on_sim)
         sub("/nav/status", String, self.on_nav)
@@ -138,13 +140,20 @@ class ExternalAgentNode(Node):
         if self.pending_done is not None and not self.finished:
             self.finish(self.pending_done)
 
+    def on_decision_image(self, msg):
+        """What the VLN policy saw at each decision (camera + numbered waypoints), for the report."""
+        folder = self.out/"decisions"
+        folder.mkdir(exist_ok=True)
+        (folder/f"{len(list(folder.glob('*.jpg'))):03d}_{msg.header.stamp.sec:05d}s.jpg").write_bytes(bytes(msg.data))
+
     def on_feedback(self, msg):
         event = json.loads(msg.data)
         self.feedback.append(event)
         self.feedback_file.write(json.dumps(event, ensure_ascii=False)+"\n")
         self.feedback_file.flush()
         brief = {k: v for k, v in event.items()
-                 if k in ("place", "subgoals", "target", "question", "result", "message", "distance_m")}
+                 if k in ("place", "subgoals", "target", "question", "result", "message", "distance_m",
+                          "step", "action", "waypoint", "waypoint_region", "target_xy", "plate", "note")}
         self.get_logger().info(f"feedback: {event.get('state')} {json.dumps(brief, ensure_ascii=False)}")
         if event.get("state") == "done" and not self.finished and not self.have_image:
             # The evidence image travels on its own topic and may arrive just after "done".
@@ -173,6 +182,11 @@ class ExternalAgentNode(Node):
         x, y, _ = self.pose if self.pose else (math.nan, math.nan, 0)
         ex, ey, _ = self.expected.pose
         final_error = float(math.hypot(x-ex, y-ey))
+        to_object = float(self.expected.distance_to_object(x, y))
+        found = done.get("target_xy")
+        target_error = float(self.expected.distance_to_object(*found)) if found else None
+        decisions = [e for e in self.feedback if e.get("state") == "decision"]
+        vln = not subgoals
         followers = [e for e in self.nav if e.get("source") == "follower" and e.get("state") == "reached"]
         rmse = [e["cross_track_rmse_m"] for e in followers if e.get("cross_track_rmse_m") is not None]
         inspection = done.get("result") or {}
@@ -185,8 +199,17 @@ class ExternalAgentNode(Node):
             "task": self.task_name, "condition": self.condition, "seed": self.seed, "instruction": self.payload,
             "state": state, "expected_place": self.expected.id, "planned_subgoals": subgoals,
             "parser": planned.get("parser"),
-            "grounding_correct": bool(subgoals) and subgoals[-1] == self.expected.id,
-            "subgoals_reached": len(reached), "navigation_complete": bool(subgoals) and len(reached) == len(subgoals),
+            "steps": planned.get("steps"),
+            # VLN: the target it localized in the image lies at the hidden object; baselines: right place id.
+            "grounding_correct": (target_error is not None and target_error <= self.grounding_radius) if vln else
+                                 subgoals[-1] == self.expected.id,
+            "subgoals_reached": len(reached),
+            "navigation_complete": any(e.get("state") == "arrived" for e in self.feedback) if vln else
+                                   len(reached) == len(subgoals),
+            "final_distance_to_target_m": round(to_object, 3),
+            "target_localization_error_m": round(target_error, 3) if target_error is not None else None,
+            "vln_decisions": len(decisions),
+            "vln_actions": [e.get("action") for e in decisions],
             "start_pose": self.start_pose, "final_pose": self.pose,
             "final_distance_to_expected_place_m": round(final_error, 3),
             "target_xy": done.get("target_xy"), "inspection": inspection or None,
@@ -200,8 +223,10 @@ class ExternalAgentNode(Node):
             "vlm_latency_mean_s": round(float(np.mean(latencies)), 3) if latencies else None,
             "realtime_factor": self.sim.get("realtime_factor"), "sim_timing_ms_mean": self.sim.get("timing_ms_mean"),
         }
-        success = bool(state == "done" and summary["grounding_correct"] and summary["navigation_complete"]
-                       and final_error <= self.success_radius and not summary["collision_events"]
+        # Success: in front of the right object, no collision/fall, check answered correctly.
+        near = to_object <= self.success_radius if vln else final_error <= 1.5
+        success = bool(state == "done" and summary["navigation_complete"] and near
+                       and summary["verdict_correct"] is not False and not summary["collision_events"]
                        and not summary["fallen"] and inspection.get("answer"))
         summary["success"] = success
         summary["spl"] = round(shortest/max(shortest, travelled), 3) if success and shortest and travelled else 0.0

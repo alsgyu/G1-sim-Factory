@@ -49,6 +49,9 @@ TOPICS = {
     "/goal_pose": ("geometry_msgs/msg/PoseStamped", COMMAND),
     "/plan": ("nav_msgs/msg/Path", PATH),
     "/nav/status": ("std_msgs/msg/String", EVENTS),
+    "/vln/nav_request": ("std_msgs/msg/String", COMMAND),
+    "/vln/nav_status": ("std_msgs/msg/String", EVENTS),
+    "/vln/decision_image": ("sensor_msgs/msg/CompressedImage", EVIDENCE),
 }
 
 

@@ -13,7 +13,7 @@
 | Office | **24×24m** · 업무실 / 회의실 / 휴게실 / 관제실 |
 | 연결 | 하나의 물리 장면 · 폭 4m 연결 통로 · 건물 간 보행 가능 |
 | 기본 평가 | 의미 구역 순서 → 고정 통로 경로 → waypoint 추종 → 보행 정책 |
-| **계층형 VLN (ROS 2)** | 외부 에이전트 지시 → VLM(Qwen3-VL) 장소·확인 대상 결정 → A*·LiDAR 재계획 → 경로추종 → 보행 정책 → VLM 확인 결과 보고 |
+| **계층형 VLN (ROS 2)** | 외부 에이전트 지시 → 단계 계획 → VLN(Qwen3-VL-8B)이 영상·지도로 웨이포인트 선택·대상 탐색 → 경로추종 → 보행 정책 → 확인 결과 보고. **Isaac Sim 5.1**·MuJoCo 공용 |
 | 선택 평가 | RGB 이력 + 언어 지시 → NaVILA(e2e) → 이동 목표 → 보행 정책 |
 
 ## 설치·업데이트
@@ -135,29 +135,30 @@ MUJOCO_GL=osmesa python scripts/render_scene.py --scenario warehouse_tour
 - 경로는 고정 중앙 통로 그래프 사용. 장애물 회피·SLAM·학습형 경로 계획은 후속 연구 대상.
 - 창고·사무실은 직접 생성한 시뮬레이션 지오메트리. 제조 공정·배터리 충전·열전달 물리는 미구현.
 
-## 계층형 VLN (ROS 2)
+## 계층형 VLN (ROS 2 · Isaac Sim 5.1)
 
-**"공장 ○○에 가서 △△를 확인해" 같은 외부 에이전트 지시를 받아 G1이 이동하고 확인 결과를 돌려주는 ROS 2 스택.** 설계·실행·실험 절차: [HVLN.md](docs/HVLN.md) · 토픽·메시지·QoS·데이터 크기: [ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md).
+**외부 에이전트의 "공장 ○○에 가서 △△를 확인해" 지시를 받아, 목표 좌표를 모르는 G1이 SLAM 지도(+의미 주석)·머리 카메라·지시문으로 VLM(Qwen3-VL-8B)이 매번 다음 웨이포인트를 골라 이동하고, 대상을 눈으로 찾아 확인 결과를 돌려주는 ROS 2 스택.**
+설계·모델 선정: [HVLN.md](docs/HVLN.md) · Ubuntu + Isaac Sim 실행 순서 전체: [UBUNTU_ISAAC.md](docs/UBUNTU_ISAAC.md) · 토픽·메시지·QoS·데이터 크기: [ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md).
 
 ```bash
-docker build -f docker/Dockerfile.ros2 -t g1-sim-ros2:humble .
-ollama pull qwen3-vl:8b-instruct          # VLM 서버 (OpenAI 호환 API)
-docker run --rm --gpus all --network host --ipc host -v "$PWD":/ws g1-sim-ros2:humble \
-  ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor
-python3 scripts/hvln_experiment.py --out outputs/exp_$(date +%F)   # 전체 실험 행렬 + 결과표
+bash scripts/run_isaac_sim.sh --spawn -12 3.8 0                                  # Isaac Sim 5.1 + G1 (터미널 1)
+docker run --rm --network host --ipc host -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
+  -e FASTRTPS_DEFAULT_PROFILES_FILE=/ws/configs/fastdds.xml -v "$PWD":/ws g1-sim-ros2:humble \
+  ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor        # VLN 스택 (터미널 2)
+python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)   # 실험 행렬
 ```
 
 | 노드 | 역할 |
 |---|---|
-| `vln_agent` | VLM 작업 계획 · 시각 grounding · 확인 VQA (`/vln/instruction` → `/vln/feedback`) |
-| `global_planner` | `/map` + LiDAR 장애물 위 A*, 막히면 재계획 (`/goal_pose` → `/plan`) |
-| `path_follower` | pure pursuit + 횡방향 보정 + 위치 유지 (`/plan` → `/cmd_vel`) |
-| `g1_sim` | MuJoCo G1 + D435i·MID-360 모사 센서 (Isaac Sim·실로봇으로 교체 가능) |
+| `vln_agent` | 계층 1: 지시 → 단계 계획·대상 명판, 도착 후 확인 VQA (`/vln/instruction` → `/vln/feedback`) |
+| `vln_navigator` | 계층 2 = VLN: 영상 위 번호 웨이포인트 + 지시 + 지도 맥락 → VLM 선택 → 직선 구간 (`/plan`) |
+| `path_follower` | 계층 3: pure pursuit + 횡방향 보정 + 위치 유지 (`/plan` → `/cmd_vel`) |
+| `isaac_sim_node` / `g1_sim` | 계층 4: Isaac Sim 5.1 또는 MuJoCo G1 보행 정책 + D435i·MID-360 모사 센서 |
 
 ## VLN·연구 확장
 
 - 기본 경로 추종은 즉시 실행 가능. **경로 추종 점수는 VLN 점수가 아님.**
-- 계층형 VLN 스택은 위 절. NaVILA는 e2e 비교 기준선.
+- 계층형 VLN 스택은 위 절. 지도 조회 + A*(`planner_mode:=oracle`)는 목표 위치를 아는 상한 기준선, NaVILA는 e2e 비교 기준선.
 - NaVILA: 설치 스크립트·모델 호출 어댑터 제공. NVIDIA GPU 모델 추론·공장 VLN 성능은 미검증.
 - VLN 실행·평가 목표 설정: [VLN.md](docs/VLN.md).
 - 구역 간 경로 교체: `g1_factory/routes.py`.
@@ -165,4 +166,4 @@ python3 scripts/hvln_experiment.py --out outputs/exp_$(date +%F)   # 전체 실�
 - 보행 정책 교체: `g1_factory/locomotion.py`. 관측·관절 순서 일치 필요.
 - 위치 추정: 시뮬레이터 정답 pose. SPL·nDTW는 지시문·정답 경로 데이터셋 구성 후 확장.
 
-[계층형 VLN](docs/HVLN.md) · [ROS 2 인터페이스](docs/ROS2_INTERFACE.md) · [검증 결과](docs/VALIDATION.md) · [환경 변경](docs/FACTORY.md) · [도구·모델 선정](docs/DECISIONS.md) · [출처·라이선스](THIRD_PARTY.md)
+[계층형 VLN](docs/HVLN.md) · [Ubuntu·Isaac 실행](docs/UBUNTU_ISAAC.md) · [ROS 2 인터페이스](docs/ROS2_INTERFACE.md) · [검증 결과](docs/VALIDATION.md) · [환경 변경](docs/FACTORY.md) · [도구·모델 선정](docs/DECISIONS.md) · [출처·라이선스](THIRD_PARTY.md)

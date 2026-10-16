@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Fast DDS profile for the Isaac Sim configuration (Isaac Sim's bundled ROS 2 libraries use Fast DDS,
+  so every node uses rmw_fastrtps_cpp there). UDPv4 only, as NVIDIA recommends for Isaac Sim in
+  Docker: the Isaac container runs as uid 1234 and the VLN stack container as root, and shared-memory
+  segments between different users are not reliable. Large socket buffers keep 0.9 MB RGB and 0.6 MB
+  depth frames at 30 Hz intact on loopback; raise the kernel limit once per boot:
+      sudo sysctl -w net.core.rmem_max=2147483647 net.core.wmem_max=2147483647
+      export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      export FASTRTPS_DEFAULT_PROFILES_FILE=$PWD/configs/fastdds.xml
+-->
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <transport_descriptors>
+    <transport_descriptor>
+      <transport_id>g1_udp</transport_id>
+      <type>UDPv4</type>
+      <sendBufferSize>16777216</sendBufferSize>
+      <receiveBufferSize>16777216</receiveBufferSize>
+    </transport_descriptor>
+  </transport_descriptors>
+  <participant profile_name="g1_participant" is_default_profile="true">
+    <rtps>
+      <useBuiltinTransports>false</useBuiltinTransports>
+      <userTransports>
+        <transport_id>g1_udp</transport_id>
+      </userTransports>
+      <sendSocketBufferSize>16777216</sendSocketBufferSize>
+      <listenSocketBufferSize>16777216</listenSocketBufferSize>
+    </rtps>
+  </participant>
+</profiles>

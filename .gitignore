@@ -9,3 +9,4 @@ outputs/
 *.pt
 *.safetensors
 .DS_Store
+.hf_cache/

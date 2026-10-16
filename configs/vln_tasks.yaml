@@ -1,4 +1,6 @@
 # Inspection tasks for the hierarchical VLN stack (ROS 2): "go to <part of the factory> and check <X>".
+# The robot gets only `instruction`; its map holds zones and a few infrastructure anchors
+# (configs/semantic_map.yaml, annotated: true), never the fine-grained targets below.
 # `instruction` is exactly what the external agent sends on /vln/instruction:
 # free text (Korean/English) or a JSON object (see g1_factory/grounding.py).
 # Evaluation-only fields (never sent to the robot):
@@ -43,13 +45,28 @@ tasks:
     expected_verdict: "yes"
     unmapped_obstacles: [[1.5, -0.6, 1.2, 1.2, 1.0]]
   json_agent_subgoals:
-    # A planner-style agent may skip language and send explicit subgoals + the check.
+    # A planner-style agent may skip language and send explicit steps (VLN) / place ids (oracle).
     spawn: [12.0, -3.8, 1.5708]
     instruction:
       task_id: agent-007
+      steps:
+        - {goal: "cross the warehouse-office bridge into the office", region: null}
+        - {goal: "enter the staff lounge", region: office_lounge}
+        - {goal: "find the vending machine and stand in front of it", region: office_lounge}
       subgoals: [warehouse_office_bridge, vending_machine]
       target: vending machine
       question: 자판기가 넘어지지 않고 정상적으로 서 있는지 확인해.
       language: ko
     expected_place: vending_machine
+    expected_verdict: "yes"
+  go_fire_cabinet_ko:
+    # Visual landmark that is not on the robot's map.
+    spawn: [0.0, 0.0, 0.0]
+    instruction: "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해."
+    expected_place: fire_cabinet_west
+    expected_verdict: "yes"
+  check_electrical_panel_en:
+    spawn: [12.0, -3.8, 1.5708]
+    instruction: "Find the blue electrical panel on the east wall of the assembly area and check whether it carries a high-voltage warning."
+    expected_place: electrical_panel
     expected_verdict: "yes"

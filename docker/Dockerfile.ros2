@@ -24,7 +24,9 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     else \
         python3 -m pip install torch==2.7.1; \
     fi \
-    && python3 -m pip install "mujoco==3.5.0" "numpy==1.26.4" "PyYAML>=6.0,<7" "Pillow>=10,<13" "pytest==8.4.2"
+    && python3 -m pip install "mujoco==3.5.0" "numpy==1.26.4" "PyYAML>=6.0,<7" "Pillow>=10,<13" "pytest==8.4.2" \
+       "transformers==4.46.3" "sentencepiece==0.2.0" "protobuf>=3.20,<6" \
+    && if [ "$TARGETARCH" = "amd64" ]; then python3 -m pip install "usd-core==25.5"; fi
 
 # Unitree's G1 SDK stack uses CycloneDDS; keep the same RMW for the simulated graph.
 # The repository is mounted at /ws. NVIDIA GPUs: run with --gpus all and
@@ -32,6 +34,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
     CYCLONEDDS_URI=file:///ws/configs/cyclonedds.xml \
     MUJOCO_GL=egl \
+    HF_HOME=/ws/.hf_cache \
     NVIDIA_DRIVER_CAPABILITIES=all \
     PYTHONPATH=/ws
 

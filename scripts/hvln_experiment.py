@@ -5,6 +5,8 @@
     python3 scripts/hvln_experiment.py --out outputs/exp_2026-10-20 --runner docker
     # native ROS 2 (shell already sourced: /opt/ros/$ROS_DISTRO/setup.bash + .venv-ros)
     python3 scripts/hvln_experiment.py --out outputs/exp_2026-10-20 --runner native
+    # Isaac Sim 5.1 as the simulator (one Isaac container per episode, VLN stack with sim:=false)
+    python3 scripts/hvln_experiment.py --out outputs/exp_isaac --simulator isaac
     # only rebuild the tables from finished episodes
     python3 scripts/hvln_experiment.py --out outputs/exp_2026-10-20 --aggregate-only
 
@@ -21,6 +23,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import statistics
 import subprocess
 import sys
@@ -29,6 +32,9 @@ import time
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from g1_factory.spawn import perturbed_spawn  # noqa: E402  (stdlib only)
+FASTDDS_ENV = {"RMW_IMPLEMENTATION": "rmw_fastrtps_cpp", "FASTRTPS_DEFAULT_PROFILES_FILE": "/ws/configs/fastdds.xml"}
 
 
 def launch_command(args, condition: dict, task: str, seed: int, out: Path, extra: dict) -> str:
@@ -40,10 +46,65 @@ def launch_command(args, condition: dict, task: str, seed: int, out: Path, extra
     return f"ros2 launch launch/g1_hvln.launch.py {joined}"
 
 
+def ros_env(args) -> dict:
+    """Isaac Sim's bundled ROS 2 uses Fast DDS: the whole graph uses it in Isaac mode."""
+    if args.simulator != "isaac":
+        return {}
+    env = dict(FASTDDS_ENV)
+    if args.runner == "native":
+        env["FASTRTPS_DEFAULT_PROFILES_FILE"] = str(ROOT/"configs/fastdds.xml")
+    return env
+
+
+def ros_probe(args, command: str, timeout: float) -> bool:
+    """Run a short ROS 2 CLI command with the same transport settings as the episode."""
+    if args.runner == "docker":
+        full = ["docker", "run", "--rm", "-v", f"{ROOT}:/ws", "-e", f"ROS_DOMAIN_ID={args.domain_id}"]
+        for k, v in ros_env(args).items():
+            full += ["-e", f"{k}={v}"]
+        full += shlex.split(args.docker_args)+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
+        env = dict(os.environ)
+    else:
+        full = ["bash", "-c", f"timeout {int(timeout)} {command}"]
+        env = {**os.environ, "ROS_DOMAIN_ID": str(args.domain_id), **ros_env(args)}
+    return subprocess.run(full, cwd=ROOT, env=env, capture_output=True).returncode == 0
+
+
+def start_isaac(args, task: dict, seed: int, extra: dict, name: str):
+    spawn = perturbed_spawn(task["spawn"], seed)
+    env = {**os.environ, "ISAAC_DETACH": "1", "ISAAC_NAME": name, "ROS_DOMAIN_ID": str(args.domain_id),
+           "ISAAC_IMAGE": args.isaac_image}
+    cmd = ["bash", "scripts/run_isaac_sim.sh", "--spawn", *map(str, spawn),
+           "--unmapped", json.dumps(task.get("unmapped_obstacles", [])),
+           "--camera-rate", str(extra.get("camera_rate_hz", 30.0)),
+           "--realtime-factor", str(extra.get("realtime_factor", 1.0))]
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+    started = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
+    if started.returncode:  # setup problems (cache ownership, missing USD/URDF) stop the whole matrix
+        raise SystemExit(f"scripts/run_isaac_sim.sh failed:\n{started.stderr.strip()}")
+    deadline = time.monotonic()+args.isaac_ready_timeout
+    while time.monotonic() < deadline:
+        state = subprocess.run(["docker", "inspect", "-f", "{{.State.Running}}", name], capture_output=True, text=True)
+        if state.stdout.strip() != "true":
+            return False
+        if ros_probe(args, "ros2 topic echo --once /clock rosgraph_msgs/msg/Clock --qos-reliability best_effort", 20):
+            return True
+        time.sleep(5)
+    return False
+
+
+def stop_isaac(name: str, log: Path):
+    logs = subprocess.run(["docker", "logs", name], capture_output=True, text=True)
+    log.write_text(logs.stdout+logs.stderr)
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+
+
 def run_episode(args, command: str, log: Path, timeout: float) -> int:
     env = dict(os.environ)
     if args.runner == "docker":
         docker = ["docker", "run", "--rm", "-v", f"{ROOT}:/ws", "-e", f"ROS_DOMAIN_ID={args.domain_id}"]
+        for k, v in ros_env(args).items():
+            docker += ["-e", f"{k}={v}"]
         docker += shlex.split(args.docker_args)
         full = docker+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
     else:
@@ -51,6 +112,7 @@ def run_episode(args, command: str, log: Path, timeout: float) -> int:
         env.setdefault("CYCLONEDDS_URI", f"file://{ROOT}/configs/cyclonedds.xml")
         env.setdefault("MUJOCO_GL", "egl")
         env["ROS_DOMAIN_ID"] = str(args.domain_id)
+        env.update(ros_env(args))
         full = ["bash", "-c", f"timeout {int(timeout)} {command}"]
     with log.open("w") as stream:
         stream.write("$ "+" ".join(shlex.quote(c) for c in full)+"\n")
@@ -133,6 +195,11 @@ def main():
     parser.add_argument("--tasks", nargs="*", help="Subset of task ids")
     parser.add_argument("--seeds", nargs="*", type=int, help="Subset of seeds")
     parser.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="Override launch_args")
+    parser.add_argument("--simulator", choices=["mujoco", "isaac"], default="mujoco")
+    parser.add_argument("--isaac-image", default="nvcr.io/nvidia/isaac-sim:5.1.0")
+    parser.add_argument("--isaac-ready-timeout", type=float, default=900.0,
+                        help="seconds to wait for Isaac Sim's /clock (first start compiles shaders)")
+    parser.add_argument("--tasks-file", type=Path, default=ROOT/"configs/vln_tasks.yaml")
     parser.add_argument("--skip-measurement", action="store_true")
     parser.add_argument("--aggregate-only", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -153,6 +220,11 @@ def main():
     tasks = [t for t in spec["tasks"] if not args.tasks or t in args.tasks]
     seeds = [s for s in spec["seeds"] if not args.seeds or s in args.seeds]
     timeout = float(spec.get("episode_wall_timeout_s", 3600))
+    task_specs = yaml.safe_load(args.tasks_file.read_text(encoding="utf-8"))["tasks"]
+    if args.simulator == "isaac":
+        extra["sim"] = False
+        if not (ROOT/"outputs/isaac/campus.usd").is_file():
+            parser.error("outputs/isaac/campus.usd missing: run scripts/export_campus_usd.py first")
     (out/"experiment.json").write_text(json.dumps({"config": spec, "launch_args": extra, "argv": sys.argv}, indent=2)+"\n")
     episodes = [(c, t, s) for c in conditions for t in tasks for s in seeds]
     if spec.get("measurement") and not args.skip_measurement:
@@ -170,11 +242,38 @@ def main():
         if args.dry_run:
             print("   ", command)
             continue
-        episode.mkdir(parents=True, exist_ok=True)
         begin = time.monotonic()
-        code = run_episode(args, command, episode.with_suffix(".log") if not measuring else out/"measurement.log", timeout)
-        summary = episode/"summary.json"
-        result = json.loads(summary.read_text(encoding="utf-8")) if summary.exists() else {}
+        log = episode.with_suffix(".log") if not measuring else out/"measurement.log"
+        isaac_name = f"hvln_isaac_{args.domain_id}"
+        summary, result, code = episode/"summary.json", {}, None
+        for attempt in (1, 2):
+            episode.mkdir(parents=True, exist_ok=True)
+            if args.simulator == "isaac" and not start_isaac(args, task_specs[task], seed,
+                                                             {**extra, **episode_args}, isaac_name):
+                stop_isaac(isaac_name, log.with_name(log.stem+"_isaac.log"))
+                print("    Isaac Sim did not publish /clock; see the _isaac.log next to the episode", flush=True)
+                break
+            try:
+                code = run_episode(args, command, log, timeout)
+            finally:
+                if args.simulator == "isaac":
+                    stop_isaac(isaac_name, log.with_name(log.stem+"_isaac.log"))
+            result = json.loads(summary.read_text(encoding="utf-8")) if summary.exists() else {}
+            if result.get("state") != "sim_stalled" or attempt == 2:
+                break
+            # The simulator itself stopped (process crash, renderer fault): an infrastructure failure, not a
+            # VLN outcome. Keep the evidence next to the episode and run it once more.
+            archive = episode.with_name(f"attempt1_{episode.name}")
+            shutil.rmtree(archive, ignore_errors=True)
+            episode.rename(archive)
+            for f in (log, log.with_name(log.stem+"_isaac.log")):
+                if f.exists():
+                    f.rename(archive/f.name)
+            print("    simulator stalled; retrying the episode once (first attempt kept in "
+                  f"{archive.relative_to(out)})", flush=True)
+        if result:
+            result["attempts"] = attempt
+            summary.write_text(json.dumps(result, indent=2, ensure_ascii=False)+"\n", encoding="utf-8")
         print(f"    exit={code} success={result.get('success')} state={result.get('state')} "
               f"wall={time.monotonic()-begin:.0f}s", flush=True)
         if measuring and (episode/"topic_stats.json").exists():

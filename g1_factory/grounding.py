@@ -45,6 +45,16 @@ class Place:
     aliases: tuple
     generic_aliases: tuple = ()
     contains_zones: tuple = ()
+    annotated: bool = True      # on the robot's annotated SLAM map (False: evaluation only)
+    object_xy: tuple | None = None
+    footprints: tuple = ()      # ((x1, y1, x2, y2), ...) floor outline(s) of the object, evaluation only
+
+    def distance_to_object(self, x: float, y: float) -> float:
+        """Metres from (x, y) to the nearest footprint box, else to the object point, else to the pose."""
+        if self.footprints:
+            return min(math.hypot(max(x1-x, 0.0, x-x2), max(y1-y, 0.0, y-y2)) for x1, y1, x2, y2 in self.footprints)
+        ox, oy = self.object_xy or self.pose[:2]
+        return math.hypot(x-ox, y-oy)
 
 
 @dataclass
@@ -109,11 +119,19 @@ class SemanticMap:
                 raise ValueError(f"{item['id']}.pose must be finite [x, y, yaw]")
             places[item["id"]] = Place(item["id"], item["label"], "landmark", item.get("zone", "transit"), pose,
                                        tuple(item.get("aliases", ())), tuple(item.get("generic_aliases", ())),
-                                       tuple(item.get("contains_zones", ())))
+                                       tuple(item.get("contains_zones", ())), bool(item.get("annotated", False)),
+                                       tuple(float(v) for v in item["object"]) if "object" in item else None,
+                                       tuple(tuple(float(v) for v in box) for box in item.get("footprint", ())))
+            if any(len(b) != 4 or b[0] >= b[2] or b[1] >= b[3] for b in places[item["id"]].footprints):
+                raise ValueError(f"{item['id']}.footprint boxes must be [x1, y1, x2, y2] with x1 < x2, y1 < y2")
         unknown = {z for p in places.values() for z in p.contains_zones} - set(places)
         if unknown:
             raise ValueError(f"contains_zones references unknown zones: {sorted(unknown)}")
         return cls(places)
+
+    def annotated(self) -> "SemanticMap":
+        """Only what a person annotated on the SLAM map: zones and infrastructure anchors."""
+        return SemanticMap({k: p for k, p in self.places.items() if p.annotated})
 
     def resolve(self, name: str) -> Place:
         if name in self.places:

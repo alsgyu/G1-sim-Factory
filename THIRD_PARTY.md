@@ -7,6 +7,9 @@
 - 계층형 VLN의 VLM: [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) Instruct 체크포인트를 사용자가 Ollama 등으로 별도 다운로드. 저장소에 포함하지 않음. 라이선스는 각 모델 카드 확인.
 - 센서 메시지 형식 참고: [realsense-ros](https://github.com/IntelRealSense/realsense-ros) 토픽 이름, [livox_ros_driver2](https://github.com/Livox-SDK/livox_ros_driver2) PointCloud2 필드 배치. 코드는 복사하지 않고 형식만 맞춤.
 - MuJoCo: [google-deepmind/mujoco](https://github.com/google-deepmind/mujoco), Apache-2.0.
+- Isaac Sim 5.1: NVIDIA 공식 컨테이너 `nvcr.io/nvidia/isaac-sim:5.1.0`를 사용자가 직접 받아 실행(`ACCEPT_EULA=Y` = NVIDIA 라이선스 동의). 저장소에 포함하지 않음. Fast DDS 설정은 Isaac Sim ROS 2 설치 문서의 UDP 프로파일을 기준으로 버퍼만 확대.
+- USD 내보내기: [OpenUSD `usd-core`](https://pypi.org/project/usd-core/), Apache-2.0 계열(Modified Apache 2.0).
+- VLN 방법: MapGPT(지도 프롬프트), PIVOT·VLMnav(영상 위 후보 표시)의 아이디어를 참고해 이 프로젝트에서 새로 작성. 원 코드는 사용하지 않음.
 - 공장 구조·waypoint 평가·HTTP 연결 코드: 이 프로젝트에서 작성.
 
 외부 모델·메시·가중치는 저장소에 재배포하지 않고 고정 버전으로 다운로드.

@@ -238,6 +238,38 @@ def _sign(asset,world,output_dir,name,text,position,width,height,color=(25,40,49
     _vbox(world,name,position,[width/2,height/2,.006],(1,1,1,1),**extra)
 
 
+def _wall_sign(asset,world,output_dir,name,title,subtitle,position,facing,width,height,color):
+    """Eye-level wayfinding sign: one textured plane facing `facing` (unit xy vector).
+
+    Real factories mark zones with large upright signs; a camera-only navigator
+    needs them, since floor paint is unreadable at G1's camera height.
+    """
+    from PIL import Image,ImageDraw,ImageFont
+    folder=Path(output_dir)/"scene_assets"
+    folder.mkdir(parents=True,exist_ok=True)
+    path=folder/(name+".png")
+    w,h=1024,max(128,int(1024*height/width))
+    img=Image.new("RGB",(w,h),tuple(int(255*c) for c in color))
+    draw=ImageDraw.Draw(img)
+    font_path=next((p for p in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf","/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf") if Path(p).exists()),None)
+    def font(size):
+        return ImageFont.truetype(font_path,size) if font_path else ImageFont.load_default()
+    size=int(h*(.46 if subtitle else .62))
+    while size>12 and draw.textbbox((0,0),title,font=font(size))[2]>w*.92:
+        size-=4
+    draw.rectangle((6,6,w-7,h-7),outline=(250,250,244),width=8)
+    draw.text((w/2,h*(.40 if subtitle else .5)),title,anchor="mm",fill=(255,255,255),font=font(size))
+    if subtitle:
+        draw.text((w/2,h*.80),subtitle,anchor="mm",fill=(255,255,255),font=font(max(12,int(h*.17))))
+    img.save(path)
+    ET.SubElement(asset,"texture",name=name+"_texture",type="2d",file=str(path.resolve()))
+    ET.SubElement(asset,"material",name=name+"_material",texture=name+"_texture",texrepeat="1 1",texuniform="false",reflectance="0",specular="0",shininess="0")
+    nx,ny=facing
+    # Plane local axes: x = viewer's right, y = up, z = normal toward the viewer.
+    ET.SubElement(world,"geom",name=name,type="plane",pos=_fmt(position),size=_fmt([width/2,height/2,.01]),
+                  xyaxes=_fmt([-ny,nx,0,0,0,1]),material=name+"_material",contype="0",conaffinity="0")
+
+
 def _rack(world,metadata,zid,shelf):
     name=f"factory_shelf_{zid}_{shelf['id']}"
     x,y=shelf["position"]; sx,sy,sz=shelf["size"]; yaw=shelf.get("yaw",0)
@@ -348,32 +380,63 @@ def _warehouse(world,asset,config,metadata,output_dir):
             _vbox(world,f"factory_loading_rib_{index}_{j}",[x,15.665,.35+j*.35],[1.76,.017,.025],(.37,.43,.46,1))
         _sign(asset,world,output_dir,f"factory_loading_sign_{index}",f"DOCK {index+1:02d}",[x,15.54,5.25],3,.56,upright=True)
     labels={"material_storage":"01  MATERIAL STORAGE","assembly_line":"02  ASSEMBLY LINE","inspection":"03  QUALITY INSPECTION","charging":"04  CHARGING STATION"}
+    # Colour-coded zone signs at camera height: one facing the cross aisle, plus a
+    # double-sided blade sign readable while walking along the aisle.
+    zone_colors={"material_storage":(.10,.32,.62),"assembly_line":(.80,.38,.06),"inspection":(.08,.50,.30),"charging":(.55,.42,.02)}
     for zid,label in labels.items():
         zone=metadata["zones"][zid]
         gx,gy=zone["goal"]
         _sign(asset,world,output_dir,f"factory_sign_{zid}",label,[gx,5.7 if gy>0 else -5.7,.021],13,1.5)
+        side=1 if gy>0 else -1
+        title=label.split("  ",1)[1]
+        _wall_sign(asset,world,output_dir,f"factory_zone_sign_{zid}",title,"ZONE "+label.split("  ")[0],[gx,side*2.25,2.1],(0,-side),3.2,.9,zone_colors[zid])
+        for direction in (1,-1):  # beside, not behind, the face-on sign
+            _wall_sign(asset,world,output_dir,f"factory_zone_blade_{zid}_{'e' if direction>0 else 'w'}",title,None,
+                       [gx+2.4+direction*.005,side*3.0,2.3],(direction,0),1.9,.45,zone_colors[zid])
         for shelf in next(z for z in config["zones"] if z["id"]==zid).get("shelves",[]):
             _rack(world,metadata,zid,shelf)
+    # Distinct, nameable landmarks for instructions such as "go to the red fire extinguisher cabinet".
+    _solid(world,metadata,"factory_fire_cabinet_west",[-23.75,1.0,1.1],[.15,.32,.45],(.78,.06,.05,1))
+    _vbox(world,"factory_fire_cabinet_west_window",[-23.59,1.0,1.15],[.01,.22,.28],(.85,.85,.82,1))
+    _vbox(world,"factory_fire_cabinet_west_extinguisher",[-23.62,1.0,1.08],[.03,.07,.22],(.70,.02,.02,1))
+    _wall_sign(asset,world,output_dir,"factory_fire_cabinet_west_sign","FIRE EXTINGUISHER",None,[-23.58,1.0,1.85],(1,0),1.1,.28,(.78,.06,.05))
+    _solid(world,metadata,"factory_electrical_panel",[23.75,5.0,1.2],[.12,.45,.65],(.08,.25,.62,1))
+    _wall_sign(asset,world,output_dir,"factory_electrical_panel_sign","ELECTRICAL PANEL","HIGH VOLTAGE",[23.62,5.0,2.05],(-1,0),1.3,.42,(.08,.25,.62))
+    _wall_sign(asset,world,output_dir,"factory_exit_sign","EXIT  >  OFFICE",None,[23.85,0,2.75],(-1,0),1.8,.45,(.04,.55,.22))
     # Assembly island: two production conveyors, tool benches and machine cells.
     for index,y in enumerate((8.2,12.1)):
         _conveyor(world,metadata,f"factory_assembly_conveyor_{index}",10,y,10)
+        # Equipment name plates (aisle side): a camera-only navigator reads them.
+        _wall_sign(asset,world,output_dir,f"factory_assembly_conveyor_plate_{index}",f"CONVEYOR {'AB'[index]}",None,
+                   [8.0,y-.80,1.6],(0,-1),1.4,.32,(.80,.38,.06))
     for index,y in enumerate((8.1,12.0)):
         _workbench(world,metadata,f"factory_assembly_bench_{index}",20,y,3.2)
+        _wall_sign(asset,world,output_dir,f"factory_assembly_bench_plate_{index}",f"WORKBENCH {index+1}",None,
+                   [20,y-.72,1.25],(0,-1),1.3,.28,(.30,.36,.40))
         _solid(world,metadata,f"factory_assembly_machine_{index}",[3.8,y,1.45],[.8,1.15,1.45],(.38,.48,.51,1))
+        _wall_sign(asset,world,output_dir,f"factory_assembly_machine_plate_{index}",f"CNC MACHINE {index+1}",None,
+                   [3.8,y-1.17,2.4],(0,-1),1.5,.3,(.30,.36,.40))
         _vbox(world,f"factory_assembly_machine_window_{index}",[3.8,y-1.16,1.85],[.58,.015,.55],(.13,.23,.28,1))
         _vbox(world,f"factory_assembly_machine_control_{index}",[4.46,y-1.19,1.25],[.09,.055,.21],(.79,.73,.45,1))
     # Inspection: vision gantries, metrology cabinets and pass/fail bins.
     for index,(x,y) in enumerate(((-18,-8.2),(-10,-8.2),(-18,-12.4),(-10,-12.4))):
         _workbench(world,metadata,f"factory_inspection_station_{index}",x,y,4,1.8,True)
+        # Numbered plate on the gantry, readable from the aisle side (north).
+        _wall_sign(asset,world,output_dir,f"factory_inspection_station_plate_{index}",f"STATION {index+1}",None,
+                   [x,y+.12,2.2],(0,1),1.0,.28,(.08,.50,.30))
         _solid(world,metadata,f"factory_inspection_bin_{index}",[x+2.6,y,.55],[.48,.55,.55],(.28,.42,.42,1))
     for index,y in enumerate((-8,-12)):
         _solid(world,metadata,f"factory_inspection_cabinet_{index}",[-4,y,1.05],[.65,1.1,1.05],(.70,.73,.71,1))
+        _wall_sign(asset,world,output_dir,f"factory_inspection_cabinet_plate_{index}","METROLOGY",None,
+                   [-4.67,y,1.9],(-1,0),1.2,.28,(.08,.50,.30))
         _vbox(world,f"factory_inspection_screen_{index}",[-4,y+1.12,1.5],[.46,.025,.3],(.09,.24,.28,1))
     # Charging: clearly marked parking bays and parked AMR carts.
     for index,x in enumerate((5,9,13,17,21)):
         _solid(world,metadata,f"factory_charger_{index}",[x,-13.4,1.05],[.48,.30,1.05],(.25,.34,.37,1))
         _vbox(world,f"factory_charger_screen_{index}",[x,-13.085,1.45],[.31,.018,.22],(.16,.47,.45,1))
         _vbox(world,f"factory_charger_light_{index}",[x,-13.075,1.83],[.18,.025,.025],(.48,.78,.59,1))
+        _wall_sign(asset,world,output_dir,f"factory_charger_plate_{index}",f"CHARGER {index+1}",None,
+                   [x,-13.07,2.3],(0,1),.9,.26,(.55,.42,.02))
         for side in (-1,1):
             _vbox(world,f"factory_parking_{index}_{side}",[x+side*1.25,-10.9,.02],[.045,2,.002],yellow)
         _vbox(world,f"factory_parking_back_{index}",[x,-12.9,.02],[1.25,.045,.002],yellow)
@@ -381,6 +444,8 @@ def _warehouse(world,asset,config,metadata,output_dir):
             _cart(world,metadata,f"factory_amr_{index}",x,-10.4)
     for index,x in enumerate((7,15)):
         _solid(world,metadata,f"factory_battery_cabinet_{index}",[x,-7.1,.8],[1.0,.45,.8],(.65,.68,.61,1))
+        _wall_sign(asset,world,output_dir,f"factory_battery_cabinet_plate_{index}","BATTERY STORAGE",None,
+                   [x,-6.62,1.75],(0,1),1.6,.3,(.55,.42,.02))
         _vbox(world,f"factory_battery_cabinet_label_{index}",[x,-6.635,.95],[.65,.018,.20],(.88,.68,.23,1))
     # Pallet staging along the far storage wall, away from the delivery route.
     for index,x in enumerate((-21.0,-16.0,-6.0)):

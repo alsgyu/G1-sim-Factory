@@ -20,6 +20,9 @@
 - 작업대·검사대 상판 0.95m, 컨베이어 벨트 0.85m: G1 머리 카메라(약 1.24m)에서 위에 놓인 물체가 보이는 높이. VLN 설정은 [HVLN.md](HVLN.md).
 - G1 머리 센서 모사: `head_rgbd` 카메라(D435i), `livox_frame` site(MID-360 LiDAR·IMU). 의미 장소 목록은 `configs/semantic_map.yaml`.
 - 형상·표지판은 코드로 직접 생성. 별도 Warehouse/Office 에셋 다운로드 불필요.
+- VLN용 시각 단서: 구역 정면 표지판(높이 2.1m)·통로 쪽 돌출 표지판, 사무실 방 문패, 설비 명판(STATION 1–4, CHARGER 1–5, CONVEYOR A/B, WORKBENCH 1/2, CNC MACHINE 1/2, METROLOGY, BATTERY STORAGE, SERVER RACK 1–3), 비상구 표지.
+- 지도에 주석이 없는 탐색 대상: 창고 서쪽 끝 빨간 소화기함 `(-23.75, 1.0)`, 조립 구역 동쪽 벽 파란 분전반 `(23.75, 5.0)`, 사무동 소화기함 `(51.75, 1.0)`.
+- Isaac Sim 5.1용 USD: `scripts/export_campus_usd.py`가 같은 장면(로봇 제외)을 `outputs/isaac/campus.usd`로 내보냄. 장면을 바꾸면 다시 내보내야 Isaac 쪽에 반영됨.
 
 ## 연구실과 의미 구역
 

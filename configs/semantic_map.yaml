@@ -1,16 +1,23 @@
-# Semantic map for hierarchical VLN (layer 1: language -> map goal poses).
+# Semantic map: what a person annotates on the robot's SLAM map, plus hidden
+# evaluation targets.
 #
-# The eight semantic zones are added automatically from configs/factory.yaml
-# (pose = zone `goal`, facing the zone centre). This file adds landmarks inside
-# or between zones. `pose` is an obstacle-free APPROACH pose [x, y, yaw] in the
-# world/map frame (metres, radians): where G1 should stand, facing the object
-# from ~1.5-1.8 m so the whole object is inside the head camera view.
-# tests/test_planning.py checks every pose keeps >= 0.6 m from mapped obstacles.
+# Given to the robot (hierarchical VLN context):
+#   * the eight zones from configs/factory.yaml (region rectangles + names) and
+#     their aliases below,
+#   * landmarks with `annotated: true` - fixed infrastructure a person marks on a
+#     SLAM map (aisle crossing, loading docks, warehouse-office bridge, office entrance).
+# NOT given to the robot (`annotated: false`): fine-grained targets such as
+# "charger 3", "inspection station 2" or "the red fire extinguisher cabinet".
+# The VLN must find those with its camera. Their `object` [x, y] (the physical
+# object), optional `footprint` [[x1, y1, x2, y2], ...] (its floor outline; several
+# boxes when any instance satisfies the instruction) and `pose` [x, y, yaw] (a good
+# viewing pose) are used only for evaluation and for the map-lookup baseline
+# (planner_mode:=oracle). Evaluation distances are measured to the footprint.
+# All coordinates: world/map frame, metres, radians. tests/test_hvln.py checks
+# every pose keeps >= 0.6 m from mapped obstacles.
 #
 # Aliases are matched case-insensitively and with whitespace removed, so Korean
 # particles ("검사구역으로", "충전 구역에서") still match. Longest alias wins.
-# In a real deployment this file is replaced by a perception-built semantic map
-# (e.g. open-vocabulary detections fused on a SLAM map); the interface is the same.
 zone_aliases:
   material_storage: [material storage, materials storage, storage area, storage zone, rack area, shelving area, 자재 창고, 자재창고, 자재 보관, 선반 구역, 창고 구역]
   assembly_line: [assembly line, assembly area, assembly zone, production line, 조립 라인, 조립라인, 조립 구역, 생산 라인]
@@ -24,77 +31,103 @@ landmarks:
   - id: main_aisle_crossing
     label: Main aisle crossing
     zone: transit
+    annotated: true
     pose: [0.0, 0.0, 0.0]
     aliases: [main aisle crossing, aisle crossing, central crossing, center of the warehouse, warehouse center, 중앙 교차로, 통로 교차점, 창고 중앙]
   - id: loading_dock_1
     label: Loading dock 01
     zone: material_storage
+    annotated: true
     pose: [-19.0, 14.6, 1.5708]
     aliases: [loading dock 1, loading dock 01, dock 1, dock 01, dock one, 1번 도크, 도크 1, 1번 하역장]
   - id: loading_dock_2
     label: Loading dock 02
     zone: material_storage
+    annotated: true
     pose: [-11.0, 14.6, 1.5708]
     aliases: [loading dock 2, loading dock 02, dock 2, dock 02, dock two, 2번 도크, 도크 2, 2번 하역장]
   - id: loading_dock_3
     label: Loading dock 03
     zone: assembly_line
+    annotated: true
     pose: [7.0, 14.6, 1.5708]
     aliases: [loading dock 3, loading dock 03, dock 3, dock 03, dock three, 3번 도크, 도크 3, 3번 하역장]
   - id: loading_dock_4
     label: Loading dock 04
     zone: assembly_line
+    annotated: true
     pose: [17.0, 14.6, 1.5708]
     aliases: [loading dock 4, loading dock 04, dock 4, dock 04, dock four, 4번 도크, 도크 4, 4번 하역장]
   - id: assembly_conveyor
     label: Assembly conveyor
     zone: assembly_line
+    annotated: false
     pose: [10.0, 5.6, 1.5708]
+    object: [10.0, 7.6]
+    footprint: [[5.0, 7.42, 15.0, 8.98], [5.0, 11.32, 15.0, 12.88]]   # CONVEYOR A and B: either counts
     aliases: [conveyor, conveyor belt, assembly conveyor, 컨베이어, 컨베이어 벨트]
   - id: assembly_workbench
     label: Assembly workbench
     zone: assembly_line
+    annotated: false
     pose: [20.0, 6.4, 1.5708]
+    object: [20.0, 7.6]
     aliases: [workbench, work bench, tool bench, assembly workbench, 작업대, 공구 작업대]
   - id: assembly_machine
     label: Assembly machine cell
     zone: assembly_line
+    annotated: false
     pose: [3.8, 5.8, 1.5708]
+    object: [3.8, 7.0]
     aliases: [machine cell, assembly machine, cnc machine, machine, 가공기, 설비 셀, 조립 설비]
   - id: inspection_station_1
     label: Inspection station 1
     zone: inspection
+    annotated: false
     pose: [-18.0, -5.6, -1.5708]
+    object: [-18.0, -8.2]
     aliases: [inspection station 1, first inspection station, vision station 1, 1번 검사대, 검사대 1]
   - id: inspection_station_2
     label: Inspection station 2
     zone: inspection
+    annotated: false
     pose: [-10.0, -5.6, -1.5708]
+    object: [-10.0, -8.2]
+    footprint: [[-12.0, -9.1, -8.0, -7.3]]
     aliases: [inspection station 2, second inspection station, vision station 2, inspection station, 2번 검사대, 검사대 2, 검사대]
   - id: metrology_cabinet
     label: Metrology cabinet
     zone: inspection
+    annotated: false
     pose: [-5.6, -8.0, 0.0]
+    object: [-4.0, -8.0]
     aliases: [metrology cabinet, measurement cabinet, inspection cabinet, 측정 캐비닛, 계측 캐비닛]
   - id: charging_dock_3
     label: Free charging dock 3 (parking bay and charger)
     zone: charging
+    annotated: false
     # In front of the bay, not inside it: the whole bay (where a cart would park) and the charger are in view.
     pose: [13.0, -7.4, -1.5708]
+    object: [13.0, -12.0]
+    footprint: [[11.75, -13.7, 14.25, -8.9]]   # parking bay + charger
     aliases: [charging dock, free charging dock, empty charging bay, charging bay 3, charging dock 3, charger, 충전 도크, 빈 충전 베이, 충전기, 3번 충전 도크]
   - id: battery_cabinet
     label: Battery cabinet
     zone: charging
+    annotated: false
     pose: [7.0, -5.6, -1.5708]
+    object: [7.0, -7.1]
     aliases: [battery cabinet, battery storage, 배터리 캐비닛, 배터리 보관함]
   - id: warehouse_office_bridge
     label: Warehouse-office bridge
     zone: transit
+    annotated: true
     pose: [26.0, 0.0, 0.0]
     aliases: [bridge, connecting corridor, connector, corridor to the office, 연결 통로, 연결통로, 브리지]
   - id: office_entrance
     label: Office entrance
     zone: transit
+    annotated: true
     pose: [30.2, 0.0, 0.0]
     aliases: [office entrance, office entry, entrance of the office, office, 사무실 입구, 사무동 입구, 사무실]
     # "office"/"사무실" alone is a container word: dropped when a room inside is also named.
@@ -103,35 +136,76 @@ landmarks:
   - id: office_desks
     label: Engineering desks
     zone: office_workstations
+    annotated: false
     pose: [33.0, 6.2, 1.5708]
+    object: [33.0, 8.0]
     aliases: [desks, engineering desks, computer desks, 책상, 업무 책상]
   - id: bookshelf
     label: Bookshelf
     zone: office_workstations
+    annotated: false
     pose: [36.2, 9.2, 0.0]
+    object: [37.3, 9.2]
     aliases: [bookshelf, book shelf, bookcase, 책장]
   - id: meeting_table
     label: Meeting table
     zone: office_meeting
+    annotated: false
     pose: [46.0, 5.4, 1.5708]
+    object: [46.0, 8.25]
+    footprint: [[43.8, 7.15, 48.2, 9.35]]
     aliases: [meeting table, conference table, 회의 테이블, 회의 탁자]
   - id: coffee_table
     label: Lounge coffee table
     zone: office_lounge
+    annotated: false
     pose: [32.9, -6.5, -1.5708]
+    object: [32.9, -8.3]
     aliases: [coffee table, sofa, couch, 커피 테이블, 소파]
   - id: vending_machine
     label: Vending machine
     zone: office_lounge
+    annotated: false
     pose: [31.4, -6.2, 3.1416]
+    object: [29.2, -6.2]
+    footprint: [[28.6, -6.65, 29.8, -5.75]]
     aliases: [vending machine, snack machine, drink machine, 자판기, 자동판매기]
   - id: control_consoles
     label: Control consoles
     zone: office_control
+    annotated: false
     pose: [45.8, -6.6, -1.5708]
+    object: [45.8, -8.4]
     aliases: [control consoles, operator consoles, monitoring consoles, consoles, 관제 콘솔, 콘솔, 모니터링 데스크]
   - id: server_racks
     label: Server racks
     zone: office_control
+    annotated: false
     pose: [48.6, -6.4, 0.0]
+    object: [50.8, -8.4]
+    footprint: [[50.3, -11.03, 51.3, -5.78]]   # the row of three racks
     aliases: [server racks, server rack, servers, server cabinets, 서버 랙, 서버랙, 서버]
+  - id: fire_cabinet_west
+    label: Red fire extinguisher cabinet (warehouse west wall)
+    zone: transit
+    annotated: false
+    pose: [-21.4, 1.0, 3.1416]
+    object: [-23.75, 1.0]
+    footprint: [[-23.9, 0.68, -23.6, 1.32]]
+    aliases: [fire extinguisher cabinet, red fire extinguisher cabinet, fire cabinet, extinguisher, 소화기함, 빨간 소화기함, 소화기]
+  - id: electrical_panel
+    label: Blue electrical panel (warehouse east wall)
+    zone: assembly_line
+    annotated: false
+    pose: [21.6, 5.0, 0.0]
+    object: [23.75, 5.0]
+    footprint: [[23.63, 4.55, 23.87, 5.45]]
+    aliases: [electrical panel, blue electrical panel, power panel, switchboard, 배전반, 분전반, 파란 배전반]
+  - id: office_fire_cabinet
+    label: Red fire extinguisher cabinet (office corridor east end)
+    zone: transit
+    annotated: false
+    pose: [49.6, 1.0, 0.0]
+    object: [51.75, 1.0]
+    footprint: [[51.6, 0.68, 51.9, 1.32]]
+    aliases: [office fire extinguisher cabinet, office fire cabinet, 사무동 소화기함]

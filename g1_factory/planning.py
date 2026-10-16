@@ -164,6 +164,11 @@ class CostMap:
     def traversable(self, row, col):
         return self.grid.inside(row, col) and self.distance[row, col] >= self.lethal_radius
 
+    def occupied(self, xy) -> bool:
+        """The static (SLAM) map has an obstacle at xy; outside the map counts as occupied."""
+        row, col = self.grid.world_to_cell(np.asarray(xy, dtype=float))
+        return not bool(self.grid.inside(row, col)) or bool(self.grid.data[row, col] != FREE)
+
     def nearest_traversable(self, xy, max_radius: float = 1.5):
         """Closest traversable cell centre to xy, or None (used to snap goals)."""
         row, col = self.grid.world_to_cell(np.asarray(xy, dtype=float))

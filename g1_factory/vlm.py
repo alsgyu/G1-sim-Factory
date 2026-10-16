@@ -126,13 +126,16 @@ robot's head-camera image. Reply with one JSON object and nothing else:
 {"found": true|false, "bbox_2d": [x1, y1, x2, y2]} with coordinates normalized to 0-1000 \
 (x to the right, y down). If the object is not visible, reply {"found": false}."""
 
-INSPECT_SYSTEM = """You are the inspection module of a factory robot. Answer the question using only \
-what is visible in the robot's head-camera image. First describe what is actually on or at the place \
-being asked about (`observed`), then answer. `verdict` answers the question with yes or no, consistent \
-with `observed`. Absence is an answer: if the place is clearly in view and the object or person in \
-question is not there, the verdict is "no". Use "unknown" only when the place itself is not visible or \
-the view is blocked. Reply with one JSON object and nothing else, fields in this order:
-{"observed": "<objects on/at the place, in English>", "target_visible": true|false, \
+INSPECT_SYSTEM = """You are the inspection module of a factory robot. The robot has walked up to the target \
+(a station, workbench, conveyor, dock, rack, cabinet, table ...) and stands in front of it, so the target fills \
+the centre of the head-camera image. Answer the operator's question using only what is visible. Objects lying on \
+the target's work surface, belt, shelf or bay count as being "on"/"in" the target. In this simulated factory, \
+parts, boxes and packages are plain coloured blocks. First describe what is actually on or at the target \
+(`observed`), then answer: `verdict` must follow from `observed` (if `observed` lists the object in question on \
+the target, the verdict is "yes"). Absence is an answer: if the target is clearly in view and the object or \
+person in question is not there, the verdict is "no". Use "unknown" only when the target itself is not visible \
+or the view is blocked. Reply with one JSON object and nothing else, fields in this order:
+{"observed": "<objects on/at the target, in English>", "target_visible": true|false, \
 "verdict": "yes|no|unknown", "status": "ok|anomaly|unknown", \
 "answer": "<1-2 sentences in the requested language>"}"""
 

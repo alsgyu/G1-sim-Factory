@@ -328,6 +328,9 @@ def add_office(world: ET.Element, asset: ET.Element, config: dict[str, Any],
     for i, y in enumerate((-6.4, -8.4, -10.4)):
         b.obstacle(f"control_server_{i}", 50.8, y, 1.0, 1.25)
         b.box(f"control_server_{i}", [50.8, y, 1.15], [1., 1.25, 2.3], (.15, .20, .24, 1))
+        from g1_factory.scene import _wall_sign
+        _wall_sign(asset, world, Path(output_dir).resolve(), f"factory_office_server_plate_{i}",
+                   f"SERVER RACK {i + 1}", None, [50.28, y, 2.45], (-1., 0.), 1.1, .26, (.55, .10, .15))
         for j in range(8):
             b.box(f"control_server_slot_{i}_{j}", [50.28, y, .35 + j * .235],
                   [.025, 1.02, .14], (.27, .33, .36, 1), collision=False)
@@ -340,6 +343,28 @@ def add_office(world: ET.Element, asset: ET.Element, config: dict[str, Any],
         for y in (-7., 7.):
             b.box(f"ceiling_light_{x}_{y}", [x, y, 3.35], [3.5, .32, .07],
                   (.95, .95, .87, 1), collision=False)
+    # Eye-level room signs over each door plus corridor blade signs, and a red
+    # fire extinguisher cabinet at the corridor's east end (visual landmarks).
+    from g1_factory.scene import _solid, _vbox, _wall_sign
+    colors = {"office_workstations": (.07, .45, .55), "office_meeting": (.42, .20, .55),
+              "office_lounge": (.70, .45, .10), "office_control": (.55, .10, .15)}
+    out = Path(output_dir).resolve()
+    for index, (room_id, room) in enumerate(ROOMS.items()):
+        side = 1. if room["bounds"][1] > 0 else -1.
+        door_x = room["goal"][0]
+        title = room["label"].upper()
+        _wall_sign(asset, world, out, f"factory_office_door_sign_{room_id}", title, f"OFFICE {index + 1:02d}",
+                   [door_x, side * 1.87, 2.3], (0., -side), 2.2, .45, colors[room_id])
+        for direction in (1., -1.):
+            _wall_sign(asset, world, out, f"factory_office_blade_{room_id}_{'e' if direction > 0 else 'w'}",
+                       title, None, [door_x + 1.9 + direction * .005, side * 1.2, 2.4], (direction, 0.),
+                       1.4, .35, colors[room_id])
+    _wall_sign(asset, world, out, "factory_office_entrance_sign", "OFFICE", "WORKSTATIONS / MEETING / LOUNGE / CONTROL",
+               [27.86, 0., 2.3], (-1., 0.), 2.6, .6, (.15, .22, .28))
+    _solid(world, metadata, "factory_office_fire_cabinet", [51.75, 1.0, 1.1], [.15, .32, .45], (.78, .06, .05, 1))
+    _vbox(world, "factory_office_fire_cabinet_window", [51.59, 1.0, 1.15], [.01, .22, .28], (.85, .85, .82, 1))
+    _wall_sign(asset, world, out, "factory_office_fire_cabinet_sign", "FIRE EXTINGUISHER", None,
+               [51.58, 1.0, 1.85], (-1., 0.), 1.1, .28, (.78, .06, .05))
     ET.SubElement(world, "light", name="office_light", pos="40 0 12", dir="0 0 -1",
                   directional="true", diffuse="0.45 0.45 0.45", castshadow="false")
     # Camera's local +z points back from its target, local +y points upward.

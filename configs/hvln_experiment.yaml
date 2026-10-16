@@ -1,17 +1,21 @@
 # Experiment matrix for scripts/hvln_experiment.py (run on the Ubuntu GPU station).
 #
-# Every (condition, task, seed) is one episode = one `ros2 launch launch/g1_hvln.launch.py`.
+# Every (condition, task, seed) is one episode = one `ros2 launch launch/g1_hvln.launch.py`
+# (plus one Isaac Sim container per episode with --simulator isaac).
 # seed 0 uses the exact task spawn; other seeds perturb it (<= 0.3 m, <= 20 deg).
-# The `rule` condition replaces only layer 1 (instruction -> subgoals) with alias matching;
-# target localization and the final check still use the VLM, so the comparison isolates
-# the language-grounding layer.
+# Conditions:
+#   vln_8b / vln_4b  the VLN: map-guided waypoint selection from camera images + instruction
+#                    (vln_navigator). The robot never receives the target position.
+#   oracle_8b        reference only, NOT VLN: the target place is looked up in the semantic map
+#                    (including evaluation-only targets) and reached with A* - an upper bound.
 tasks: [inspect_conveyor, inspect_dock_en, inspect_dock_cart_ko, inspect_servers_office,
-        inspect_meeting_table_en, inspect_station_paraphrase, json_agent_subgoals]
+        inspect_meeting_table_en, inspect_station_paraphrase, json_agent_subgoals,
+        go_fire_cabinet_ko, check_electrical_panel_en]
 seeds: [0, 1, 2]
 conditions:
-  rule:   {planner_mode: rule, vlm_model: "qwen3-vl:8b-instruct"}
-  vlm_4b: {planner_mode: vlm,  vlm_model: "qwen3-vl:4b-instruct"}
-  vlm_8b: {planner_mode: vlm,  vlm_model: "qwen3-vl:8b-instruct"}
+  vln_8b:    {planner_mode: vln,    vlm_model: "qwen3-vl:8b-instruct"}
+  vln_4b:    {planner_mode: vln,    vlm_model: "qwen3-vl:4b-instruct"}
+  oracle_8b: {planner_mode: oracle, vlm_model: "qwen3-vl:8b-instruct"}
 # Shared launch arguments (see launch/g1_hvln.launch.py for all of them).
 launch_args:
   camera_rate_hz: 30.0
@@ -22,7 +26,7 @@ launch_args:
 # One extra episode with topic_monitor enabled, for the ROS 2 interface report
 # (its own launch_args override the shared ones).
 measurement:
-  condition: vlm_8b
+  condition: vln_8b
   task: inspect_conveyor
   seed: 0
   launch_args: {camera_rate_hz: 30.0}
