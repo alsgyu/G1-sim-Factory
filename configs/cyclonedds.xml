@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CycloneDDS settings for the G1 VLN graph (0.9 MB RGB + 0.6 MB depth at 30 Hz, 0.3 MB LiDAR at 10 Hz).
+  Large best-effort samples are split into many UDP fragments; when the kernel receive buffer
+  overflows, one lost fragment drops the whole image. Raise the OS limit once per boot:
+      sudo sysctl -w net.core.rmem_max=2147483647 net.ipv4.ipfrag_time=3 net.ipv4.ipfrag_high_thresh=134217728
+  Use with:  export CYCLONEDDS_URI=file://$PWD/configs/cyclonedds.xml
+  `max` is a request, not a requirement, so the file also works where the limit cannot be raised.
+-->
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Domain Id="any">
+    <General>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+    <Internal>
+      <SocketReceiveBufferSize min="default" max="64MB"/>
+    </Internal>
+  </Domain>
+</CycloneDDS>

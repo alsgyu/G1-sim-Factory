@@ -1,0 +1,55 @@
+# Inspection tasks for the hierarchical VLN stack (ROS 2): "go to <part of the factory> and check <X>".
+# `instruction` is exactly what the external agent sends on /vln/instruction:
+# free text (Korean/English) or a JSON object (see g1_factory/grounding.py).
+# Evaluation-only fields (never sent to the robot):
+#   expected_place    semantic place the robot must end at (configs/semantic_map.yaml)
+#   expected_verdict  correct yes/no answer to the check question in this scene
+# `unmapped_obstacles` [x, y, size_x, size_y, size_z] exist in physics and LiDAR but
+# not in /map, so the planner must detect them and replan.
+tasks:
+  inspect_conveyor:
+    spawn: [-12.0, 3.8, 0.0]
+    instruction: "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해."
+    expected_place: assembly_conveyor
+    expected_verdict: "yes"
+  inspect_dock_en:
+    spawn: [-12.0, -3.8, 0.0]
+    instruction: "Go to the charging area and check whether the free charging dock is empty."
+    expected_place: charging_dock_3
+    expected_verdict: "yes"
+  inspect_dock_cart_ko:
+    # Negative check: dock 3 is the only bay without a parked AMR cart.
+    spawn: [-12.0, -3.8, 0.0]
+    instruction: "충전 구역의 3번 충전 도크에 AMR 카트가 주차되어 있는지 확인해."
+    expected_place: charging_dock_3
+    expected_verdict: "no"
+  inspect_servers_office:
+    spawn: [12.0, -3.8, 0.0]
+    instruction: "사무동 관제실에 가서 서버 랙의 상태 표시등이 켜져 있는지 확인해."
+    expected_place: server_racks
+    expected_verdict: "yes"
+  inspect_meeting_table_en:
+    # Negative check: nobody is in the scene.
+    spawn: [26.0, 0.0, 0.0]
+    instruction: "Go to the meeting room and check whether anyone is sitting at the meeting table."
+    expected_place: meeting_table
+    expected_verdict: "no"
+  inspect_station_paraphrase:
+    # No alias appears verbatim: the rule-based baseline cannot ground it; the VLM must reason.
+    # A pallet stack that is not in /map blocks the direct path (LiDAR replanning).
+    spawn: [12.0, 3.8, 3.1416]
+    instruction: "부품 품질을 확인하는 곳에 가서 두 번째 비전 검사 장비 위에 부품이 올려져 있는지 봐줘."
+    expected_place: inspection_station_2
+    expected_verdict: "yes"
+    unmapped_obstacles: [[1.5, -0.6, 1.2, 1.2, 1.0]]
+  json_agent_subgoals:
+    # A planner-style agent may skip language and send explicit subgoals + the check.
+    spawn: [12.0, -3.8, 1.5708]
+    instruction:
+      task_id: agent-007
+      subgoals: [warehouse_office_bridge, vending_machine]
+      target: vending machine
+      question: 자판기가 넘어지지 않고 정상적으로 서 있는지 확인해.
+      language: ko
+    expected_place: vending_machine
+    expected_verdict: "yes"

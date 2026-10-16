@@ -13,7 +13,8 @@
 | Office | **24×24m** · 업무실 / 회의실 / 휴게실 / 관제실 |
 | 연결 | 하나의 물리 장면 · 폭 4m 연결 통로 · 건물 간 보행 가능 |
 | 기본 평가 | 의미 구역 순서 → 고정 통로 경로 → waypoint 추종 → 보행 정책 |
-| 선택 평가 | RGB 이력 + 언어 지시 → NaVILA → 이동 목표 → 보행 정책 |
+| **계층형 VLN (ROS 2)** | 외부 에이전트 지시 → VLM(Qwen3-VL) 장소·확인 대상 결정 → A*·LiDAR 재계획 → 경로추종 → 보행 정책 → VLM 확인 결과 보고 |
+| 선택 평가 | RGB 이력 + 언어 지시 → NaVILA(e2e) → 이동 목표 → 보행 정책 |
 
 ## 설치·업데이트
 
@@ -134,9 +135,29 @@ MUJOCO_GL=osmesa python scripts/render_scene.py --scenario warehouse_tour
 - 경로는 고정 중앙 통로 그래프 사용. 장애물 회피·SLAM·학습형 경로 계획은 후속 연구 대상.
 - 창고·사무실은 직접 생성한 시뮬레이션 지오메트리. 제조 공정·배터리 충전·열전달 물리는 미구현.
 
+## 계층형 VLN (ROS 2)
+
+**"공장 ○○에 가서 △△를 확인해" 같은 외부 에이전트 지시를 받아 G1이 이동하고 확인 결과를 돌려주는 ROS 2 스택.** 설계·실행·실험 절차: [HVLN.md](docs/HVLN.md) · 토픽·메시지·QoS·데이터 크기: [ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md).
+
+```bash
+docker build -f docker/Dockerfile.ros2 -t g1-sim-ros2:humble .
+ollama pull qwen3-vl:8b-instruct          # VLM 서버 (OpenAI 호환 API)
+docker run --rm --gpus all --network host --ipc host -v "$PWD":/ws g1-sim-ros2:humble \
+  ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor
+python3 scripts/hvln_experiment.py --out outputs/exp_$(date +%F)   # 전체 실험 행렬 + 결과표
+```
+
+| 노드 | 역할 |
+|---|---|
+| `vln_agent` | VLM 작업 계획 · 시각 grounding · 확인 VQA (`/vln/instruction` → `/vln/feedback`) |
+| `global_planner` | `/map` + LiDAR 장애물 위 A*, 막히면 재계획 (`/goal_pose` → `/plan`) |
+| `path_follower` | pure pursuit + 횡방향 보정 + 위치 유지 (`/plan` → `/cmd_vel`) |
+| `g1_sim` | MuJoCo G1 + D435i·MID-360 모사 센서 (Isaac Sim·실로봇으로 교체 가능) |
+
 ## VLN·연구 확장
 
 - 기본 경로 추종은 즉시 실행 가능. **경로 추종 점수는 VLN 점수가 아님.**
+- 계층형 VLN 스택은 위 절. NaVILA는 e2e 비교 기준선.
 - NaVILA: 설치 스크립트·모델 호출 어댑터 제공. NVIDIA GPU 모델 추론·공장 VLN 성능은 미검증.
 - VLN 실행·평가 목표 설정: [VLN.md](docs/VLN.md).
 - 구역 간 경로 교체: `g1_factory/routes.py`.
@@ -144,4 +165,4 @@ MUJOCO_GL=osmesa python scripts/render_scene.py --scenario warehouse_tour
 - 보행 정책 교체: `g1_factory/locomotion.py`. 관측·관절 순서 일치 필요.
 - 위치 추정: 시뮬레이터 정답 pose. SPL·nDTW는 지시문·정답 경로 데이터셋 구성 후 확장.
 
-[검증 결과](docs/VALIDATION.md) · [환경 변경](docs/FACTORY.md) · [도구·모델 선정](docs/DECISIONS.md) · [출처·라이선스](THIRD_PARTY.md)
+[계층형 VLN](docs/HVLN.md) · [ROS 2 인터페이스](docs/ROS2_INTERFACE.md) · [검증 결과](docs/VALIDATION.md) · [환경 변경](docs/FACTORY.md) · [도구·모델 선정](docs/DECISIONS.md) · [출처·라이선스](THIRD_PARTY.md)

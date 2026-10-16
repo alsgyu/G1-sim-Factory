@@ -262,35 +262,38 @@ def _rack(world,metadata,zid,shelf):
 
 
 def _workbench(world,metadata,name,x,y,width=3.4,depth=1.4,inspection=False):
-    _solid(world,metadata,name+"_collision",[x,y,.59],[width/2,depth/2,.59],(0,0,0,0),group="3")
-    _vbox(world,name+"_top",[x,y,1.13],[width/2,depth/2,.065],(.78,.80,.79,1))
+    # Standing-work height (~0.95 m top) so G1's ~1.24 m head camera sees parts on top.
+    _solid(world,metadata,name+"_collision",[x,y,.475],[width/2,depth/2,.475],(0,0,0,0),group="3")
+    _vbox(world,name+"_top",[x,y,.88],[width/2,depth/2,.065],(.78,.80,.79,1))
     for i,dx in enumerate((-width/2+.1,width/2-.1)):
         for j,dy in enumerate((-depth/2+.1,depth/2-.1)):
-            _vbox(world,f"{name}_leg_{i}_{j}",[x+dx,y+dy,.53],[.075,.075,.53],(.18,.26,.31,1))
+            _vbox(world,f"{name}_leg_{i}_{j}",[x+dx,y+dy,.41],[.075,.075,.41],(.18,.26,.31,1))
     if inspection:
-        _vbox(world,name+"_gantry_a",[x-.8,y,1.7],[.065,.08,.5],(.28,.35,.38,1))
-        _vbox(world,name+"_gantry_b",[x+.8,y,1.7],[.065,.08,.5],(.28,.35,.38,1))
-        _vbox(world,name+"_gantry_top",[x,y,2.22],[.87,.08,.065],(.28,.35,.38,1))
-        _vbox(world,name+"_camera",[x,y,2.06],[.13,.13,.15],(.11,.13,.15,1))
-        _vbox(world,name+"_part",[x,y,1.3],[.45,.35,.1],(.41,.52,.59,1))
+        _vbox(world,name+"_gantry_a",[x-.8,y,1.45],[.065,.08,.5],(.28,.35,.38,1))
+        _vbox(world,name+"_gantry_b",[x+.8,y,1.45],[.065,.08,.5],(.28,.35,.38,1))
+        _vbox(world,name+"_gantry_top",[x,y,1.97],[.87,.08,.065],(.28,.35,.38,1))
+        _vbox(world,name+"_camera",[x,y,1.81],[.13,.13,.15],(.11,.13,.15,1))
+        # The inspected part contrasts with the light table top so a camera/VLM can tell it apart.
+        _vbox(world,name+"_part",[x,y,1.065],[.22,.16,.12],(.88,.46,.12,1))
     else:
-        _vbox(world,name+"_toolboard",[x,y+depth/2-.04,1.63],[width/2,.06,.4],(.24,.36,.41,1))
+        _vbox(world,name+"_toolboard",[x,y+depth/2-.04,1.38],[width/2,.06,.4],(.24,.36,.41,1))
         for i in range(5):
-            _vbox(world,f"{name}_tool_{i}",[x-width*.32+i*width*.16,y+depth/2-.12,1.63],[.035,.03,.22],(.77,.73,.56,1))
-        _vbox(world,name+"_part",[x,y,1.30],[.55,.35,.12],(.44,.49,.50,1))
+            _vbox(world,f"{name}_tool_{i}",[x-width*.32+i*width*.16,y+depth/2-.12,1.38],[.035,.03,.22],(.77,.73,.56,1))
+        _vbox(world,name+"_part",[x,y,1.065],[.55,.35,.12],(.44,.49,.50,1))
 
 
 def _conveyor(world,metadata,name,x,y,length=9):
-    _solid(world,metadata,name+"_collision",[x,y,.56],[length/2,.78,.56],(0,0,0,0),group="3")
-    _vbox(world,name+"_belt",[x,y,1.05],[length/2,.7,.1],(.12,.18,.21,1))
+    # Belt top at 0.85 m (typical assembly conveyor) keeps packages in G1's camera view.
+    _solid(world,metadata,name+"_collision",[x,y,.45],[length/2,.78,.45],(0,0,0,0),group="3")
+    _vbox(world,name+"_belt",[x,y,.75],[length/2,.7,.1],(.12,.18,.21,1))
     for side in (-1,1):
-        _vbox(world,f"{name}_rail_{side}",[x,y+side*.77,1.05],[length/2,.06,.15],(.61,.64,.63,1))
+        _vbox(world,f"{name}_rail_{side}",[x,y+side*.77,.80],[length/2,.06,.10],(.61,.64,.63,1))
     for index in range(4):
         dx=-length*.38+index*length*.25
         for side in (-1,1):
-            _vbox(world,f"{name}_leg_{index}_{side}",[x+dx,y+side*.55,.5],[.075,.075,.5],(.33,.40,.43,1))
-        _vbox(world,f"{name}_package_{index}",[x+dx,y,1.39],[.55,.45,.24],(.72,.55,.34,1))
-        _vbox(world,f"{name}_tape_{index}",[x+dx,y,1.635],[.07,.45,.005],(.90,.79,.53,1))
+            _vbox(world,f"{name}_leg_{index}_{side}",[x+dx,y+side*.55,.33],[.075,.075,.33],(.33,.40,.43,1))
+        _vbox(world,f"{name}_package_{index}",[x+dx,y,1.09],[.55,.45,.24],(.72,.55,.34,1))
+        _vbox(world,f"{name}_tape_{index}",[x+dx,y,1.335],[.07,.45,.005],(.90,.79,.53,1))
 
 
 def _cart(world,metadata,name,x,y):
@@ -404,6 +407,17 @@ def build_scene(config_path: str | Path, upstream_root: str | Path, output_path:
     pelvis=world.find(".//body[@name='pelvis']")
     if pelvis is None: raise ValueError("Upstream G1 XML has no pelvis body")
     ET.SubElement(pelvis,"camera",name="ego_rgb",pos="0.15 0 0.50",xyaxes="0 -1 0 0 0 1",fovy="75")
+    # Head sensor suite of a G1 EDU (RealSense D435i + Livox MID-360), approximated
+    # on the pelvis because waist/head are fixed in the 12-DOF model. The D435i RGB
+    # HFOV is ~69 deg; at 640x480 that is fovy 54.9. Pitch -10 deg is an assumption.
+    pitch=math.radians(10)
+    ET.SubElement(pelvis,"camera",name="head_rgbd",pos="0.12 0 0.45",
+                  xyaxes=_fmt([0,-1,0,math.sin(pitch),0,math.cos(pitch)]),fovy="54.9")
+    ET.SubElement(pelvis,"site",name="livox_frame",pos="0.05 0 0.42",size=".02",rgba="0 0 0 0")
+    sensor_block=root.find("sensor")
+    if sensor_block is None: sensor_block=ET.SubElement(root,"sensor")
+    ET.SubElement(sensor_block,"gyro",name="livox_imu_gyro",site="livox_frame")
+    ET.SubElement(sensor_block,"accelerometer",name="livox_imu_accel",site="livox_frame")
     for geom in list(world.findall("geom")):
         if geom.get("type")=="plane": world.remove(geom)
     asset=root.find("asset")
@@ -411,7 +425,7 @@ def build_scene(config_path: str | Path, upstream_root: str | Path, output_path:
     ET.SubElement(asset,"texture",name="factory_sky",type="skybox",builtin="gradient",
                   rgb1=".58 .66 .70",rgb2=".88 .91 .91",width="512",height="3072")
     output=Path(output_path).expanduser().resolve(); output.parent.mkdir(parents=True,exist_ok=True)
-    metadata={"scene_path":str(output),"config":copy.deepcopy(config),"zones":{},"obstacles":[],"camera_names":{"ego":"ego_rgb","map":"map_camera"},"sensor_names":[],"synthetic_temperature":True,"bounds":[-25,-17,53,17],"warehouse_bounds":[-24,-16,24,16],"office_bounds":[28,-12,52,12]}
+    metadata={"scene_path":str(output),"config":copy.deepcopy(config),"zones":{},"obstacles":[],"camera_names":{"ego":"ego_rgb","map":"map_camera","head_rgbd":"head_rgbd"},"sensor_names":[],"synthetic_temperature":True,"bounds":[-25,-17,53,17],"warehouse_bounds":[-24,-16,24,16],"office_bounds":[28,-12,52,12]}
     for z in config["zones"]:
         metadata["zones"][z["id"]]={**copy.deepcopy(z),"shelves":{},"sensors":[],"origin":[0,0]}
     ET.SubElement(world,"geom",name="factory_floor",type="plane",pos="14 0 0",size="40 18 .1",rgba=".66 .69 .69 1",contype="1",conaffinity="1",condim="3",friction=_fmt(config.get("simulation",{}).get("floor_friction",[1,.005,.0001])))

@@ -1,0 +1,41 @@
+# ROS 2 Humble runtime for the G1 MuJoCo simulation and the VLN navigation nodes.
+# Ubuntu 22.04 / Python 3.10. Works on amd64 and arm64 (Apple silicon via Docker Desktop).
+# NaVILA itself still runs in its own CUDA environment (scripts/setup_navila.sh).
+FROM ros:humble-ros-base-jammy
+
+ARG TARGETARCH
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-pip git curl \
+        libgl1 libegl1 libgles2 libosmesa6 libgl1-mesa-dri libglfw3 \
+        fonts-dejavu-core \
+        ros-humble-rmw-cyclonedds-cpp \
+        ros-humble-sensor-msgs-py \
+        ros-humble-tf2-ros-py \
+        ros-humble-rosbag2-storage-mcap \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU torch keeps CUDA out of the simulation image; PyPI aarch64 wheels are CPU-only.
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        python3 -m pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu; \
+    else \
+        python3 -m pip install torch==2.7.1; \
+    fi \
+    && python3 -m pip install "mujoco==3.5.0" "numpy==1.26.4" "PyYAML>=6.0,<7" "Pillow>=10,<13" "pytest==8.4.2"
+
+# Unitree's G1 SDK stack uses CycloneDDS; keep the same RMW for the simulated graph.
+# The repository is mounted at /ws. NVIDIA GPUs: run with --gpus all and
+# NVIDIA_DRIVER_CAPABILITIES=all so EGL uses the GPU instead of Mesa llvmpipe.
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+    CYCLONEDDS_URI=file:///ws/configs/cyclonedds.xml \
+    MUJOCO_GL=egl \
+    NVIDIA_DRIVER_CAPABILITIES=all \
+    PYTHONPATH=/ws
+
+WORKDIR /ws
+COPY docker/ros_entrypoint.sh /g1_entrypoint.sh
+ENTRYPOINT ["/g1_entrypoint.sh"]
+CMD ["bash"]

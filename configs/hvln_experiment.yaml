@@ -1,0 +1,29 @@
+# Experiment matrix for scripts/hvln_experiment.py (run on the Ubuntu GPU station).
+#
+# Every (condition, task, seed) is one episode = one `ros2 launch launch/g1_hvln.launch.py`.
+# seed 0 uses the exact task spawn; other seeds perturb it (<= 0.3 m, <= 20 deg).
+# The `rule` condition replaces only layer 1 (instruction -> subgoals) with alias matching;
+# target localization and the final check still use the VLM, so the comparison isolates
+# the language-grounding layer.
+tasks: [inspect_conveyor, inspect_dock_en, inspect_dock_cart_ko, inspect_servers_office,
+        inspect_meeting_table_en, inspect_station_paraphrase, json_agent_subgoals]
+seeds: [0, 1, 2]
+conditions:
+  rule:   {planner_mode: rule, vlm_model: "qwen3-vl:8b-instruct"}
+  vlm_4b: {planner_mode: vlm,  vlm_model: "qwen3-vl:4b-instruct"}
+  vlm_8b: {planner_mode: vlm,  vlm_model: "qwen3-vl:8b-instruct"}
+# Shared launch arguments (see launch/g1_hvln.launch.py for all of them).
+launch_args:
+  camera_rate_hz: 30.0
+  render_shadows: true
+  realtime_factor: 1.0
+  monitor: false
+  timeout_s: 900.0
+# One extra episode with topic_monitor enabled, for the ROS 2 interface report
+# (its own launch_args override the shared ones).
+measurement:
+  condition: vlm_8b
+  task: inspect_conveyor
+  seed: 0
+  launch_args: {camera_rate_hz: 30.0}
+episode_wall_timeout_s: 3600

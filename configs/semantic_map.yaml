@@ -1,0 +1,137 @@
+# Semantic map for hierarchical VLN (layer 1: language -> map goal poses).
+#
+# The eight semantic zones are added automatically from configs/factory.yaml
+# (pose = zone `goal`, facing the zone centre). This file adds landmarks inside
+# or between zones. `pose` is an obstacle-free APPROACH pose [x, y, yaw] in the
+# world/map frame (metres, radians): where G1 should stand, facing the object
+# from ~1.5-1.8 m so the whole object is inside the head camera view.
+# tests/test_planning.py checks every pose keeps >= 0.6 m from mapped obstacles.
+#
+# Aliases are matched case-insensitively and with whitespace removed, so Korean
+# particles ("검사구역으로", "충전 구역에서") still match. Longest alias wins.
+# In a real deployment this file is replaced by a perception-built semantic map
+# (e.g. open-vocabulary detections fused on a SLAM map); the interface is the same.
+zone_aliases:
+  material_storage: [material storage, materials storage, storage area, storage zone, rack area, shelving area, 자재 창고, 자재창고, 자재 보관, 선반 구역, 창고 구역]
+  assembly_line: [assembly line, assembly area, assembly zone, production line, 조립 라인, 조립라인, 조립 구역, 생산 라인]
+  inspection: [quality inspection, inspection area, inspection zone, inspection, qa area, 품질 검사, 검사 구역, 검사구역, 검사장]
+  charging: [charging station, charging area, charging zone, charging, 충전 구역, 충전구역, 충전소, 충전 스테이션]
+  office_workstations: [engineering workstations, workstations, workstation room, work room, office workstations, 업무실, 사무 공간, 작업실, 엔지니어링 업무실]
+  office_meeting: [meeting room, conference room, office meeting room, 회의실, 미팅룸]
+  office_lounge: [staff lounge, lounge, break room, office lounge, 휴게실, 라운지]
+  office_control: [operations control, control room, operations room, office control room, 관제실, 통제실, 운영실]
+landmarks:
+  - id: main_aisle_crossing
+    label: Main aisle crossing
+    zone: transit
+    pose: [0.0, 0.0, 0.0]
+    aliases: [main aisle crossing, aisle crossing, central crossing, center of the warehouse, warehouse center, 중앙 교차로, 통로 교차점, 창고 중앙]
+  - id: loading_dock_1
+    label: Loading dock 01
+    zone: material_storage
+    pose: [-19.0, 14.6, 1.5708]
+    aliases: [loading dock 1, loading dock 01, dock 1, dock 01, dock one, 1번 도크, 도크 1, 1번 하역장]
+  - id: loading_dock_2
+    label: Loading dock 02
+    zone: material_storage
+    pose: [-11.0, 14.6, 1.5708]
+    aliases: [loading dock 2, loading dock 02, dock 2, dock 02, dock two, 2번 도크, 도크 2, 2번 하역장]
+  - id: loading_dock_3
+    label: Loading dock 03
+    zone: assembly_line
+    pose: [7.0, 14.6, 1.5708]
+    aliases: [loading dock 3, loading dock 03, dock 3, dock 03, dock three, 3번 도크, 도크 3, 3번 하역장]
+  - id: loading_dock_4
+    label: Loading dock 04
+    zone: assembly_line
+    pose: [17.0, 14.6, 1.5708]
+    aliases: [loading dock 4, loading dock 04, dock 4, dock 04, dock four, 4번 도크, 도크 4, 4번 하역장]
+  - id: assembly_conveyor
+    label: Assembly conveyor
+    zone: assembly_line
+    pose: [10.0, 5.6, 1.5708]
+    aliases: [conveyor, conveyor belt, assembly conveyor, 컨베이어, 컨베이어 벨트]
+  - id: assembly_workbench
+    label: Assembly workbench
+    zone: assembly_line
+    pose: [20.0, 6.4, 1.5708]
+    aliases: [workbench, work bench, tool bench, assembly workbench, 작업대, 공구 작업대]
+  - id: assembly_machine
+    label: Assembly machine cell
+    zone: assembly_line
+    pose: [3.8, 5.8, 1.5708]
+    aliases: [machine cell, assembly machine, cnc machine, machine, 가공기, 설비 셀, 조립 설비]
+  - id: inspection_station_1
+    label: Inspection station 1
+    zone: inspection
+    pose: [-18.0, -5.6, -1.5708]
+    aliases: [inspection station 1, first inspection station, vision station 1, 1번 검사대, 검사대 1]
+  - id: inspection_station_2
+    label: Inspection station 2
+    zone: inspection
+    pose: [-10.0, -5.6, -1.5708]
+    aliases: [inspection station 2, second inspection station, vision station 2, inspection station, 2번 검사대, 검사대 2, 검사대]
+  - id: metrology_cabinet
+    label: Metrology cabinet
+    zone: inspection
+    pose: [-5.6, -8.0, 0.0]
+    aliases: [metrology cabinet, measurement cabinet, inspection cabinet, 측정 캐비닛, 계측 캐비닛]
+  - id: charging_dock_3
+    label: Free charging dock 3 (parking bay and charger)
+    zone: charging
+    # In front of the bay, not inside it: the whole bay (where a cart would park) and the charger are in view.
+    pose: [13.0, -7.4, -1.5708]
+    aliases: [charging dock, free charging dock, empty charging bay, charging bay 3, charging dock 3, charger, 충전 도크, 빈 충전 베이, 충전기, 3번 충전 도크]
+  - id: battery_cabinet
+    label: Battery cabinet
+    zone: charging
+    pose: [7.0, -5.6, -1.5708]
+    aliases: [battery cabinet, battery storage, 배터리 캐비닛, 배터리 보관함]
+  - id: warehouse_office_bridge
+    label: Warehouse-office bridge
+    zone: transit
+    pose: [26.0, 0.0, 0.0]
+    aliases: [bridge, connecting corridor, connector, corridor to the office, 연결 통로, 연결통로, 브리지]
+  - id: office_entrance
+    label: Office entrance
+    zone: transit
+    pose: [30.2, 0.0, 0.0]
+    aliases: [office entrance, office entry, entrance of the office, office, 사무실 입구, 사무동 입구, 사무실]
+    # "office"/"사무실" alone is a container word: dropped when a room inside is also named.
+    generic_aliases: [office, 사무실]
+    contains_zones: [office_workstations, office_meeting, office_lounge, office_control]
+  - id: office_desks
+    label: Engineering desks
+    zone: office_workstations
+    pose: [33.0, 6.2, 1.5708]
+    aliases: [desks, engineering desks, computer desks, 책상, 업무 책상]
+  - id: bookshelf
+    label: Bookshelf
+    zone: office_workstations
+    pose: [36.2, 9.2, 0.0]
+    aliases: [bookshelf, book shelf, bookcase, 책장]
+  - id: meeting_table
+    label: Meeting table
+    zone: office_meeting
+    pose: [46.0, 5.4, 1.5708]
+    aliases: [meeting table, conference table, 회의 테이블, 회의 탁자]
+  - id: coffee_table
+    label: Lounge coffee table
+    zone: office_lounge
+    pose: [32.9, -6.5, -1.5708]
+    aliases: [coffee table, sofa, couch, 커피 테이블, 소파]
+  - id: vending_machine
+    label: Vending machine
+    zone: office_lounge
+    pose: [31.4, -6.2, 3.1416]
+    aliases: [vending machine, snack machine, drink machine, 자판기, 자동판매기]
+  - id: control_consoles
+    label: Control consoles
+    zone: office_control
+    pose: [45.8, -6.6, -1.5708]
+    aliases: [control consoles, operator consoles, monitoring consoles, consoles, 관제 콘솔, 콘솔, 모니터링 데스크]
+  - id: server_racks
+    label: Server racks
+    zone: office_control
+    pose: [48.6, -6.4, 0.0]
+    aliases: [server racks, server rack, servers, server cabinets, 서버 랙, 서버랙, 서버]
