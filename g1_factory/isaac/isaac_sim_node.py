@@ -60,10 +60,37 @@ app = SimulationApp({"headless": not ARGS.gui, "width": 1280, "height": 720})
 
 import numpy as np  # noqa: E402
 import omni.kit.commands  # noqa: E402
+from isaacsim.core.utils.extensions import enable_extension  # noqa: E402
+
+
+def ensure_python_deps():
+    """torch (walking policy) and yaml (its config) ship with Isaac Sim as prebundled extensions;
+    put them on sys.path if a plain import fails."""
+    def importable():
+        try:
+            import torch  # noqa: F401
+            import yaml  # noqa: F401
+            return True
+        except ImportError:
+            return False
+    if importable():
+        return
+    for ext in ("isaacsim.pip.prebundle", "omni.isaac.ml_archive", "isaacsim.ml_archive", "omni.kit.pip_archive"):
+        try:
+            enable_extension(ext)
+            app.update()
+        except Exception:
+            pass
+        if importable():
+            return
+    raise ImportError("torch/yaml not importable in Isaac Sim's Python; install with "
+                      "/isaac-sim/python.sh -m pip install torch pyyaml")
+
+
+ensure_python_deps()
 import omni.usd  # noqa: E402
 from isaacsim.core.api import World  # noqa: E402
 from isaacsim.core.prims import SingleArticulation  # noqa: E402
-from isaacsim.core.utils.extensions import enable_extension  # noqa: E402
 from isaacsim.core.utils.stage import add_reference_to_stage  # noqa: E402
 from isaacsim.core.utils.types import ArticulationAction  # noqa: E402
 from isaacsim.sensors.camera import Camera  # noqa: E402

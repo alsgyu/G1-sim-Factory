@@ -8,8 +8,12 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 import math
 
-import mujoco
 import numpy as np
+
+try:
+    import mujoco
+except ImportError:  # Isaac Sim's Python: only mid360_directions() is used there
+    mujoco = None
 
 
 class RGBDCamera:
