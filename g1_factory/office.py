@@ -363,6 +363,9 @@ def add_office(world: ET.Element, asset: ET.Element, config: dict[str, Any],
                [27.86, 0., 2.3], (-1., 0.), 2.6, .6, (.15, .22, .28))
     _solid(world, metadata, "factory_office_fire_cabinet", [51.75, 1.0, 1.1], [.15, .32, .45], (.78, .06, .05, 1))
     _vbox(world, "factory_office_fire_cabinet_window", [51.59, 1.0, 1.15], [.01, .22, .28], (.85, .85, .82, 1))
+    _vbox(world, "factory_office_fire_cabinet_extinguisher", [51.53, 1.0, 1.08], [.04, .08, .22], (.70, .02, .02, 1))
+    _vbox(world, "factory_office_fire_cabinet_extinguisher_valve", [51.53, 1.0, 1.36], [.035, .05, .06],
+          (.08, .08, .08, 1))
     _wall_sign(asset, world, out, "factory_office_fire_cabinet_sign", "FIRE EXTINGUISHER", None,
                [51.58, 1.0, 1.85], (-1., 0.), 1.1, .28, (.78, .06, .05))
     ET.SubElement(world, "light", name="office_light", pos="40 0 12", dir="0 0 -1",

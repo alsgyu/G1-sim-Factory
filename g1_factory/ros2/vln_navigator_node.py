@@ -31,7 +31,8 @@ from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, a
 from g1_factory.roadmap import RoadMap
 from g1_factory.scene import load_config
 from g1_factory.vlm import VLMClient, encode_jpeg
-from g1_factory.vln_navigator import NavStep, NavTask, VLNNavigator, already_in_front, approach_pose
+from g1_factory.vln_navigator import (NavStep, NavTask, VLNNavigator, already_in_front, approach_pose,
+                                      behind_partition)
 from g1_factory.ros2 import messages as M
 from g1_factory.ros2.qos import TOPICS
 
@@ -322,6 +323,11 @@ class VLNNavigatorNode(Node):
                 self.state, self.arrival = "settling", self.now()
                 return
             center, near = located
+            if behind_partition(center[:2], self.pose[:2], self.costmap.occupied):
+                self.navigator.history.append("the object you selected is behind a wall or glass partition (depth "
+                                              "hit the wall): walk around to it through a doorway first")
+                self.state, self.arrival = "settling", self.now()
+                return
             self.target_xy = [round(float(center[0]), 3), round(float(center[1]), 3)]
             goal = approach_pose(center[:2], near[:2], self.pose[:2], self.standoff, self.costmap.occupied)
             self.report("target_located", target_xy=self.target_xy, approach=[round(v, 3) for v in goal])

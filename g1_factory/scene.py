@@ -398,10 +398,14 @@ def _warehouse(world,asset,config,metadata,output_dir):
     # Distinct, nameable landmarks for instructions such as "go to the red fire extinguisher cabinet".
     _solid(world,metadata,"factory_fire_cabinet_west",[-23.75,1.0,1.1],[.15,.32,.45],(.78,.06,.05,1))
     _vbox(world,"factory_fire_cabinet_west_window",[-23.59,1.0,1.15],[.01,.22,.28],(.85,.85,.82,1))
-    _vbox(world,"factory_fire_cabinet_west_extinguisher",[-23.62,1.0,1.08],[.03,.07,.22],(.70,.02,.02,1))
+    # The extinguisher hangs in front of the pale back panel (glass-front cabinet), so a camera sees it.
+    _vbox(world,"factory_fire_cabinet_west_extinguisher",[-23.53,1.0,1.08],[.04,.08,.22],(.70,.02,.02,1))
+    _vbox(world,"factory_fire_cabinet_west_extinguisher_valve",[-23.53,1.0,1.36],[.035,.05,.06],(.08,.08,.08,1))
     _wall_sign(asset,world,output_dir,"factory_fire_cabinet_west_sign","FIRE EXTINGUISHER",None,[-23.58,1.0,1.85],(1,0),1.1,.28,(.78,.06,.05))
     _solid(world,metadata,"factory_electrical_panel",[23.75,5.0,1.2],[.12,.45,.65],(.08,.25,.62,1))
     _wall_sign(asset,world,output_dir,"factory_electrical_panel_sign","ELECTRICAL PANEL","HIGH VOLTAGE",[23.62,5.0,2.05],(-1,0),1.3,.42,(.08,.25,.62))
+    # Warning label on the panel door itself, at camera height (what "does it carry a warning?" checks).
+    _wall_sign(asset,world,output_dir,"factory_electrical_panel_warning","HIGH VOLTAGE","DANGER",[23.62,5.0,1.30],(-1,0),.62,.34,(.80,.10,.05))
     _wall_sign(asset,world,output_dir,"factory_exit_sign","EXIT  >  OFFICE",None,[23.85,0,2.75],(-1,0),1.8,.45,(.04,.55,.22))
     # Assembly island: two production conveyors, tool benches and machine cells.
     for index,y in enumerate((8.2,12.1)):

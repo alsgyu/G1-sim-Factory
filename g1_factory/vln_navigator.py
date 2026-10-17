@@ -563,6 +563,30 @@ def approach_pose(target_xy, near_xy, robot_xy, standoff=1.4, occupied=None):
     return (float(robot[0]+step*math.cos(bearing)), float(robot[1]+step*math.sin(bearing)), bearing)
 
 
+def behind_partition(target_xy, robot_xy, occupied, max_wall=0.35, open_behind=0.6, step=0.05) -> bool:
+    """The localized point sits on a thin mapped wall with open floor behind it.
+
+    Depth stops at glass partitions and windows, so an object seen through one is localized on the wall
+    (measured: the meeting table seen from the corridor). Wall-mounted objects (cabinets, panels) have the
+    building wall or the map edge behind them, free-standing ones are thicker than a partition.
+    """
+    target, robot = np.asarray(target_xy, float), np.asarray(robot_xy, float)
+    if not occupied(target):
+        return False
+    span = float(np.linalg.norm(target-robot))
+    away = (target-robot)/max(span, 1e-6)
+    s = 0.0
+    while s < span and occupied(target-s*away):
+        s += step
+    near = target-s*away                       # first free point on the robot's side
+    depth = step
+    while depth < 3.0 and occupied(near+depth*away):
+        depth += step
+    if depth-step > max_wall:
+        return False
+    return all(not occupied(near+(depth+k*step)*away) for k in range(int(open_behind/step)))
+
+
 def already_in_front(goal, robot_xy, tolerance=0.4) -> bool:
     """An 'approach' whose stand-off pose is where the robot already stands means the step is done."""
     return math.hypot(goal[0]-robot_xy[0], goal[1]-robot_xy[1]) < tolerance

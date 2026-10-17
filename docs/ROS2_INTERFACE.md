@@ -4,14 +4,14 @@
 
 | 측정 조건 | 값 |
 |---|---|
-| 측정일·환경 | 2026-10-16 · ROS 2 Humble · CycloneDDS · Docker(macOS M1 Pro, CPU 렌더링) |
-| 에피소드 | 센서·상태 토픽: `inspect_conveyor`(2026-10-16, 카메라 30 Hz, 시뮬레이션 84.6초). VLN 토픽(`/vln/nav_*`, `/vln/decision_image`, VLN `/plan`): `inspect_station_paraphrase`(2026-10-17, VLN 모드, 카메라 10 Hz, 시뮬레이션 89.6초). VLM Qwen3-VL 4B |
+| 측정일·환경 | **Isaac Sim 5.1** (2026-10-17, Ubuntu, RTX 5080 Laptop, Fast DDS, 파일럿 측정 회차 `inspect_conveyor`, 카메라 30 Hz, Qwen3-VL-8B). 비교: MuJoCo(2026-10-16, macOS Docker, CycloneDDS) |
+| 원본 | `results/isaac_pilot_2026-10-17/topic_tables.md` (Isaac). MuJoCo와 다른 값은 표 안에 괄호로 표기 |
 | 크기 | 메시지 1개의 **직렬화(CDR) 바이트** = DDS가 실어 나르는 페이로드. RTPS·UDP·IP 헤더와 조각화 오버헤드 제외 |
 | 주기 | 시뮬레이션 시간 기준 실측. 발행 주기는 launch 기본값 |
 | 대역폭 | 평균 크기 × 발행 주기. 실시간(RTF 1)일 때의 벽시계 대역폭 |
 | 측정 도구 | `topic_monitor` 노드(raw 구독 + ROS 그래프 API) → `topic_stats.json` → `scripts/topic_report.py` |
 
-- 크기는 하드웨어와 무관. 이 Mac은 CPU 렌더링이라 실시간의 0.15배로 돌았고, 벽시계 대역폭도 같은 비율로 낮았음. Ubuntu GPU에서 RTF ≈ 1이면 아래 대역폭 그대로.
+- 크기는 시뮬레이터와 거의 무관(같은 `SimTopics` 발행 코드). 다른 것은 LiDAR 반사점 수(장면 표면에 따라 다름): Isaac 평균 약 18,000점, MuJoCo 약 12,500점.
 - 재측정(Isaac Sim): `python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_<날짜>` → `measurement/topic_tables.md`. 메시지 크기·QoS·발행 코드는 MuJoCo와 같음(`SimTopics` 공용). Isaac LiDAR 점 수는 장면 반사점 수에 따라 다름.
 
 ## 1. 토픽별 메시지 타입 (전체 통합 시스템)
@@ -66,7 +66,7 @@ ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `P
 |---|---|---|---:|---:|
 | `/camera/camera/color/image_raw` | 640×480 rgb8 = 921,600 B 픽셀 + 헤더 72 B | **921,672 B** (고정) | 30 Hz | **27.65 MB/s** |
 | `/camera/camera/aligned_depth_to_color/image_raw` | 640×480 16UC1 = 614,400 B + 72 B | **614,472 B** (고정) | 30 Hz | **18.43 MB/s** |
-| `/livox/lidar` | 20,000 ray/scan 중 반사점 약 12,000–13,000점 × 26 B | **325.7 KB** (314.4–338.5 KB) | 10 Hz | **3.26 MB/s** |
+| `/livox/lidar` | 20,000 ray/scan 중 반사점 약 17,500–18,400점 × 26 B (MuJoCo 12,000–13,000점) | **470.0 KB** (456.2–479.7 KB; MuJoCo 325.7 KB) | 10 Hz | **4.70 MB/s** |
 | `/livox/imu` | 각속도·가속도 | 324 B | 200 Hz | 64.8 KB/s |
 | `/odom` | pose·twist·공분산 | 724 B | 50 Hz | 36.2 KB/s |
 | `/joint_states` | 12관절 × (위치·속도·토크) | 644 B | 50 Hz | 32.2 KB/s |
@@ -76,7 +76,7 @@ ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `P
 | `/clock` | sim time | 12 B | 100 Hz | 1.2 KB/s |
 | `/sim/status` | JSON | 436–452 B | 2 Hz | 0.9 KB/s |
 | `/map` | 0.1 m 격자 780×340 = 265,200 셀 | **265,304 B** | 1회 (latched) | - |
-| `/vln/decision_image` | JPEG q80 640×480 (VLM이 본 영상 + 번호 웨이포인트) | **31.4 KB** (27.7–35.1 KB) | VLN 결정마다 (이 회차 4회) | - |
+| `/vln/decision_image` | JPEG q80 640×480 (VLM이 본 영상 + 번호 웨이포인트) | **25.7 KB** (20.3–29.4 KB) | VLN 결정마다 (측정 회차 5회) | - |
 | `/vln/inspection_image` | JPEG q85 640×480 | 19.3–20.7 KB | 작업당 1회 | - |
 | `/plan` | 0.1 m 간격 PoseStamped. VLN: 결정 1회의 직선 구간(≤8 m), 회전·정지 = 1점 | 100 B – 5.9 KB (평균 3.6 KB) | VLN 결정마다 + 우회 | - |
 | `/vln/nav_request` | JSON: 지시·단계 계획·대상·명판 글자 | 512 B | 작업당 1회 (+취소) | - |
@@ -87,7 +87,7 @@ ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `P
 | `/vln/instruction` | 지시문 UTF-8 | 96–132 B (한글 문장 1개) | 작업당 1회 | - |
 | `/goal_pose`, `/vln/subgoals` | 목표 자세, 하위목표 2개 (`oracle` 기준선 전용) | 76 B, 140 B | 목표마다, 작업당 1회 | - |
 
-- **주기 토픽 합계 ≈ 49.5 MB/s (≈ 396 Mbit/s).** 이 중 RGB·깊이가 93%.
+- **주기 토픽 합계 ≈ 51.0 MB/s (≈ 408 Mbit/s, Isaac).** 이 중 RGB·깊이가 90%. (MuJoCo 49.5 MB/s, LiDAR 점 수 차이)
 - `/livox/lidar` 점 수는 장면에 따라 다름: 반사가 없는(40m 밖·하늘 방향) ray는 제외. 실내 벽이 가까우면 최대 20,000점 ≈ 520 KB/scan → 5.2 MB/s.
 - 점 하나 26 B: `x,y,z,intensity`(float32×4) + `tag,line`(uint8×2) + `timestamp`(float64). `livox_ros_driver2` PointCloud2 배치(packed `LivoxPointXyzrtlt`)와 동일.
 
@@ -109,7 +109,7 @@ ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `P
 
 ## 3. Publisher 옵션 (발행 주기·QoS)
 
-QoS 표기: 신뢰성 / 지속성 / 이력(깊이). 정의는 한 파일에 모음: `g1_factory/ros2/qos.py`.
+QoS 표기: 신뢰성 / 지속성 / 이력(깊이). 정의는 한 파일에 모음: `g1_factory/ros2/qos.py`. 신뢰성·지속성은 실행 중 ROS 그래프에서 확인(Isaac·MuJoCo 동일). 이력 깊이는 Fast DDS 그래프 API가 알려주지 않아(`UNKNOWN`) 코드 값.
 
 | 토픽 | 발행 노드 | 주기·발행 시점 | QoS | frame_id |
 |---|---|---|---|---|
@@ -228,6 +228,7 @@ flowchart LR
 | 둘러보기 (4방향 중 선택) | `vln_navigator` | 대상 구역 첫 도착 시 1회 | 195 KB (JPEG 4장 + 지시) | 약 0.3 KB | 22.5 s |
 | 확인 VQA | `vln_agent` | 도착 후 1회 | 29.0 KB (JPEG 1장 + 질문) | 0.6 KB | 8.4 s |
 
+- Isaac Sim 파일럿(Qwen3-VL-8B, RTX 5080 Laptop): 결정당 VLM 지연 평균 **4.28 s**(9개 과제). 아래 표의 지연은 Mac(M1, 4B) 값.
 - 측정: `inspect_station_paraphrase` VLN 회차(결정 4회), 둘러보기는 `inspect_conveyor` 회차. 요청 크기는 HTTP 본문(JSON, 이미지 base64) 바이트.
 - 둘러보기 요청은 영상 4장(Ollama 기준 장당 약 1,050 토큰) → VLM 서버 문맥 길이 8192 이상 필요(`OLLAMA_CONTEXT_LENGTH=8192`, vLLM `--max-model-len`).
 - 작업 1회당 VLM 트래픽 약 0.5 MB(결정 4회 + 둘러보기 1회) – 2.7 MB(결정 40회). 원시 센서 스트림(약 50 MB/s) 대비 무시할 수준 → VLM 서버는 원격에 두어도 됨. 위 지연은 Mac(M1, Metal) 값이며, Ubuntu GPU 지연은 실험 행렬의 `results.md`로 측정([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 6절).

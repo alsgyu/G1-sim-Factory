@@ -264,3 +264,16 @@ def test_waypoints_are_offered_when_the_robot_brushed_an_obstacle(roadmap):
     xy = (22.46, 15.18)
     assert roadmap.costmap.distance[roadmap.costmap.grid.world_to_cell(np.array(xy))] < 0.45
     assert roadmap.candidates(xy, 0.13)
+
+
+@pytest.mark.parametrize("target, robot, through_glass", [
+    ((41.924, 3.059), (40.19, 1.65), True),     # meeting table seen through the glass wall (Isaac pilot)
+    ((-9.863, -8.077), (-6.34, -4.12), False),  # STATION 2 table
+    ((13.2, 7.74), (13.45, 6.27), False),       # conveyor A
+    ((-23.7, 1.0), (-21.0, 1.0), False),        # fire cabinet on the west wall
+    ((23.7, 5.0), (21.0, 5.0), False),          # electrical panel on the east wall
+    ((13.0, -11.0), (13.0, -7.4), False),       # charging bay floor (free)
+])
+def test_targets_behind_glass_partitions_are_not_approached(roadmap, target, robot, through_glass):
+    from g1_factory.vln_navigator import behind_partition
+    assert behind_partition(target, robot, roadmap.costmap.occupied) is through_glass

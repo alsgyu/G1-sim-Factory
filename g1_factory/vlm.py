@@ -132,7 +132,8 @@ the centre of the head-camera image. Answer the operator's question using only w
 the target's work surface, belt, shelf or bay count as being "on"/"in" the target. In this simulated factory, \
 parts, boxes and packages are plain coloured blocks. First describe what is actually on or at the target \
 (`observed`), then answer: `verdict` must follow from `observed` (if `observed` lists the object in question on \
-the target, the verdict is "yes"). Absence is an answer: if the target is clearly in view and the object or \
+the target, the verdict is "yes"). `verdict` answers the question exactly as asked: for "is X empty / free / \
+off?", an empty / free / off X is "yes". Absence is an answer: if the target is clearly in view and the object or \
 person in question is not there, the verdict is "no". Use "unknown" only when the target itself is not visible \
 or the view is blocked. Reply with one JSON object and nothing else, fields in this order:
 {"observed": "<objects on/at the target, in English>", "target_visible": true|false, \
