@@ -1,0 +1,155 @@
+{
+  "task": "inspect_dock_en",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "Go to the charging area and check whether the free charging dock is empty.",
+  "state": "done",
+  "expected_place": "charging_dock_3",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the charging area",
+      "region": "charging"
+    },
+    {
+      "goal": "find the free charging dock (no cart parked) and stand in front of it",
+      "region": "charging"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 0.528,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 8,
+  "vln_actions": [
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "approach"
+  ],
+  "start_pose": [
+    -11.855825424194336,
+    -4.127030849456787,
+    -4.9950812341181045e-05
+  ],
+  "final_pose": [
+    11.2217378616333,
+    -12.52398681640625,
+    -0.3937946759850535
+  ],
+  "final_distance_to_expected_place_m": 5.424,
+  "target_xy": [
+    12.625,
+    -13.124
+  ],
+  "inspection": {
+    "observed": "no cart parked at the free charging dock",
+    "target_visible": true,
+    "verdict": "no",
+    "status": "ok",
+    "answer": "No cart is parked at the free charging dock."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": false,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 30.475,
+  "shortest_path_m": 25.334874865864162,
+  "task_sim_time_s": 125.39,
+  "plans": 12,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.011,
+    0.012,
+    0.013,
+    0.028
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.865210240000124,
+      "request_bytes": 1895,
+      "response_bytes": 776,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the charging area\",\n      \"region\": \"charging\"\n    },\n    {\n      \"goal\": \"find the free charging dock (no cart parked) and stand in front of it\",\n      \"region\": \"charging\"\n    }\n  ],\n  \"target\": \"the free charging dock (no cart parked)\",\n  \"target_label\": \"\",\n  \"question\": \"is a cart parked at the free charging dock?\",\n  \"language\": \"en\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.75,
+      "request_bytes": 45081,
+      "action": "move",
+      "raw": "{\"thought\": \"Move toward waypoint 1 to get closer to the charging station area.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.74,
+      "request_bytes": 37761,
+      "action": "move",
+      "raw": "{\"thought\": \"Move to waypoint 1 to get closer to the charging station area where the free charging dock is located.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.21,
+      "request_bytes": 123677,
+      "action": "turn",
+      "raw": "{\"seen\": \"charging station sign, carts parked, assembly zone, quality inspection, storage shelves\", \"view\": 2, \"target_visible\": false}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 7.9,
+      "request_bytes": 131921,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find a free charging dock. Waypoint 1 is inside the charging station and closer to the target area, so I should move there.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.29,
+      "request_bytes": 37142,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find the free charging dock. The current view shows the quality inspection area, but not the charging docks. I should turn to look for the charging area.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.13,
+      "request_bytes": 29276,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find the free charging dock. The current view shows two waypoints, but I should look around to locate the charging dock.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.03,
+      "request_bytes": 38033,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find a free charging dock with no cart parked. Waypoint 2 is closer and might lead to an unoccupied dock.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.87,
+      "request_bytes": 56099,
+      "action": "approach",
+      "raw": "{\"thought\": \"I am in the charging station and need to find a free charging dock. The image shows charging stations with visible name plates, including 'CHARGER 3'. I should approach one of them to check if it's free.\", \"action\": \"approach\", \"bbox_2d\": [375, 137, 498, 497]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.7660031309997066,
+      "request_bytes": 27039,
+      "response_bytes": 532,
+      "raw": "{\"observed\": \"no cart parked at the free charging dock\", \"target_visible\": true, \"verdict\": \"no\", \"status\": \"ok\", \"answer\": \"No cart is parked at the free charging dock.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 4.055,
+  "realtime_factor": 0.642,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.46,
+    "camera_publish": 1.92
+  },
+  "success": false,
+  "spl": 0.0,
+  "attempts": 1
+}

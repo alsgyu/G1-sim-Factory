@@ -1,0 +1,375 @@
+{
+  "task": "json_agent_subgoals",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "{\"task_id\": \"agent-007\", \"steps\": [{\"goal\": \"cross the warehouse-office bridge into the office\", \"region\": null}, {\"goal\": \"enter the staff lounge\", \"region\": \"office_lounge\"}, {\"goal\": \"find the vending machine and stand in front of it\", \"region\": \"office_lounge\"}], \"subgoals\": [\"warehouse_office_bridge\", \"vending_machine\"], \"target\": \"vending machine\", \"question\": \"자판기가 넘어지지 않고 정상적으로 서 있는지 확인해.\", \"language\": \"ko\"}",
+  "state": "done",
+  "expected_place": "vending_machine",
+  "planned_subgoals": [],
+  "parser": "external_steps",
+  "steps": [
+    {
+      "goal": "cross the warehouse-office bridge into the office",
+      "region": null
+    },
+    {
+      "goal": "enter the staff lounge",
+      "region": "office_lounge"
+    },
+    {
+      "goal": "find the vending machine and stand in front of it",
+      "region": "office_lounge"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 1.457,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 33,
+  "vln_actions": [
+    "move",
+    "move",
+    "turn",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "turn",
+    "move",
+    "turn",
+    "move",
+    "turn",
+    "approach",
+    "turn",
+    "approach",
+    "stop"
+  ],
+  "start_pose": [
+    12.016074180603027,
+    -4.067922115325928,
+    1.5624668169381346
+  ],
+  "final_pose": [
+    31.17603874206543,
+    -5.271124839782715,
+    -2.78715886835206
+  ],
+  "final_distance_to_expected_place_m": 0.955,
+  "target_xy": [
+    29.8,
+    -6.098
+  ],
+  "inspection": {
+    "observed": "자판기",
+    "target_visible": true,
+    "verdict": "yes",
+    "status": "ok",
+    "answer": "자판기는 정상적으로 서 있으며 넘어져 있지 않습니다."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 134.537,
+  "shortest_path_m": 27.347522036595553,
+  "task_sim_time_s": 482.19,
+  "plans": 35,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.052,
+    0.03,
+    0.022,
+    0.025,
+    0.013,
+    0.023,
+    0.023,
+    0.013,
+    0.022,
+    0.021,
+    0.012,
+    0.015,
+    0.027,
+    0.024,
+    0.062,
+    0.013,
+    0.029,
+    0.034,
+    0.024,
+    0.023
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": null,
+      "request_bytes": null,
+      "response_bytes": null,
+      "raw": null
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.0,
+      "request_bytes": 55567,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to cross the warehouse-office bridge into the office to reach the staff lounge where the vending machine is located.\", \"action\": \"move\", \"waypoint\": 12}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.73,
+      "request_bytes": 21188,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to cross the warehouse-office bridge into the office to reach the staff lounge where the vending machine is located.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.54,
+      "request_bytes": 18412,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to enter the staff lounge to find the vending machine, and the entrance is to the left.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.67,
+      "request_bytes": 22144,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to enter the staff lounge to find the vending machine, and the bridge is the way to get there.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.04,
+      "request_bytes": 41329,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to enter the staff lounge to find the vending machine, and the closest unvisited waypoint is 1.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.75,
+      "request_bytes": 34481,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to cross the warehouse-office bridge into the office to reach the staff lounge where the vending machine is located.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.06,
+      "request_bytes": 36983,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to enter the staff lounge to find the vending machine. The staff lounge entrance is to the right, and waypoint 3 is in that direction.\", \"action\": \"move\", \"waypoint\": 3}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.16,
+      "request_bytes": 45596,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to enter the staff lounge to find the vending machine. Waypoint 4 is the entrance to the staff lounge and is in the direction I should go.\", \"action\": \"move\", \"waypoint\": 4}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.22,
+      "request_bytes": 24509,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view is obstructed, so I should turn to scan the area for the vending machine.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.22,
+      "request_bytes": 32373,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows the meeting room, so I should turn to look for the vending machine in other directions.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.22,
+      "request_bytes": 52042,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The vending machine is likely near the entrance or in a visible area. I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.07,
+      "request_bytes": 42014,
+      "action": "move",
+      "raw": "{\"thought\": \"The vending machine is likely near the right side of the lounge, as indicated by the tall cabinet-like object in the image. I should move closer to investigate.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.1,
+      "request_bytes": 35870,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. Waypoint 1 is in view and likely leads me closer to the target area.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.33,
+      "request_bytes": 31341,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows a window and a potted plant, but no vending machine. I should turn to scan the area for the vending machine.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.91,
+      "request_bytes": 34671,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows a sofa, so I should turn to scan other areas.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.97,
+      "request_bytes": 45494,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. Since it's not visible, I should turn to scan the area for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.7,
+      "request_bytes": 65231,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to search for the vending machine in the staff lounge. Since I've already looked around, I should move to an unvisited waypoint to cover more ground.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.7,
+      "request_bytes": 41115,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows office workstations ahead, but no vending machine is visible. I should explore further by moving to an unvisited waypoint that might lead me closer to the target.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.42,
+      "request_bytes": 28545,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the aisle/corridor and need to enter the staff lounge to find the vending machine. Waypoint 1 is ahead-right and in view, which is a direct path toward the staff lounge.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.17,
+      "request_bytes": 33772,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and need to enter the staff lounge. The closest unvisited waypoint is ahead-right, which will bring me closer to the target region.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.15,
+      "request_bytes": 46636,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and need to enter the staff lounge to find the vending machine. The staff lounge entrance is ahead, and I should move toward it.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.94,
+      "request_bytes": 23359,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the aisle/corridor and need to enter the staff lounge to find the vending machine. The closest unvisited waypoint is 3, which is behind (-179 deg, west), 7.5 m away. Moving to this waypoint will bring me closer to the staff lounge region.\", \"action\": \"move\", \"waypoint\": 3}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.24,
+      "request_bytes": 43137,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and can see the 'STAFF LOUNGE' sign, which is the target region. I should move towards it to find the vending machine.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.66,
+      "request_bytes": 46385,
+      "action": "move",
+      "raw": "{\"thought\": \"I am currently in the aisle/corridor and need to enter the staff lounge to find the vending machine. Waypoint 3 is the entrance to the staff lounge and is unvisited, making it the best choice to proceed toward the target.\", \"action\": \"move\", \"waypoint\": 3}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.33,
+      "request_bytes": 40050,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows a pillar and a potted plant, but no vending machine. I should turn to scan for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.46,
+      "request_bytes": 37338,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows a seating area, but no vending machine is visible. I should explore further by moving to a new waypoint to search for it.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.24,
+      "request_bytes": 26801,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view is obstructed, so I should turn to scan the area for the vending machine.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.33,
+      "request_bytes": 30851,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the staff lounge and need to find the vending machine. The current view shows a corridor ahead, and waypoint 1 is in view, likely leading me closer to the target area.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.12,
+      "request_bytes": 28054,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the vending machine in the staff lounge. Since it's not visible in the current view, I should turn to scan the area for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.43,
+      "request_bytes": 62751,
+      "action": "approach",
+      "raw": "{\"thought\": \"The vending machine is likely near the visible gray machine in the staff lounge.\", \"action\": \"approach\", \"waypoint\": null, \"turn\": null, \"bbox_2d\": [17, 214, 170, 474]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.31,
+      "request_bytes": 128782,
+      "action": "turn",
+      "raw": "{\"seen\": \"a vending machine with buttons\", \"view\": 1, \"target_visible\": true}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.44,
+      "request_bytes": 99705,
+      "action": "approach",
+      "raw": "{\"thought\": \"The vending machine is visible in the current view, so I should approach it directly.\", \"action\": \"approach\", \"bbox_2d\": [148, 0, 666, 999]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.44,
+      "request_bytes": 99705,
+      "action": "stop",
+      "raw": "{\"thought\": \"The vending machine is visible in the current view, so I should approach it directly.\", \"action\": \"approach\", \"bbox_2d\": [148, 0, 666, 999]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.7914510579994385,
+      "request_bytes": 27329,
+      "response_bytes": 531,
+      "raw": "{\"observed\": \"자판기\", \"target_visible\": true, \"verdict\": \"yes\", \"status\": \"ok\", \"answer\": \"자판기는 정상적으로 서 있으며 넘어져 있지 않습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 3.584,
+  "realtime_factor": 0.64,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.48,
+    "camera_publish": 1.9
+  },
+  "success": true,
+  "spl": 0.203,
+  "attempts": 1
+}

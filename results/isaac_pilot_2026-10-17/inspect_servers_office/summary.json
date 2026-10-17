@@ -1,0 +1,200 @@
+{
+  "task": "inspect_servers_office",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "사무동 관제실에 가서 서버 랙의 상태 표시등이 켜져 있는지 확인해.",
+  "state": "done",
+  "expected_place": "server_racks",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the operations control",
+      "region": "office_control"
+    },
+    {
+      "goal": "find the server rack and stand in front of it",
+      "region": "office_control"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 1.378,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 13,
+  "vln_actions": [
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "approach"
+  ],
+  "start_pose": [
+    12.1444730758667,
+    -4.128042221069336,
+    -0.00019355461729885426
+  ],
+  "final_pose": [
+    48.92237854003906,
+    -9.191201210021973,
+    -0.7006265105430041
+  ],
+  "final_distance_to_expected_place_m": 2.81,
+  "target_xy": [
+    50.301,
+    -10.091
+  ],
+  "inspection": {
+    "observed": "서버 랙의 여러 층에 녹색 상태 표시등이 켜져 있음",
+    "target_visible": true,
+    "verdict": "yes",
+    "status": "ok",
+    "answer": "서버 랙의 상태 표시등이 켜져 있습니다."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 62.974,
+  "shortest_path_m": 39.61105837422101,
+  "task_sim_time_s": 236.39,
+  "plans": 17,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.097,
+    0.011,
+    0.019,
+    0.03,
+    0.017,
+    0.021,
+    0.054,
+    0.033,
+    0.043
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.863582342999507,
+      "request_bytes": 1993,
+      "response_bytes": 760,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the operations control\",\n      \"region\": \"office_control\"\n    },\n    {\n      \"goal\": \"find the server rack and stand in front of it\",\n      \"region\": \"office_control\"\n    }\n  ],\n  \"target\": \"server rack 1\",\n  \"target_label\": \"SERVER RACK 1\",\n  \"question\": \"is the status indicator on the server rack lit?\",\n  \"language\": \"ko\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.83,
+      "request_bytes": 42642,
+      "action": "move",
+      "raw": "{\"thought\": \"I am currently at the charging station and need to reach the operations control room. The closest waypoint in view is waypoint 2, which is 8.7 meters closer to the operations control. Moving to waypoint 2 will bring me closer to my target region.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.11,
+      "request_bytes": 40161,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and need to reach the operations control room. Waypoint 1 is ahead and closer to the target, so I should move there.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.18,
+      "request_bytes": 48835,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and need to reach the operations control room. Waypoint 2 is closer to the operations control and is in view, so I should move towards it.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.31,
+      "request_bytes": 43798,
+      "action": "move",
+      "raw": "{\"thought\": \"I am currently in the corridor and need to reach the operations control room. Waypoint 2 is closer to the operations control and is in view, so I should move towards it.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.34,
+      "request_bytes": 35897,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and can see the 'CONTROL ROOM' sign ahead to the right, which is my target region. Moving toward waypoint 3 will bring me closer to the operations control room.\", \"action\": \"move\", \"waypoint\": 3}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.25,
+      "request_bytes": 43900,
+      "action": "move",
+      "raw": "{\"thought\": \"The target is in the operations control room, and waypoint 1 is directly in front of the 'CONTROL ROOM' entrance, which is the correct path to enter the target region.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.04,
+      "request_bytes": 28466,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the aisle and need to reach the operations control room. Waypoint 5 is directly leading me closer to the target region.\", \"action\": \"move\", \"waypoint\": 5}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 7.2,
+      "request_bytes": 154181,
+      "action": "turn",
+      "raw": "{\"seen\": \"view 1: glass wall and reflection; view 2: server racks with labels; view 3: control room sign; view 4: glass partition and workstation sign\", \"view\": 2, \"target_visible\": true}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 16.78,
+      "request_bytes": 187933,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the server rack to check its status light. The server rack is visible in the image, so I should approach it.\", \"action\": \"approach\", \"bbox_2d\": [100, 437, 200, 537]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.49,
+      "request_bytes": 55623,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the server rack in the operations control room. Since previous attempts to identify it failed, I should turn to look in a new direction to locate it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.37,
+      "request_bytes": 38903,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the server rack in the operations control room. The current view shows a workstation area, but no server rack is visible. I should turn to scan other areas in the room.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.95,
+      "request_bytes": 68145,
+      "action": "move",
+      "raw": "{\"thought\": \"I have already looked around and need to move to an unvisited waypoint to find the server rack.\", \"action\": \"move\", \"waypoint\": 3}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.47,
+      "request_bytes": 66668,
+      "action": "approach",
+      "raw": "{\"thought\": \"The server rack is visible in the image with a clear name plate 'SERVER RACK 3', so I should approach it to inspect its status.\", \"action\": \"approach\", \"bbox_2d\": [312, 19, 500, 150]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 3.5017609970000194,
+      "request_bytes": 35508,
+      "response_bytes": 571,
+      "raw": "{\"observed\": \"서버 랙의 여러 층에 녹색 상태 표시등이 켜져 있음\", \"target_visible\": true, \"verdict\": \"yes\", \"status\": \"ok\", \"answer\": \"서버 랙의 상태 표시등이 켜져 있습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 4.779,
+  "realtime_factor": 0.633,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.47,
+    "camera_publish": 1.89
+  },
+  "success": true,
+  "spl": 0.629,
+  "attempts": 1
+}
