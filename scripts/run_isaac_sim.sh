@@ -22,6 +22,9 @@ if [[ ! -d "$CACHE/cache/main" || "$(stat -c %u "$CACHE/cache/main" 2>/dev/null)
 fi
 [[ -f outputs/isaac/campus.usd ]] || { echo "Missing outputs/isaac/campus.usd: run scripts/export_campus_usd.py first" >&2; exit 1; }
 [[ -f external/unitree_rl_gym/resources/robots/g1_description/g1_12dof.urdf ]] || { echo "Missing G1 URDF: run scripts/fetch_assets.py" >&2; exit 1; }
+# The container user (uid 1234) reads the repository: make our files world-readable (assets fetched
+# by older versions of fetch_assets.py were owner-only).
+chmod -R a+rX external outputs/isaac configs g1_factory 2>/dev/null || true
 RUN=(docker run --rm --gpus all --network host --ipc host
   -e ACCEPT_EULA=Y -e PRIVACY_CONSENT="${PRIVACY_CONSENT:-N}"
   -e ROS_DISTRO=humble -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp

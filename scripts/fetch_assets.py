@@ -45,6 +45,7 @@ def fetch_one(name: str, expected: dict, destination: Path, timeout: float,
     if target.exists():
         # A local change is a review decision, never an automatic overwrite.
         actual = verify(target.read_bytes(), expected, name)
+        target.chmod(0o644)  # readable by other users (Isaac Sim container)
         return name, actual, "verified"
     if verify_only:
         raise FileNotFoundError(f"Missing asset: {name}")
@@ -60,9 +61,13 @@ def fetch_one(name: str, expected: dict, destination: Path, timeout: float,
                                              delete=False) as temporary:
                 temporary_path = Path(temporary.name)
                 temporary.write(content)
+            # NamedTemporaryFile is owner-only (0600); other users (Isaac Sim's container runs as
+            # uid 1234) must be able to read the assets.
+            os.chmod(temporary_path, 0o644)
             try:
                 if target.exists():
                     actual = verify(target.read_bytes(), expected, name)
+                    os.chmod(target, 0o644)
                 else:
                     os.replace(temporary_path, target)
             finally:
