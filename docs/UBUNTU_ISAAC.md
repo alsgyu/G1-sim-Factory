@@ -254,6 +254,18 @@ G1_DDS=fastdds bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py si
 - 끝나면 터미널 1은 Ctrl-C. 다른 과제는 `configs/vln_tasks.yaml`의 그 과제 `spawn`으로 Isaac을 띄우고 `task:=`만 바꿈.
 - 8B가 기본. 4B로 보려면 `vlm_model:=qwen3-vl:4b-instruct`를 덧붙임.
 
+### 7.0 VLN 과정을 화면으로 보기
+
+터미널 1에서 `--gui`를 붙이면 Isaac Sim 창이 뜨고, 뷰포트 카메라가 로봇 뒤 위쪽에서 따라감(창 렌더링 때문에 시뮬레이션이 조금 느려짐):
+
+```bash
+bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0
+```
+
+- 터미널 2의 launch 로그에 VLN 결정마다 `feedback: decision {"action", "waypoint", …, "thought": "…"}`로 VLM이 고른 행동과 이유가 실시간으로 나옴.
+- VLM이 결정할 때 본 영상(번호 웨이포인트, 둘러보기 4방향)은 결정마다 `outputs/hvln_<과제>/decisions/`에 저장됨 → 이미지 뷰어로 열어 두면 새 장이 계속 추가됨: `eog outputs/hvln_inspect_conveyor/decisions/ &`.
+- 실험 행렬(8절)은 화면 없이(headless) 실행. 행렬이 도는 동안에는 GUI 실행을 같이 하지 말 것(GPU 공유).
+
 ### 7.1 외부 에이전트로 직접 지시하기
 
 평가기 없이 그래프만 띄우고(`agent:=false`, Ctrl-C까지 계속 실행):

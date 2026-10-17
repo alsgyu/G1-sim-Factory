@@ -3,6 +3,7 @@
 #
 #   bash scripts/run_isaac_sim.sh --smoke-test 8                 # bring-up check, no ROS
 #   bash scripts/run_isaac_sim.sh --spawn -12 3.8 0              # publish /g1_sim topics for the VLN stack
+#   bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0        # same, with the Isaac Sim window (follow camera)
 #   ISAAC_DETACH=1 ISAAC_NAME=g1_isaac bash scripts/run_isaac_sim.sh --spawn ...   # background (runner)
 #
 # Needs: NVIDIA driver + nvidia-container-toolkit, `docker pull nvcr.io/nvidia/isaac-sim:5.1.0`,
@@ -39,6 +40,12 @@ RUN=(docker run --rm --gpus all --network host --ipc host
   -v "$CACHE/pkg:/isaac-sim/.local/share/ov/pkg:rw"
   -v "$PWD:/ws:ro" -e PYTHONDONTWRITEBYTECODE=1 -u 1234:1234
   --entrypoint /isaac-sim/python.sh)
+if [[ " $* " == *" --gui "* ]]; then
+  # Isaac Sim window on this desktop (X11): allow local containers to use the display once per login.
+  [[ -n "${DISPLAY:-}" ]] || { echo "--gui needs a desktop session (DISPLAY is empty)" >&2; exit 1; }
+  xhost +local: >/dev/null
+  RUN+=(-e DISPLAY="$DISPLAY" -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
+fi
 if [[ "${ISAAC_DETACH:-0}" == "1" ]]; then
   RUN+=(-d --name "${ISAAC_NAME:-g1_isaac}")
 fi

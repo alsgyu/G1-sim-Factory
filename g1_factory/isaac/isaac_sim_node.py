@@ -353,6 +353,22 @@ def smoke_test(sim: IsaacG1):
     return report
 
 
+_view = {}
+
+
+def follow_camera(pos, rot):
+    """--gui: keep the viewport camera behind and above the walking robot (smoothed)."""
+    from isaacsim.core.utils.viewports import set_camera_view
+    forward = np.array([rot[0, 0], rot[1, 0], 0.0])
+    forward /= max(np.linalg.norm(forward), 1e-6)
+    eye = np.asarray(pos)-3.6*forward+np.array([0.0, 0.0, 2.4])
+    target = np.asarray(pos)+1.5*forward+np.array([0.0, 0.0, 0.6])
+    if "eye" in _view:
+        eye, target = 0.85*_view["eye"]+0.15*eye, 0.85*_view["target"]+0.15*target
+    _view["eye"], _view["target"] = eye, target
+    set_camera_view(eye=eye, target=target, camera_prim_path="/OmniverseKit_Persp")
+
+
 def run_ros(sim: IsaacG1):
     rclpy = import_rclpy()
     from g1_factory.ros2.sim_bridge import Scheduler, SimTopics
@@ -380,6 +396,8 @@ def run_ros(sim: IsaacG1):
                 sim.step(command, render=camera_due or lidar_due)
                 t = sim.t
                 pos, quat, rot, lin_w, ang_w = sim.base_state()
+                if ARGS.gui and camera_due:
+                    follow_camera(pos, rot)
                 if schedule.due("clock", t):
                     topics.publish_clock(t)
                 if schedule.due("imu", t):

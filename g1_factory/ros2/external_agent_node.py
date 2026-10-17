@@ -154,6 +154,8 @@ class ExternalAgentNode(Node):
         brief = {k: v for k, v in event.items()
                  if k in ("place", "subgoals", "target", "question", "result", "message", "distance_m",
                           "step", "action", "waypoint", "waypoint_region", "target_xy", "plate", "note")}
+        if event.get("thought"):  # the VLN's reason, so the terminal reads as a live narrative
+            brief["thought"] = str(event["thought"])[:160]
         self.get_logger().info(f"feedback: {event.get('state')} {json.dumps(brief, ensure_ascii=False)}")
         if event.get("state") == "done" and not self.finished and not self.have_image:
             # The evidence image travels on its own topic and may arrive just after "done".
