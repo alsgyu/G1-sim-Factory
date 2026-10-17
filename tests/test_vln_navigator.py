@@ -257,3 +257,10 @@ def test_last_step_needs_an_approach_not_a_stop_from_afar(roadmap):
     nav.task.index = 1
     d = nav.decide(np.array([10.1, 3.4]), math.pi/2, rgb, cam, intr)
     assert d.action == "approach" and "do not stop here" in nav.client.prompts[1]
+
+
+def test_waypoints_are_offered_when_the_robot_brushed_an_obstacle(roadmap):
+    # Measured: the robot stopped touching factory_column_5 at (22.46, 15.18) and got "no reachable waypoint".
+    xy = (22.46, 15.18)
+    assert roadmap.costmap.distance[roadmap.costmap.grid.world_to_cell(np.array(xy))] < 0.45
+    assert roadmap.candidates(xy, 0.13)

@@ -132,11 +132,19 @@ class RoadMap:
         dist = np.linalg.norm(delta, axis=1)
         near = np.nonzero((dist >= min_range) & (dist <= max_range))[0]
         best = {}
-        for idx in near[np.argsort(-dist[near], kind="stable")]:  # farthest first
-            bearing = float(np.degrees(wrap_angle(math.atan2(delta[idx, 1], delta[idx, 0])-yaw)))
-            sector = int((bearing+180.0)/360.0*sectors) % sectors
-            if sector not in best and self.segment_clear(xy, self.nodes[idx]):
-                best[sector] = (idx, bearing)
+        origins = [xy]
+        if len(self.nodes) and float(dist.min()) < 2.0:
+            # The robot may stand inside an obstacle's margin (it brushed a column): then judge reachability
+            # from the nearest lattice node (clear by construction); the segment planner walks out first.
+            origins.append(self.nodes[int(np.argmin(dist))])
+        for origin in origins:
+            for idx in near[np.argsort(-dist[near], kind="stable")]:  # farthest first
+                bearing = float(np.degrees(wrap_angle(math.atan2(delta[idx, 1], delta[idx, 0])-yaw)))
+                sector = int((bearing+180.0)/360.0*sectors) % sectors
+                if sector not in best and self.segment_clear(origin, self.nodes[idx]):
+                    best[sector] = (idx, bearing)
+            if best:
+                break
         visited = np.asarray(visited, float).reshape(-1, 2)
         route = self.route_distance(region) if region else None
         here = route[self.nearest_node(xy)] if route is not None else None

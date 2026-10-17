@@ -39,6 +39,27 @@
 | 실험이 갈수록 느려짐(결정 간격 10분 이상): Ollama llama-server가 프롬프트를 RAM에 캐시(1개 ≈ 340 MB, 상한 8 GB) → 14 GB, 스왑 16 GB | `LLAMA_ARG_CACHE_RAM=0` → 3 GB, 스왑 8 GB. Ubuntu 설정에도 반영 |
 | Fast DDS 기본 설정에서 30 Hz RGB(0.9 MB) 수신 57% | UDP 전용 + 16 MB 소켓 버퍼 프로파일(`configs/fastdds.xml`) → 100% |
 
+### Mac 9개 과제 (MuJoCo, Qwen3-VL **4B**, seed 0)
+
+경량 비교 조건(4B)으로 파이프라인 전체를 확인한 결과. 주 조건(8B)은 아래 Isaac Sim 절과 Ubuntu 실험 행렬.
+
+| 과제 | 결과 | 결정 수 | 원인 |
+|---|---|---:|---|
+| `inspect_conveyor` | 성공 | – | 둘러보기 → 컨베이어 방향 → 접근·판정 정답 |
+| `inspect_dock_en` (빈 도크) | 성공 | – | 조건("카트 없음")까지 보는 2차 확인으로 빈 도크 선택 |
+| `inspect_meeting_table_en` | 성공 | – | |
+| `json_agent_subgoals` (JSON 단계) | 성공 | – | |
+| `inspect_servers_office` | 실패 | 11 | 서버 랙을 찾아 접근(grounding 정답), 판정 "unknown" |
+| `go_fire_cabinet_ko` | 실패 | 17 | 소화기함을 찾아 접근(grounding 정답), 판정 "no"(정답 yes) |
+| `inspect_dock_cart_ko` (3번 도크) | 실패 | 41 | 결정 한도 40 초과 — 명판 CHARGER 3을 찾지 못함 |
+| `inspect_station_paraphrase` (2번 검사대) | 실패 | 41 | 결정 한도 초과 — 검사대 근처(1.7 m)까지 갔으나 명판 확인 실패 |
+| `check_electrical_panel_en` | 실패 | 13 | 북동쪽 기둥에 닿은 뒤 "갈 수 있는 웨이포인트 없음" → 수정(아래) |
+
+- 성공 4/9, grounding 6/9, 판정 정확도 4/6(판정까지 간 과제 기준), 결정당 VLM 지연 20.6 s(M1 Pro, Metal).
+- 4B의 약점: 명판 판독(번호로 지정된 대상)과 작은 물체 판정. 같은 과제를 8B로 Isaac Sim에서 돌린 결과와 비교 필요.
+- 이 실행 중 코드 변경: `go_fire_cabinet_ko`, `check_electrical_panel_en`은 마지막 단계 `stop` 거절 규칙이 들어간 뒤 시작.
+- 실행 후 수정: 로봇이 장애물 여유 공간 안에 서 있으면 가장 가까운 격자 노드 기준으로 웨이포인트를 계산(기둥에 닿은 실제 위치로 회귀 테스트).
+
 ### Isaac Sim 5.1 + Qwen3-VL-8B (Ubuntu, RTX 5080 Laptop 16 GB, 드라이버 580)
 
 - 스모크 테스트 `SMOKE PASS`: 0.3 m/s 명령에 6초 동안 1.80 m 보행, 골반 높이 0.775 m, RGB 640×480, 깊이 유효 76%, LiDAR 18,169점.
