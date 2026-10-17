@@ -140,12 +140,12 @@ MUJOCO_GL=osmesa python scripts/render_scene.py --scenario warehouse_tour
 **외부 에이전트의 "공장 ○○에 가서 △△를 확인해" 지시를 받아, 목표 좌표를 모르는 G1이 SLAM 지도(+의미 주석)·머리 카메라·지시문으로 VLM(Qwen3-VL-8B)이 매번 다음 웨이포인트를 골라 이동하고, 대상을 눈으로 찾아 확인 결과를 돌려주는 ROS 2 스택.**
 설계·모델 선정: [HVLN.md](docs/HVLN.md) · Ubuntu + Isaac Sim 실행 순서 전체: [UBUNTU_ISAAC.md](docs/UBUNTU_ISAAC.md) · 토픽·메시지·QoS·데이터 크기: [ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md).
 
+처음 설치(Docker 권한·NVIDIA 컨테이너·이미지 빌드·에셋·USD·Isaac 캐시·Ollama 설정)는 [UBUNTU_ISAAC.md](docs/UBUNTU_ISAAC.md) 1–5절을 순서대로. 그 뒤:
+
 ```bash
-bash scripts/run_isaac_sim.sh --spawn -12 3.8 0                                  # Isaac Sim 5.1 + G1 (터미널 1)
-docker run --rm --network host --ipc host -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
-  -e FASTRTPS_DEFAULT_PROFILES_FILE=/ws/configs/fastdds.xml -v "$PWD":/ws g1-sim-ros2:humble \
-  ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor        # VLN 스택 (터미널 2)
-python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)   # 실험 행렬
+bash scripts/run_isaac_sim.sh --spawn -12 3.8 0                                                        # 터미널 1: Isaac Sim 5.1 + G1
+G1_DDS=fastdds bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor  # 터미널 2: VLN 스택
+python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)              # 실험 행렬
 ```
 
 | 노드 | 역할 |

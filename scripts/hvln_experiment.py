@@ -56,13 +56,22 @@ def ros_env(args) -> dict:
     return env
 
 
+def docker_base(args) -> list:
+    """`docker run` prefix shared by episodes and probes: repo at /ws, run as the calling user so the
+    episode files in outputs/ stay the user's (HOME=/tmp gives ROS a writable log directory)."""
+    base = ["docker", "run", "--rm", "-v", f"{ROOT}:/ws", "-e", f"ROS_DOMAIN_ID={args.domain_id}",
+            "-e", "HOME=/tmp", "-e", "PYTHONDONTWRITEBYTECODE=1"]
+    if hasattr(os, "getuid"):
+        base += ["--user", f"{os.getuid()}:{os.getgid()}"]
+    for k, v in ros_env(args).items():
+        base += ["-e", f"{k}={v}"]
+    return base+shlex.split(args.docker_args)
+
+
 def ros_probe(args, command: str, timeout: float) -> bool:
     """Run a short ROS 2 CLI command with the same transport settings as the episode."""
     if args.runner == "docker":
-        full = ["docker", "run", "--rm", "-v", f"{ROOT}:/ws", "-e", f"ROS_DOMAIN_ID={args.domain_id}"]
-        for k, v in ros_env(args).items():
-            full += ["-e", f"{k}={v}"]
-        full += shlex.split(args.docker_args)+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
+        full = docker_base(args)+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
         env = dict(os.environ)
     else:
         full = ["bash", "-c", f"timeout {int(timeout)} {command}"]
@@ -102,11 +111,7 @@ def stop_isaac(name: str, log: Path):
 def run_episode(args, command: str, log: Path, timeout: float) -> int:
     env = dict(os.environ)
     if args.runner == "docker":
-        docker = ["docker", "run", "--rm", "-v", f"{ROOT}:/ws", "-e", f"ROS_DOMAIN_ID={args.domain_id}"]
-        for k, v in ros_env(args).items():
-            docker += ["-e", f"{k}={v}"]
-        docker += shlex.split(args.docker_args)
-        full = docker+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
+        full = docker_base(args)+[args.image, "bash", "-c", f"timeout {int(timeout)} {command}"]
     else:
         env.setdefault("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp")
         env.setdefault("CYCLONEDDS_URI", f"file://{ROOT}/configs/cyclonedds.xml")

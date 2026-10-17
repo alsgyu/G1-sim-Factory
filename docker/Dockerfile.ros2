@@ -31,7 +31,8 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 # Unitree's G1 SDK stack uses CycloneDDS; keep the same RMW for the simulated graph.
 # The repository is mounted at /ws. NVIDIA GPUs: run with --gpus all and
 # NVIDIA_DRIVER_CAPABILITIES=all so EGL uses the GPU instead of Mesa llvmpipe.
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    RMW_IMPLEMENTATION=rmw_cyclonedds_cpp \
     CYCLONEDDS_URI=file:///ws/configs/cyclonedds.xml \
     MUJOCO_GL=egl \
     HF_HOME=/ws/.hf_cache \
