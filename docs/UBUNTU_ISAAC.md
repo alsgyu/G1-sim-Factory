@@ -214,7 +214,7 @@ bash scripts/g1_docker.sh python3 scripts/check_hvln_env.py
 ROS_DOMAIN_ID=99 bash scripts/g1_docker.sh python3 -m pytest -q -p no:cacheprovider
 ```
 
-확인: `120 passed`(실패 0).
+확인: `121 passed`(실패 0).
 
 ## 6. Isaac Sim 스모크 테스트 (ROS 없이 G1이 서서 걷는지)
 

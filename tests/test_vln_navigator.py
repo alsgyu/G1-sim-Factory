@@ -244,3 +244,16 @@ def test_decomposition_requires_a_final_find_step():
 def test_plate_check_compares_identifiers(label, plate, ok):
     from g1_factory.vln_navigator import plate_matches
     assert plate_matches(label, plate) is ok
+
+
+def test_last_step_needs_an_approach_not_a_stop_from_afar(roadmap):
+    # Isaac Sim + 8B: the VLM saw CONVEYOR A and answered "stop" 4 m away; the task is to stand in front of it.
+    rgb, cam, intr = frame()
+    nav = navigator(roadmap, ['{"action": "stop", "thought": "CONVEYOR A with boxes is in view"}',
+                              '{"action": "approach", "bbox_2d": [300, 300, 700, 700]}',
+                              '{"what": "a conveyor belt with boxes", "is_target": true}'],
+                    [NavStep("go to the assembly line", "assembly_line"),
+                     NavStep("find the conveyor and stand in front of it", "assembly_line")])
+    nav.task.index = 1
+    d = nav.decide(np.array([10.1, 3.4]), math.pi/2, rgb, cam, intr)
+    assert d.action == "approach" and "do not stop here" in nav.client.prompts[1]

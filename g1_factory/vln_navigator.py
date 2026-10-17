@@ -48,7 +48,8 @@ unvisited ones when searching.
 normalized to 0-1000 (x right, y down). When the task names a plate ("name plate: ..." below), approach only \
 an object whose plate you can read and that shows the required number or letter (do not guess from shape). Once the object is in view, \
 approach it instead of walking past it.
-- "stop": the current step is complete (you are in the right region, or close in front of the target object).
+- "stop": a travel step is complete (you are in its region). The LAST step ("find ... and stand in front of it") \
+is never completed by "stop" from a distance: approach the object (bounding box) - the robot then walks up to it.
 When you are in the region where the target should be but cannot see it, turn to look before walking away. \
 Do not repeat "approach" on an object you already stand in front of: then "stop".
 Reply with one JSON object and nothing else:
@@ -478,6 +479,10 @@ class VLNNavigator:
             h, w = shape[:2]
             return Decision("approach", bbox=(x1*w/1000, y1*h/1000, x2*w/1000, y2*h/1000), thought=thought)
         if action == "stop":
+            if self.task.index == len(self.task.steps)-1:
+                raise ValueError("this is the last step: the robot must stand in front of the object, so do not "
+                                 "stop here - if you can see it, answer \"approach\" with its bounding box, "
+                                 "otherwise move or turn to find it")
             return Decision("stop", thought=thought)
         raise ValueError(f"unknown action {action!r}")
 
