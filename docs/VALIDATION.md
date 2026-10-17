@@ -39,7 +39,15 @@
 | 실험이 갈수록 느려짐(결정 간격 10분 이상): Ollama llama-server가 프롬프트를 RAM에 캐시(1개 ≈ 340 MB, 상한 8 GB) → 14 GB, 스왑 16 GB | `LLAMA_ARG_CACHE_RAM=0` → 3 GB, 스왑 8 GB. Ubuntu 설정에도 반영 |
 | Fast DDS 기본 설정에서 30 Hz RGB(0.9 MB) 수신 57% | UDP 전용 + 16 MB 소켓 버퍼 프로파일(`configs/fastdds.xml`) → 100% |
 
-### Isaac Sim 경로 (오프라인 검증만)
+### Isaac Sim 5.1 + Qwen3-VL-8B (Ubuntu, RTX 5080 Laptop 16 GB, 드라이버 580)
+
+- 스모크 테스트 `SMOKE PASS`: 0.3 m/s 명령에 6초 동안 1.80 m 보행, 골반 높이 0.775 m, RGB 640×480, 깊이 유효 76%, LiDAR 18,169점.
+- 처음 실행에서 고친 문제: Isaac Python에 `mujoco` 없음(`sensors.py` 선택적 import), 에셋 파일 권한 0600 → uid 1234가 URDF를 못 읽음(0644로 저장).
+- `inspect_conveyor` 단일 에피소드(seed 0):
+  - 1회차: VLN이 조립 라인 도착 → 둘러보기로 CONVEYOR A 방향 선택 → 4 m 밖에서 `stop` → 판정은 맞았지만 성공 반경 밖. 마지막 단계의 `stop`을 거절하도록 수정.
+  - 2회차: **성공**. VLN 결정 4회, 영상으로 찾은 대상이 컨베이어 외곽 안(오차 0.0 m), 정지 거리 0.86 m, 판정 정답("a few beige boxes on the conveyor" → yes), 충돌·넘어짐 0, VLM 지연 평균 3.9 s, 실시간 대비 0.67.
+
+### Isaac Sim 경로 오프라인 검증 (Mac)
 
 - 캠퍼스 USD 내보내기: 상자 1,236 · 평면 57 · 원기둥 54 · 타원체 12 · 충돌체 192 · 재질 187, 누락 0. Z-up, 1 m 단위 확인.
 - 카메라·LiDAR 수학: 쿼터니언 왕복, 4개 100° 깊이 카메라로 MID-360 패턴 모사 시 MuJoCo 광선 투사 대비 중앙값 오차 1.1 cm.
@@ -49,7 +57,7 @@
 
 ### 미검증
 
-- Isaac Sim 5.1 실제 실행, Qwen3-VL 8B 결과, Ubuntu GPU 실시간(RTF ≥ 0.95): [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 순서로 실행 필요.
+- Isaac Sim 5.1 + 8B 실험 행렬(현재 단일 과제 1개만 실행), 실시간 비율 0.95 이상 운용: [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 8절.
 - 프롬프트는 이 9개 과제로 개발함 → 일반화 성능은 새 지시문(보류 세트)으로 따로 측정해야 함.
 - 과제당 seed 1회. 성공률은 동작 확인용 소규모 결과이며 통계적 성능 주장이 아님.
 
