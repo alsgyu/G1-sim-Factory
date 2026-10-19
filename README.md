@@ -8,7 +8,7 @@
 | 로봇 | Unitree G1 + 공식 사전학습 보행 정책 (다리 12관절, 실제 물리 보행) |
 | 센서 | RealSense D435i 모사 RGB-D 640×480@30 Hz · Livox MID-360 모사 LiDAR 20,000 ray@10 Hz |
 | 시뮬레이터 | **Isaac Sim 5.1** · 캠퍼스(창고·사무동·펌프실)는 코드로 생성해 USD로 내보냄 |
-| 지도 | 점유 지도 + 시멘틱 레이어(구역·객체 91개) + 토폴로지 그래프(장소 13·연결 12), `/semantic_map` 발행 |
+| 지도 | 점유 지도 + 시멘틱 레이어(구역·객체 91개) + 토폴로지 그래프(장소 13·출입구 12), `/semantic_map` 발행 · 토폴로지 경로를 VLN 결정에 사용 |
 | 파일럿 결과 | Isaac Sim, 지시 9개: **성공 5/9 · 대상 앞 도착 9/9 · 충돌 0** · VLM 결정당 4.3 s (RTX 5080 Laptop) |
 
 ## 지시문을 따라가는 모습 (Isaac Sim 5.1 + Qwen3-VL-8B 실제 실행)
@@ -100,13 +100,14 @@ flowchart LR
   VA -- "/vln/nav_request" --> VN[계층 2 · vln_navigator = VLN<br/>영상 위 번호 웨이포인트 + 지시 + 지도 → 다음 이동]
   VA & VN <-- "HTTP" --> VLM[(Qwen3-VL-8B)]
   VN -- "/plan" --> PF[계층 3 · path_follower]
-  PF -- "/cmd_vel" --> SIM[계층 4 · G1 보행 정책<br/>Isaac Sim 5.1 / MuJoCo]
-  SIM -- "RGB-D, LiDAR, odom, /map" --> VN
+  PF -- "/cmd_vel" --> SIM[계층 4 · G1 보행 정책<br/>Isaac Sim 5.1]
+  SIM -- "RGB-D, LiDAR, odom, /map, /semantic_map" --> VN
 ```
 
-- **매 결정**: SLAM 지도에서 직선으로 갈 수 있는 지점을 카메라 영상 위에 번호로 그립니다. 여기에 지시, 단계 계획, 구역 방향, 후보별 보행 거리 이득, 최근 결정을 함께 VLM에 줍니다. VLM은 "k번 이동 / 회전 / 보이는 물체에 접근(bbox) / 정지" 중 하나를 고르고, 규칙이 그 선택을 검증합니다(지도에 없는 이동, 구역 이탈, 명판 불일치는 거절하고 다시 묻습니다).
+- **매 결정**: SLAM 지도에서 직선으로 갈 수 있는 지점을 카메라 영상 위에 번호로 그립니다. 여기에 지시, 단계 계획, 구역 방향, **토폴로지 경로**(목표 구역까지 지나갈 장소 순서와 다음 출입구의 방향·거리), 후보별 보행 거리 이득, 최근 결정을 함께 VLM에 줍니다. VLM은 "k번 이동 / 회전 / 보이는 물체에 접근(bbox) / 정지" 중 하나를 고르고, 규칙이 그 선택을 검증합니다(지도에 없는 이동, 구역 이탈, 명판 불일치는 거절하고 다시 묻습니다).
 - **대상 구역 도착 시**: 네 방향을 둘러보고 계속 갈 방향을 고릅니다. 머리 카메라 시야가 69°라 옆에 있는 대상을 놓치지 않기 위해서입니다.
-- **로봇이 아는 것**: 주행 가능 공간(점유 지도), 사람이 단 구역 8개와 고정 기준점 7개뿐입니다. 검사대, 충전 도크, 소화기함 같은 세부 대상 위치는 평가에만 씁니다.
+- **토폴로지 경로 예** (자재 창고에서 펌프실로 갈 때 프롬프트에 들어가는 줄): `Topological route to Pump room: Material storage -> Warehouse main aisle -> Warehouse-office bridge -> Office corridor -> Pump room passage -> Pump room; next opening (into Warehouse main aisle): ahead (+5 deg, east), 3.2 m`. 장소 그래프에서 출입구를 거치는 최단 경로(Dijkstra)이며, 실제 이동은 여전히 VLM이 영상 위 후보 중에서 고릅니다.
+- **로봇이 아는 것**: 주행 가능 공간(점유 지도), 사람이 단 구역 9개, 고정 기준점 7개, 장소 그래프(장소 13·출입구 12)뿐입니다. 검사대, 충전 도크, 소화기함 같은 세부 대상 위치는 평가에만 씁니다.
 - **왜 MapGPT 방식인가**: e2e 생성형(NaVILA)은 공장 도메인과 장애물 처리가 약하고, 지도 조회 + A*는 목표를 미리 알아 VLN이 아닙니다. 이 방식은 기존 지도와 영상, 지시를 모두 쓰고, 학습이 필요 없으며, 결정마다 근거가 남습니다. 자세한 비교는 [HVLN.md](docs/HVLN.md)에 있습니다.
 
 ## 실행 (Ubuntu + Isaac Sim 5.1)
@@ -131,11 +132,34 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=
 python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)
 ```
 
-직접 지시하려면 launch에 `agent:=false`를 붙여 띄우고, 다른 터미널에서 지시를 보냅니다.
+### 직접 지시하기 (대화형 콘솔)
+
+Isaac Sim(터미널 1)을 띄운 채 터미널 2에서 콘솔을 엽니다. VLN 스택이 백그라운드로 함께 뜹니다.
 
 ```bash
-bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
+bash scripts/vln_console.sh
 ```
+
+`지시>`에 아무 지시나 한국어·영어로 입력하면, 단계 계획, VLN 결정과 이유, 판정이 실시간으로 나옵니다. 아래는 Mac 개발 그래프에서 콘솔을 확인한 출력입니다(Qwen3-VL-4B).
+
+```text
+지시> 조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해.
+[    6.4 s] 계획 go to assembly line (assembly_line) → find box on conveyor (assembly_line)  | 대상: box on conveyor
+[   10.0 s] 결정 1 이동 #1 — I need to move towards the assembly line ...
+[   57.4 s] 결정 3 이동 #4 — I need to get closer to the assembly line entrance, which is ahead-left ...
+[   79.2 s] 단계 완료 → 다음 단계 1
+[  100.4 s] 결정 4 회전·둘러보기 [looked around: view 1 of 4] — view 1: facing north-east - assembly line mat with boxes on conveyor ...
+[  130.0 s] 결정 6 접근 — The target is a box on the conveyor belt, which is clearly visible in the image ...
+[  133.8 s] 완료  판정 yes — 컨베이어 위에 상자가 놓여 있습니다.
+           관찰: a large brown box on the conveyor
+  → 결과: outputs/console/20261019-162505_조립_라인으로_가서_컨베이어_위에_상자가_놓여_있는지_확인해 (route.png, decisions/, inspection.jpg)
+지시> :where
+위치 (13.38, 6.61), 방향 34°, 구역: Assembly line
+```
+
+- 다음 지시는 로봇이 멈춘 자리에서 시작합니다. 명령은 `:where`, `:tasks`(예시 지시), `:cancel`, `:quit`이고, 실행 중 Ctrl-C는 그 지시만 취소합니다.
+- 지시마다 `outputs/console/<시각>_<지시>/`에 VLM이 본 영상(`decisions/`), 판정 근거(`inspection.jpg`), 경로 그림(`route.png`), 이벤트 기록이 남습니다.
+- 다른 프로그램(외부 에이전트)에서 보낼 때는 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독합니다. 한 줄 예: `bash scripts/g1_docker.sh python3 scripts/send_instruction.py "…"`.
 
 ## 외부 에이전트 인터페이스와 ROS 2 토픽
 
@@ -152,7 +176,7 @@ bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝
 
 ## 캠퍼스와 펌프실
 
-![창고·사무동·펌프실 캠퍼스의 시멘틱·토폴로지 맵](docs/images/semantic/semantic_topological_map.png)
+![창고·사무동·펌프실 캠퍼스 위에서 본 장면과 시멘틱·토폴로지 맵: 구역(색 상자), 객체(종류별 색 점), 장소(주황 원)와 출입구(흰 사각형)를 잇는 그래프, 사람이 단 기준점(초록 삼각형)](docs/images/semantic/semantic_topological_2d.png)
 
 | 공간 | 구성 |
 |---|---|
@@ -168,13 +192,16 @@ bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝
 
 ## 시멘틱·토폴로지 맵
 
-SLAM이 만든 점유 지도 위에 두 층을 얹은 구조입니다(위 그림).
+SLAM이 만든 기하 지도 위에 의미 층들을 얹은 계층형 3D 장면 그래프입니다(Hydra, HOV-SG 논문의 그림 방식). 아래에서부터 기하(장면·점유 지도) → 객체 91개(종류별 색) → 장소 13개와 출입구 12개(토폴로지) → 건물 3개 → 캠퍼스 순서이고, 세로선은 각 노드가 속한 상위 노드를 가리킵니다.
+
+![계층형 3D 장면 그래프: 기하 → 객체 → 장소·출입구 → 건물 → 캠퍼스](docs/images/semantic/scene_graph_3d.png)
 
 - **시멘틱 레이어**: 구역 9개와 객체 91개(종류 33가지: 검사대, 충전 도크, 서버 랙, 펌프, 탱크, 밸브 …)로 이루어집니다. 객체마다 명판 글자, 소속 구역, 3D 상자가 있습니다.
 - **토폴로지 레이어**: 장소 13개(구역 9 + 창고 통로·연결 통로·사무동 복도·펌프실 통로)와 연결 12개(출입구 위치 포함), 그리고 사람이 단 기준점입니다. 예: 자재 창고 → 펌프실 = 창고 통로 → 연결 통로 → 사무동 복도 → 펌프실 통로 → 펌프실.
 - 실제 로봇이라면 SLAM(LiDAR SLAM이나 MASt3R 같은 SLAM 파운데이션 모델)이 기하 지도를 만들고, 사람이 주석을 달거나 개방어휘 인식(ConceptGraphs·HOV-SG 류)으로 위의 두 층을 채웁니다. 여기서는 시뮬레이터 정답으로 만들었습니다.
-- VLN에는 구역과 기준점만 주고, 객체 층은 아래 인식 정확도 평가의 정답으로만 씁니다.
+- VLN에는 구역, 기준점, 장소 그래프를 줍니다. `vln_navigator`가 `/semantic_map`을 구독해 매 결정마다 목표 구역까지의 토폴로지 경로와 다음 출입구를 프롬프트에 넣습니다. 객체 층은 주지 않고, 아래 인식 정확도 평가의 정답으로만 씁니다.
 - 파일과 토픽: USD를 내보낼 때 `outputs/isaac/semantic_map.json`과 `.png`가 함께 생기고, Isaac 노드가 `/semantic_map`(JSON, latched)으로 발행합니다.
+- 그림 다시 만들기: `bash scripts/g1_docker.sh python3 scripts/plot_scene_graph.py` → `docs/images/semantic/scene_graph_3d.png`, `semantic_topological_2d.png`.
 
 ## 인식 정확도 측정 (구역·객체)
 
@@ -188,7 +215,7 @@ SLAM이 만든 점유 지도 위에 두 층을 얹은 구조입니다(위 그림
 
 ## 개발용 MuJoCo
 
-MuJoCo는 시뮬레이터로는 쓰지 않습니다. 캠퍼스 장면 생성기(MJCF → USD 내보내기)와 Mac에서 도는 단위 테스트(133개)에만 남아 있습니다. 고정 경로 보행 데모와 구역·선반 편집은 [MUJOCO.md](docs/MUJOCO.md)와 [FACTORY.md](docs/FACTORY.md)에 있습니다.
+MuJoCo는 시뮬레이터로는 쓰지 않습니다. 캠퍼스 장면 생성기(MJCF → USD 내보내기)와 Mac에서 도는 단위 테스트(134개)에만 남아 있습니다. 고정 경로 보행 데모와 구역·선반 편집은 [MUJOCO.md](docs/MUJOCO.md)와 [FACTORY.md](docs/FACTORY.md)에 있습니다.
 
 ## 문서
 

@@ -42,7 +42,7 @@
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | `g1_sim` → `vln_navigator`, `vln_agent` |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `g1_sim` → `use_sim_time` 노드 전부 |
 | `/sim/status` | `std_msgs/msg/String` (JSON) | `g1_sim` → `external_agent` (시뮬레이터 전용) |
-| `/semantic_map` | `std_msgs/msg/String` (JSON) | `g1_sim`(Isaac) → 외부 에이전트·시각화·지도 소비 노드 (시멘틱·토폴로지 레이어, `g1_factory/semantic_world.py`) |
+| `/semantic_map` | `std_msgs/msg/String` (JSON) | `g1_sim`(Isaac) → `vln_navigator`(토폴로지 경로 힌트), 외부 에이전트·시각화 (시멘틱·토폴로지 레이어, `g1_factory/semantic_world.py`) |
 
 ### 1.3 VLN·계획·제어
 
@@ -156,6 +156,7 @@ QoS 선택 이유:
 | | color `camera_info` | BestEffort / Volatile / KeepLast(5) | 웨이포인트를 영상에 투영, bbox → 3D |
 | | `/livox/lidar` | BestEffort / Volatile / KeepLast(5) | 스캔 stamp의 TF로 map 변환 → 높이 0.15–1.7 m, 거리 0.3–8 m 점 중 지도에 없는 칸 표시(감쇠) → 현재 구간이 막히면 국소 우회 |
 | | `/odom` | Reliable / Volatile / KeepLast(10) | 현재 자세, 방문 기록 |
+| | `/semantic_map` | Reliable / TransientLocal / KeepLast(1) | 장소 그래프 → 매 결정 프롬프트에 목표 구역까지 토폴로지 경로·다음 출입구 (없으면 `outputs/isaac/semantic_map.json`) |
 | | `/nav/status` | Reliable / Volatile / KeepLast(50) | 현재 계획 id의 reached/failed → 다음 결정 |
 | | `/tf`, `/tf_static` | tf2_ros 기본 (Reliable, KeepLast 100) | camera optical·livox_frame → map |
 | `vln_agent` | `/vln/instruction` | Reliable / Volatile / KeepLast(10) | 작업 시작·선점·취소. VLM 호출은 작업 스레드 |
@@ -184,7 +185,7 @@ flowchart LR
   VLM[(VLM 서버<br/>HTTP)]
   SIM -- "color/depth image_raw 30Hz · camera_info" --> VN & VA
   SIM -- "/livox/lidar 10Hz" --> VN
-  SIM -- "/map (latched)" --> VN
+  SIM -- "/map · /semantic_map (latched)" --> VN
   SIM -- "/odom 50Hz" --> VN & VA & PF & EA
   SIM -- "/tf · /tf_static" --> VN & VA
   SIM -- "/sim/status 2Hz" --> EA
@@ -203,7 +204,7 @@ flowchart LR
 |---|---|---|
 | `g1_sim` (Isaac `isaac_sim_node`) | `/clock`, color·depth `image_raw`·`camera_info`, `/livox/lidar`, `/livox/imu`, `/odom`, `/joint_states`, `/tf`, `/tf_static`, `/map`, `/semantic_map`, `/sim/status` | `/cmd_vel` |
 | `vln_agent` | `/vln/feedback`, `/vln/inspection_image`, `/vln/nav_request` | `/vln/instruction`, `/vln/nav_status`, `/odom`, color `image_raw`·`camera_info`, depth `image_raw`, `/tf`, `/tf_static`, `/clock` |
-| `vln_navigator` | `/plan`, `/vln/nav_status`, `/vln/decision_image` | `/vln/nav_request`, `/map`, `/odom`, color `image_raw`·`camera_info`, depth `image_raw`, `/livox/lidar`, `/nav/status`, `/tf`, `/tf_static`, `/clock` |
+| `vln_navigator` | `/plan`, `/vln/nav_status`, `/vln/decision_image` | `/vln/nav_request`, `/map`, `/semantic_map`, `/odom`, color `image_raw`·`camera_info`, depth `image_raw`, `/livox/lidar`, `/nav/status`, `/tf`, `/tf_static`, `/clock` |
 | `path_follower` | `/cmd_vel`, `/nav/status` | `/plan`, `/odom`, `/clock` |
 | `external_agent` (평가기) | `/vln/instruction` | `/vln/feedback`, `/vln/inspection_image`, `/vln/decision_image`, `/odom`, `/sim/status`, `/nav/status`, `/plan`, `/map`, `/clock` |
 | `topic_monitor` (측정 전용) | - | 위 토픽 전부 (raw) |

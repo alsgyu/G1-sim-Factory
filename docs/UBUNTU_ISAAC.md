@@ -268,21 +268,21 @@ bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0
 - VLM이 결정할 때 본 영상(번호 웨이포인트, 둘러보기 4방향)은 결정마다 `outputs/hvln_<과제>/decisions/`에 저장됨 → 이미지 뷰어로 열어 두면 새 장이 계속 추가됨: `eog outputs/hvln_inspect_conveyor/decisions/ &`.
 - 실험 행렬(8절)은 화면 없이(headless) 실행. 행렬이 도는 동안에는 GUI 실행을 같이 하지 말 것(GPU 공유).
 
-### 7.1 외부 에이전트로 직접 지시하기
+### 7.1 직접 지시하기 (대화형 콘솔)
 
-평가기 없이 그래프만 띄우고(`agent:=false`, Ctrl-C까지 계속 실행):
-
-```bash
-bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false agent:=false monitor:=false
-```
-
-다른 터미널에서 지시:
+터미널 1에서 Isaac Sim을 띄운 채(7절, `--gui` 권장), 터미널 2에서:
 
 ```bash
-bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
+bash scripts/vln_console.sh
 ```
 
-- 진행 이벤트가 출력되고 확인 이미지는 `inspection.jpg`로 저장. 외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독(QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md) 3·4절).
+- VLN 스택(`agent:=false`, 백그라운드 컨테이너 `g1_vln_stack`)을 띄우고 콘솔을 엽니다. `지시>` 에 한국어·영어 지시를 입력하면 단계 계획, VLN 결정(이동·회전·접근·정지와 VLM의 이유), 도착, 판정이 실시간으로 나옵니다.
+- 한 지시가 끝나면 로봇은 그 자리에 서 있고, 다음 지시는 거기서 출발합니다.
+- 명령: `:where`(현재 위치·구역), `:tasks`(예시 지시), `:cancel`(정지), `:help`, `:quit`(스택도 함께 종료). 실행 중 Ctrl-C는 그 지시만 취소합니다.
+- 지시마다 `outputs/console/<시각>_<지시>/`에 `feedback.jsonl`, `decisions/*.jpg`(VLM이 본 영상), `inspection.jpg`(판정 근거), `summary.json`, `route.png`(결정 지점을 지도에 표시)가 저장됩니다.
+- 모델 변경: `VLM_MODEL=qwen3-vl:4b-instruct bash scripts/vln_console.sh`. 스택이 이미 떠 있으면 콘솔만: `bash scripts/g1_docker.sh python3 scripts/vln_console.py`.
+
+외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독합니다(QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md) 3·4절). 한 줄짜리 예: `bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"`.
 
 ## 8. 실험 행렬
 
@@ -307,7 +307,14 @@ python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(d
 
 ## 9. 시멘틱·토폴로지 맵과 인식 정확도
 
-**시멘틱·토폴로지 맵**: 2.3의 USD 내보내기가 함께 만듦 → `outputs/isaac/semantic_map.json`(구역·객체·장소 그래프), `outputs/isaac/semantic_map.png`(그림). Isaac 노드가 `/map`과 함께 `/semantic_map`(`std_msgs/String` JSON, TransientLocal)으로 발행.
+**시멘틱·토폴로지 맵**: 2.3의 USD 내보내기가 함께 만듦 → `outputs/isaac/semantic_map.json`(구역·객체·장소 그래프), `outputs/isaac/semantic_map.png`(그림). Isaac 노드가 `/map`과 함께 `/semantic_map`(`std_msgs/String` JSON, TransientLocal)으로 발행. `vln_navigator`가 이를 구독해 매 결정 프롬프트에 토폴로지 경로(지나갈 장소 순서와 다음 출입구의 방향·거리)를 넣습니다.
+
+논문식 그림(계층형 3D 장면 그래프, 2D 시멘틱·토폴로지 오버레이)은 `docs/images/semantic/`에 만듭니다(처음 한 번 위에서 본 장면 렌더링 포함 약 1분):
+
+```bash
+bash scripts/g1_docker.sh python3 scripts/plot_scene_graph.py
+```
+
 
 **인식 정확도**: 로봇이 어디서 지시를 받든 "지금 어느 구역인지", "무엇이 보이는지"를 맞히는지, 경로 이동과 따로 측정.
 

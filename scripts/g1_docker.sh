@@ -10,10 +10,10 @@
 # * GPU (--gpus all) when nvidia-smi exists on the host; G1_GPU=0 turns it off.
 # * Fast DDS with configs/fastdds.xml (default): Isaac Sim's bundled ROS 2 uses Fast DDS, so the whole graph
 #   does. G1_DDS=cyclonedds only for the MuJoCo development graph.
-# * ROS_DOMAIN_ID is passed through (default 0).
+# * ROS_DOMAIN_ID is passed through (default 0); G1_DOCKER_ARGS adds docker run flags.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-[[ $# -gt 0 ]] || { sed -n '2,13p' "$0"; exit 2; }
+[[ $# -gt 0 ]] || { sed -n '2,14p' "$0"; exit 2; }
 IMAGE="${G1_IMAGE:-g1-sim-ros2:humble}"
 args=(docker run --rm --network host --ipc host -v "$PWD:/ws" --user "$(id -u):$(id -g)"
       -e HOME=/tmp -e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}")
@@ -25,5 +25,9 @@ if [[ "${G1_DDS:-fastdds}" == "fastdds" ]]; then
 fi
 if [[ -t 0 && -t 1 ]]; then
   args+=(-it)
+fi
+if [[ -n "${G1_DOCKER_ARGS:-}" ]]; then  # extra docker run flags, e.g. "-d --name g1_vln_stack"
+  read -r -a extra <<< "$G1_DOCKER_ARGS"
+  args+=("${extra[@]}")
 fi
 exec "${args[@]}" "$IMAGE" "$@"

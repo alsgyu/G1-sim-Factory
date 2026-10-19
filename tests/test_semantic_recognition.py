@@ -101,3 +101,12 @@ def test_detections_are_matched_by_class_position_and_plate(world):
     assert m["wrong_class"] and m["wrong_class"][0]["truth"] == "electric motor"
     assert m["plates"] == [{"id": pump["id"], "truth": "PUMP P-101", "read": "PUMP P-101", "correct": True}]
     assert motor["id"] in m["fn"]
+
+
+def test_topological_route_reaches_the_vln_prompt(world):
+    from g1_factory.semantic_world import topological_hint
+    semantic = world[4]
+    hint = topological_hint(semantic, (0.0, 0.0), 0.0, "pump_room")   # main aisle crossing, facing east
+    assert hint.startswith("Topological route to Pump room: Warehouse main aisle -> Warehouse-office bridge")
+    assert "Pump room passage -> Pump room" in hint and "next opening (into Warehouse-office bridge): ahead" in hint
+    assert topological_hint(semantic, (40.0, -21.0), 0.0, "pump_room") is None   # already there

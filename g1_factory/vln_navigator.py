@@ -5,9 +5,10 @@ factory map and a humanoid, with candidate markers drawn on the camera image
 (visual prompting, cf. PIVOT / VLMnav). At every decision the VLM sees:
 
 * the operator instruction and the step plan from layer 1,
-* what the annotated SLAM map says: region names with direction/distance, and for
-  each candidate how much closer (walking distance) it brings the robot to the
-  current step's region,
+* what the annotated SLAM map says: region names with direction/distance, the
+  topological route (place sequence through doorways, next opening) to the current
+  step's region, and for each candidate how much closer (walking distance) it brings
+  the robot to that region,
 * reachable waypoints (straight, obstacle-free segments on the SLAM map), the
   ones in view drawn as numbered circles on the current head-camera image,
 * its own recent decisions.
@@ -39,7 +40,8 @@ reachable floor waypoints in view; waypoints outside the view are only listed wi
 Map directions: north = +y, east = +x. Zone signs, name plates (e.g. "CHARGER 3", "STATION 2", \
 "CONVEYOR A") and objects in the image tell you where things are; fine-grained targets are not on the map, \
 so look for them. For each waypoint you are told how many metres of walking it saves towards the current \
-step's region (negative = it leads away); use it to travel between regions, use the image to find objects.
+step's region (negative = it leads away); use it to travel between regions, use the image to find objects. \
+The topological route lists the places to pass through and where the next opening (doorway) is.
 Choose exactly one action:
 - "move": walk to waypoint <number>. Prefer waypoints that make progress on the current step; prefer \
 unvisited ones when searching.
@@ -233,6 +235,7 @@ class VLNNavigator:
     region_labels: dict                  # region id -> human label
     region_entrances: dict               # region id -> (x, y) annotated entrance point
     anchors: dict = field(default_factory=dict)   # annotated landmark label -> (x, y)
+    topology: dict | None = None         # place graph from /semantic_map (g1_factory.semantic_world)
     max_decisions: int = 40
     max_turns_in_place: int = 3          # 270 deg of looking around, then the VLN must move
     history: list = field(default_factory=list)
@@ -326,6 +329,12 @@ class VLNNavigator:
             heading = math.atan2(ay-xy[1], ax-xy[0])
             b = math.degrees(wrap_angle(heading-yaw))
             lines.append(f"- {label}: {describe_direction(b)} ({b:+.0f} deg, {compass_name(heading)}), {d:.1f} m")
+        step = self.task.current if self.task else None
+        if self.topology and step and step.region:
+            from .semantic_world import topological_hint
+            hint = topological_hint(self.topology, xy, yaw, step.region)
+            if hint:
+                lines.append("- "+hint)
         return "\n".join(lines)
 
     def prompt(self, xy, yaw, candidates) -> str:

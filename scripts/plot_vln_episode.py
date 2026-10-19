@@ -8,7 +8,8 @@ Reads summary.json + feedback.jsonl (+ decisions/*.jpg, inspection.jpg) written 
 evaluator. The route map draws the annotated regions, the start pose, every VLN decision at the pose
 where it was taken (blue = move, grey = turn/look-around, orange = approach), the straight segments the
 robot walked between them, the hidden target's footprint (evaluation only, red) and the final pose.
-Run inside the g1-sim-ros2 image (needs the scene): bash scripts/g1_docker.sh python3 scripts/plot_vln_episode.py ...
+Uses outputs/isaac/campus_meta.json (Isaac export) for the map. Console runs (scripts/vln_console.py) get the
+same route.png automatically.
 """
 from __future__ import annotations
 
@@ -49,7 +50,7 @@ def load_episode(folder: Path):
 def route_map(summary, decisions, grid, regions, labels, footprints, scale=18, margin=4.5):
     start, final = summary["start_pose"][:2], summary["final_pose"][:2]
     pts = np.array([start, final]+[d["pose"][:2] for d in decisions]+[[b[0], b[1]] for b in footprints]
-                   + [[b[2], b[3]] for b in footprints])
+                   + [[b[2], b[3]] for b in footprints]).reshape(-1, 2)
     x0, y0 = pts.min(axis=0)-margin
     x1, y1 = pts.max(axis=0)+margin
     to_px = lambda x, y: ((x-x0)*scale, (y1-y)*scale)
@@ -106,7 +107,8 @@ def route_map(summary, decisions, grid, regions, labels, footprints, scale=18, m
     draw.text((fx+16, fy-12), "stop", fill=(40, 150, 70), font=font(20, True))
 
     legend = [("move", COLORS["move"]), ("turn / look-around", COLORS["turn"]), ("approach", COLORS["approach"]),
-              ("target (hidden from robot)", (210, 30, 30))]
+              ("target (hidden from robot)" if summary.get("expected_place") else "target (located by VLN)",
+               (210, 30, 30))]
     bar = Image.new("RGB", (max(w, 760), 40), (255, 255, 255))
     bdraw = ImageDraw.Draw(bar)
     lx = 12
@@ -153,6 +155,40 @@ def frame_strip(folder: Path, picks, decisions, width=400):
     return strip
 
 
+def load_campus():
+    """Occupancy grid and zones: from the Isaac export (outputs/isaac/campus_meta.json) or the scene source."""
+    path = ROOT/"outputs/isaac/campus_meta.json"
+    if path.is_file():
+        meta = json.loads(path.read_text())
+    else:
+        meta = build_scene(ROOT/"configs/factory.yaml", ROOT/"external/unitree_rl_gym", Path("/tmp/vln_plot/scene.xml"))
+    regions = {zid: z["bounds"] for zid, z in meta["zones"].items()}
+    labels = {zid: z["label"] for zid, z in meta["zones"].items()}
+    return OccupancyGrid.from_scene(meta, 0.1), regions, labels
+
+
+def target_footprints(summary):
+    """Evaluation footprint of the expected object (benchmark tasks); none for free-form instructions."""
+    if summary.get("expected_place"):
+        place = SemanticMap.load(load_config(ROOT/"configs/factory.yaml"),
+                                 ROOT/"configs/semantic_map.yaml").places[summary["expected_place"]]
+        return list(place.footprints) or [(place.object_xy[0]-.3, place.object_xy[1]-.3,
+                                           place.object_xy[0]+.3, place.object_xy[1]+.3)]
+    if summary.get("target_xy"):  # where the VLN localized the target in the image
+        x, y = summary["target_xy"]
+        return [(x-.25, y-.25, x+.25, y+.25)]
+    return []
+
+
+def route_figure(folder: Path, out: Path | None = None) -> Path:
+    """route.png for one run folder (benchmark episode or console instruction)."""
+    summary, decisions = load_episode(folder)
+    grid, regions, labels = load_campus()
+    path = out or folder/"route.png"
+    route_map(summary, decisions, grid, regions, labels, target_footprints(summary)).save(path, optimize=True)
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("episode", type=Path, help="episode folder with summary.json and feedback.jsonl")
@@ -161,17 +197,9 @@ def main():
     parser.add_argument("--name", default=None)
     args = parser.parse_args()
     summary, decisions = load_episode(args.episode)
-    config = load_config(ROOT/"configs/factory.yaml")
-    meta = build_scene(ROOT/"configs/factory.yaml", ROOT/"external/unitree_rl_gym", Path("/tmp/vln_plot/scene.xml"))
-    grid = OccupancyGrid.from_scene(meta, 0.1)
-    regions = {z["id"]: z["bounds"] for z in config["zones"]}
-    labels = {z["id"]: z["label"] for z in config["zones"]}
-    place = SemanticMap.load(config, ROOT/"configs/semantic_map.yaml").places[summary["expected_place"]]
-    footprints = list(place.footprints) or [(place.object_xy[0]-.3, place.object_xy[1]-.3,
-                                             place.object_xy[0]+.3, place.object_xy[1]+.3)]
     name = args.name or summary["task"]
     args.out.mkdir(parents=True, exist_ok=True)
-    route_map(summary, decisions, grid, regions, labels, footprints).save(args.out/f"{name}_route.png", optimize=True)
+    route_figure(args.episode, args.out/f"{name}_route.png")
     if args.frames:
         frame_strip(args.episode, args.frames, decisions).save(args.out/f"{name}_frames.jpg", quality=82)
     print(json.dumps({"route": str(args.out/f"{name}_route.png"), "decisions": len(decisions),

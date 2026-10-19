@@ -215,6 +215,7 @@ def build_semantic_map(model, data, meta: dict, anchors: dict, resolution: float
              for zid, z in meta["zones"].items()]
     return {"frame": "map", "units": "m", "source": "simulator ground truth (= human annotation of the SLAM map)",
             "occupancy": {"bounds": meta["bounds"], "resolution": resolution},
+            "aisle_segments": buildings_from(meta),
             "zones": zones, "objects": scene_objects(model, data, regions), **topo}
 
 
@@ -290,3 +291,24 @@ def draw_semantic_map(semantic: dict, grid, scale: float = 14.0):
     out.paste(img, (0, 0))
     out.paste(bar, (0, h))
     return out
+
+
+def topological_hint(topo: dict, xy, yaw: float, goal: str) -> str | None:
+    """One prompt line: the place route to `goal` and where the next opening is, relative to the robot."""
+    from g1_factory.roadmap import compass_name, describe_direction
+    from g1_factory.navigation import wrap_angle
+    regions = {p["id"]: p["bounds"] for p in topo["places"] if p.get("bounds")}
+    here = place_of(xy, regions, topo.get("aisle_segments", {}))
+    if here == goal:
+        return None
+    path = route(topo, here, goal)
+    if len(path) < 2:
+        return None
+    labels = {p["id"]: p["label"] for p in topo["places"]}
+    door = next(e["door"] for e in topo["edges"] if {e["a"], e["b"]} == {path[0], path[1]})
+    heading = math.atan2(door[1]-xy[1], door[0]-xy[0])
+    bearing = math.degrees(wrap_angle(heading-yaw))
+    distance = math.hypot(door[0]-xy[0], door[1]-xy[1])
+    return (f"Topological route to {labels.get(goal, goal)}: " + " -> ".join(labels.get(p, p) for p in path)
+            + f"; next opening (into {labels.get(path[1], path[1])}): {describe_direction(bearing)} "
+              f"({bearing:+.0f} deg, {compass_name(heading)}), {distance:.1f} m")

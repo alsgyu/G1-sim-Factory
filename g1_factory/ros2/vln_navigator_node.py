@@ -66,6 +66,9 @@ class VLNNavigatorNode(Node):
         sub("/camera/camera/color/camera_info", CameraInfo, self.on_info)
         sub("/livox/lidar", PointCloud2, self.on_cloud)
         sub("/nav/status", String, self.on_nav_status)
+        sub("/semantic_map", String, self.on_semantic_map)
+        exported = ROOT/"outputs/isaac/semantic_map.json"  # fallback when no node publishes /semantic_map
+        self.topology = json.loads(exported.read_text()) if exported.is_file() else None
         pub = lambda name, msg: self.create_publisher(msg, name, TOPICS[name][1])
         self.pub_plan = pub("/plan", PathMsg)
         self.pub_status = pub("/vln/nav_status", String)
@@ -93,8 +96,16 @@ class VLNNavigatorNode(Node):
         self.costmap = CostMap(grid)
         self.roadmap = RoadMap(self.costmap, self.regions)
         self.navigator = VLNNavigator(self.client, self.roadmap, self.region_labels, self.entrances, self.anchors,
-                                      max_decisions=self.max_decisions)
+                                      topology=self.topology, max_decisions=self.max_decisions)
         self.get_logger().info(f"SLAM map {grid.width}x{grid.height}; {len(self.roadmap.nodes)} waypoints")
+
+    def on_semantic_map(self, msg):
+        """Topological layer (places, openings) for the VLN prompt; zones/anchors stay from the annotations."""
+        self.topology = json.loads(msg.data)
+        if self.navigator:
+            self.navigator.topology = self.topology
+        self.get_logger().info(f"semantic map: {len(self.topology.get('places', []))} places, "
+                               f"{len(self.topology.get('edges', []))} openings")
 
     def on_odom(self, msg):
         self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
