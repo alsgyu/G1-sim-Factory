@@ -28,11 +28,11 @@ from tf2_ros import Buffer, TransformListener
 
 from g1_factory.grounding import SemanticMap
 from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, astar, path_blocked, smooth_path, densify
-from g1_factory.roadmap import RoadMap
+from g1_factory.roadmap import RoadMap, region_at
 from g1_factory.scene import load_config
 from g1_factory.vlm import VLMClient, encode_jpeg
 from g1_factory.vln_navigator import (NavStep, NavTask, VLNNavigator, already_in_front, approach_pose,
-                                      behind_partition)
+                                      behind_partition, outside_region)
 from g1_factory.ros2 import messages as M
 from g1_factory.ros2.qos import TOPICS
 
@@ -337,6 +337,14 @@ class VLNNavigatorNode(Node):
             if behind_partition(center[:2], self.pose[:2], self.costmap.occupied):
                 self.navigator.history.append("the object you selected is behind a wall or glass partition (depth "
                                               "hit the wall): walk around to it through a doorway first")
+                self.state, self.arrival = "settling", self.now()
+                return
+            step = self.navigator.task.current if self.navigator.task else None
+            if step and outside_region(center[:2], self.roadmap.regions, step.region):
+                found = self.region_labels.get(region_at(self.roadmap.regions, center[:2]), "another area")
+                self.navigator.history.append(
+                    f"the object you selected is in {found}, not in {self.region_labels.get(step.region, step.region)}: "
+                    "look for the target inside that area")
                 self.state, self.arrival = "settling", self.now()
                 return
             self.target_xy = [round(float(center[0]), 3), round(float(center[1]), 3)]

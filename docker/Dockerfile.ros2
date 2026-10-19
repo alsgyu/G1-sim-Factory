@@ -28,6 +28,20 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
        "transformers==4.46.3" "sentencepiece==0.2.0" "protobuf>=3.20,<6" \
     && if [ "$TARGETARCH" = "amd64" ]; then python3 -m pip install "usd-core==25.5"; fi
 
+# LiDAR-inertial SLAM for the robot's own map (launch/g1_slam_mapping.launch.py): FAST-LIO2, ROS 2 branch at a
+# pinned commit, built against the livox_ros_driver2 message definitions in ros2_ws/ (on the robot the Livox
+# driver provides the same messages).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential python3-colcon-common-extensions python3-dev libeigen3-dev libpcl-dev \
+        ros-humble-pcl-ros ros-humble-pcl-conversions \
+    && rm -rf /var/lib/apt/lists/*
+ARG FAST_LIO_COMMIT=a4743b095409588842a5b30ddfa27e29d2f99164
+COPY ros2_ws/src/livox_ros_driver2 /opt/g1_ws/src/livox_ros_driver2
+RUN git clone https://github.com/hku-mars/FAST_LIO.git /opt/g1_ws/src/FAST_LIO \
+    && cd /opt/g1_ws/src/FAST_LIO && git checkout "$FAST_LIO_COMMIT" && git submodule update --init --recursive \
+    && . /opt/ros/humble/setup.sh && cd /opt/g1_ws \
+    && colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release && rm -rf build log
+
 # Unitree's G1 SDK stack uses CycloneDDS; keep the same RMW for the simulated graph.
 # The repository is mounted at /ws. NVIDIA GPUs: run with --gpus all and
 # NVIDIA_DRIVER_CAPABILITIES=all so EGL uses the GPU instead of Mesa llvmpipe.

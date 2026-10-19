@@ -17,8 +17,10 @@ assert LIVOX_DTYPE.itemsize == 26
 
 
 def stamp(seconds: float) -> Time:
-    sec = math.floor(seconds)
-    return Time(sec=int(sec), nanosec=int(round((seconds-sec)*1e9)) % 1_000_000_000)
+    # Round once in integer nanoseconds: 85.9999999999 s must become 86.0, not 85.0 (nanosec wrapping to 0
+    # without carrying into sec made stamps jump one second back every few seconds).
+    ns = int(round(seconds*1e9))
+    return Time(sec=ns//1_000_000_000, nanosec=ns % 1_000_000_000)
 
 
 def to_seconds(t) -> float:

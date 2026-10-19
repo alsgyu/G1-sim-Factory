@@ -46,6 +46,8 @@ DEFAULTS = {
     "agent": ("true", "false: no built-in external_agent/evaluator; send instructions yourself "
                       "(scripts/send_instruction.py) - the graph then runs until Ctrl-C"),
     "output_dir": ("", "Episode output directory (default outputs/hvln_<task>)"),
+    "map_file": ("", "Run the VLN on a saved map (map_server YAML in the simulator frame, e.g. "
+                     "maps/campus/map_world.yaml from g1_slam_mapping.launch.py) instead of the simulator's /map"),
 }
 
 
@@ -84,7 +86,8 @@ def setup(context):
         node("vln_agent_node", "vln_agent", {**sim_time, "planner_mode": arg("planner_mode"),
                                              "vlm_url": arg("vlm_url"), "vlm_model": arg("vlm_model")}, remaps),
         (node("vln_navigator_node", "vln_navigator", {**sim_time, "vlm_url": arg("vlm_url"),
-                                                      "vlm_model": arg("vlm_model")}, remaps)
+                                                      "vlm_model": arg("vlm_model")},
+              remaps+(["/map:=/slam_map"] if arg("map_file") else []))
          if arg("planner_mode") == "vln" else node("planner_node", "global_planner", sim_time, remaps)),
         node("follower_node", "path_follower", sim_time, remaps),
     ]
@@ -98,6 +101,9 @@ def setup(context):
             "render_shadows": arg("render_shadows").lower() == "true",
             # Quoted so ROS parses it as a YAML string, not a nested list.
             "unmapped_obstacles": "'" + json.dumps(task.get("unmapped_obstacles", [])) + "'"}))
+    if arg("map_file"):
+        actions.append(node("map_file_node", "map_file", {**sim_time, "yaml": str(Path(arg("map_file")).resolve()),
+                                                          "topic": "/slam_map"}))
     if arg("monitor").lower() == "true":
         actions.append(node("topic_monitor", "topic_monitor", {**sim_time, "output_dir": str(out)}, remaps))
     (out/"launch_args.json").write_text(json.dumps(

@@ -57,6 +57,17 @@
 | `/cmd_vel` | `geometry_msgs/msg/Twist` | `path_follower` → `g1_sim` (실로봇: 보행 API 브리지) |
 | `/goal_pose`, `/vln/subgoals` | `geometry_msgs/msg/PoseStamped`, `PoseArray` | `vln_agent` → `global_planner` (**`oracle` 기준선 전용**. VLN 모드에서는 발행 안 함) |
 
+SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](SLAM_MAPPING.md))과 저장한 지도로 VLN을 돌릴 때만 쓰는 토픽:
+
+| 토픽 | 메시지 타입 | 발행 노드 → 구독 노드 |
+|---|---|---|
+| `/slam/imu` | `sensor_msgs/msg/Imu` (RELIABLE) | `slam_map` (시뮬레이터 `/livox/imu`를 다시 발행) → `fast_lio` |
+| `/cloud_registered`, `/Odometry`, `/path` | `PointCloud2`, `Odometry`, `Path` (frame `camera_init`) | `fast_lio` → `slam_map` |
+| `/slam/map` | `nav_msgs/msg/OccupancyGrid` (frame `slam_map`, TransientLocal) | `slam_map` → 외부 에이전트, 시각화 (매핑 중 2초마다) |
+| `/slam/status` | `std_msgs/msg/String` (JSON) | `slam_map` → `mapping_tour`, 외부 에이전트 |
+| `/mapping/done` | `std_msgs/msg/String` | `mapping_tour` → `slam_map` (지도 저장) |
+| `/slam_map` | `nav_msgs/msg/OccupancyGrid` (TransientLocal) | `map_file` → `vln_navigator` (`map_file:=` 로 실행할 때 `/map` 대신) |
+
 ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `POST /v1/chat/completions` (JPEG base64 + 프롬프트). 5절 참고.
 
 ## 2. 실제 데이터 크기

@@ -105,6 +105,7 @@ docker images g1-sim-ros2
 ```
 
 - `docker/Dockerfile.ros2`가 바뀐 `git pull` 뒤에는 다시 빌드(캐시 덕분에 짧음).
+- 이미지에는 SLAM 지도용 FAST-LIO2(고정 커밋)가 함께 빌드됩니다(PCL 설치 포함, 처음 한 번 10분 정도 더 걸림).
 
 ### 2.2 Unitree G1 공식 에셋 (고정 커밋, 해시 검증)
 
@@ -336,6 +337,35 @@ bash scripts/g1_docker.sh python3 scripts/recognition_eval.py outputs/recognitio
 - 지표: 구역 정확도(구역별·혼동표), 객체 precision/recall/F1(클래스별), 명판 판독 정확도, 찾은 객체의 3D 위치 오차, VLM 지연.
 - 결과: `outputs/recognition/run1/eval_qwen3-vl_8b-instruct/results.md`, `results.json`, `examples/*.jpg`(초록 = 정답, 주황 = VLM).
 - 4B와 비교하려면 같은 촬영본에 `--vlm-model qwen3-vl:4b-instruct`로 한 번 더(촬영은 다시 할 필요 없음).
+
+### 9.1 로봇이 직접 만드는 SLAM 지도
+
+G1이 캠퍼스를 한 바퀴 걸으며 LiDAR와 IMU(FAST-LIO2)로 지도를 만들고 `maps/<이름>/`에 저장합니다. 설계, 지도 묶음 형식, 실제 로봇에서 할 일은 [SLAM_MAPPING.md](SLAM_MAPPING.md)에 있습니다.
+
+터미널 1 (매핑 시작 자세):
+
+```bash
+bash scripts/run_isaac_sim.sh --spawn -12 3.8 0
+```
+
+터미널 2 (다 걸으면 지도를 저장하고 끝남, 시뮬레이션 시간 약 15분):
+
+```bash
+bash scripts/g1_docker.sh ros2 launch launch/g1_slam_mapping.launch.py name:=campus
+```
+
+결과 그림과 정답 비교:
+
+```bash
+bash scripts/g1_docker.sh python3 scripts/plot_slam_map.py maps/campus
+cat maps/campus/evaluation.json
+```
+
+이 지도로 VLN 실행(`map_world.yaml` = 시뮬레이터 좌표로 옮긴 같은 지도):
+
+```bash
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor map_file:=maps/campus/map_world.yaml
+```
 
 ## 10. 문제 해결
 

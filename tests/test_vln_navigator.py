@@ -277,3 +277,12 @@ def test_waypoints_are_offered_when_the_robot_brushed_an_obstacle(roadmap):
 def test_targets_behind_glass_partitions_are_not_approached(roadmap, target, robot, through_glass):
     from g1_factory.vln_navigator import behind_partition
     assert behind_partition(target, robot, roadmap.costmap.occupied) is through_glass
+
+
+def test_approach_targets_outside_the_step_region_are_rejected():
+    from g1_factory.vln_navigator import outside_region
+    regions = {"assembly_line": (2, 2, 24, 16), "material_storage": (-24, 2, -2, 16)}
+    assert outside_region((-5.15, 4.17), regions, "assembly_line")      # a box in material storage (Mac 4B run)
+    assert not outside_region((10.0, 7.6), regions, "assembly_line")    # the conveyor
+    assert not outside_region((0.5, 3.0), regions, "assembly_line")     # just outside the zone edge: allowed
+    assert not outside_region((-5.0, 4.0), regions, None) and not outside_region((-5.0, 4.0), regions, "aisle")

@@ -572,6 +572,15 @@ def approach_pose(target_xy, near_xy, robot_xy, standoff=1.4, occupied=None):
     return (float(robot[0]+step*math.cos(bearing)), float(robot[1]+step*math.sin(bearing)), bearing)
 
 
+def outside_region(target_xy, regions: dict, region: str | None, margin=3.0) -> bool:
+    """The object chosen for approach lies outside the step's region (bounds grown by `margin` for edge objects)."""
+    if not region or region not in regions:
+        return False
+    x0, y0, x1, y1 = regions[region]
+    x, y = float(target_xy[0]), float(target_xy[1])
+    return not (x0-margin <= x <= x1+margin and y0-margin <= y <= y1+margin)
+
+
 def behind_partition(target_xy, robot_xy, occupied, max_wall=0.35, open_behind=0.6, step=0.05) -> bool:
     """The localized point sits on a thin mapped wall with open floor behind it.
 

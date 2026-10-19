@@ -1,0 +1,31 @@
+# SLAM mapping tours (launch/g1_slam_mapping.launch.py). The robot stands at `spawn`, FAST-LIO2 starts, and
+# mapping_tour walks it through these waypoints (simulator frame, m) with global_planner + path_follower, the way
+# a person would drive it once with a joystick. The map frame of the result is the robot's pose at the start.
+tours:
+  campus:
+    spawn: [-12.0, 3.8, 0.0]          # Isaac Sim: bash scripts/run_isaac_sim.sh --spawn -12 3.8 0
+    waypoints:
+      - [-13.0, 6.5]     # material storage
+      - [-21.0, 0.0]     # west end of the main aisle
+      - [-13.0, -6.5]    # quality inspection
+      - [-13.0, -12.5]
+      - [0.0, -13.0]     # south cross aisle
+      - [13.0, -6.5]     # charging
+      - [20.0, -8.0]
+      - [0.0, 13.0]      # north cross aisle
+      - [13.0, 6.5]      # assembly line
+      - [21.0, 9.0]
+      - [26.0, 0.0]      # warehouse-office bridge
+      - [33.0, 5.0]      # engineering workstations
+      - [39.5, 0.0]      # office corridor
+      - [47.0, 5.0]      # meeting room
+      - [47.0, -5.0]     # control room
+      - [33.0, -5.0]     # staff lounge
+      - [39.5, -14.0]    # pump room passage
+      - [37.0, -20.0]    # pump room
+      - [43.0, -23.0]
+      - [39.5, -14.0]
+      - [39.5, 0.0]
+      - [26.0, 0.0]
+      - [0.0, 0.0]       # main crossing
+      - [-12.0, 3.8]     # back to the start: the end-point error shows the accumulated drift
