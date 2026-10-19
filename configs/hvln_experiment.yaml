@@ -1,6 +1,6 @@
 # Experiment matrix for scripts/hvln_experiment.py (run on the Ubuntu GPU station).
 #
-# Every (condition, task, seed) is one episode = one `ros2 launch launch/g1_hvln.launch.py`
+# Every (condition, task, seed) is one episode (11 tasks x 3 seeds x 3 conditions = 99) = one `ros2 launch launch/g1_hvln.launch.py`
 # (plus one Isaac Sim container per episode with --simulator isaac).
 # seed 0 uses the exact task spawn; other seeds perturb it (<= 0.3 m, <= 20 deg).
 # Conditions:
@@ -10,7 +10,7 @@
 #                    (including evaluation-only targets) and reached with A* - an upper bound.
 tasks: [inspect_conveyor, inspect_dock_en, inspect_dock_cart_ko, inspect_servers_office,
         inspect_meeting_table_en, inspect_station_paraphrase, json_agent_subgoals,
-        go_fire_cabinet_ko, check_electrical_panel_en]
+        go_fire_cabinet_ko, check_electrical_panel_en, inspect_pump_guard_ko, check_tank_gauge_en]
 seeds: [0, 1, 2]
 conditions:
   vln_8b:    {planner_mode: vln,    vlm_model: "qwen3-vl:8b-instruct"}

@@ -232,12 +232,15 @@ def add_office(world: ET.Element, asset: ET.Element, config: dict[str, Any],
 
     # Exterior: the warehouse bridge enters through a four-metre west opening.
     for name, x, y, sx, sy in (("north_wall", 40, 12, 24.2, .2),
-                               ("south_wall", 40, -12, 24.2, .2),
+                               # South wall: 4 m door into the passage to the pump room (utility.py).
+                               ("south_wall_w", 33, -12, 10.2, .2),
+                               ("south_wall_e", 47, -12, 10.2, .2),
                                ("east_wall", 52, 0, .2, 24),
                                ("west_north_wall", 28, 7, .2, 10),
                                ("west_south_wall", 28, -7, .2, 10)):
         b.wall_segment(name, x, y, sx, sy, glass="west" in name or "east" in name)
     b.box("west_entrance_lintel", [28, 0, 2.79], [.2, 4, .42], b.wall)
+    b.box("south_door_lintel", [40, -12, 2.79], [4, .2, .42], b.wall, collision=False)
 
     # Four bounded rooms. Split door walls leave 2.4 m openings into the spine.
     for room_id, room in ROOMS.items():

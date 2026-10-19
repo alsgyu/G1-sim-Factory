@@ -105,16 +105,17 @@ def validate_config(config: dict) -> None:
     _number(temp.get("temporal_amplitude_c",0),"temperature.temporal_amplitude_c",0)
     _number(temp.get("period_s",120),"temperature.period_s",.01)
     zones = config.get("zones", [])
-    if not isinstance(zones,list) or len(zones)!=8:
-        raise ValueError("Exactly four warehouse zones and four office rooms are required")
+    kinds = [z.get("kind") for z in zones] if isinstance(zones,list) else []
+    if kinds.count("warehouse")!=4 or kinds.count("office")!=4 or kinds.count("utility")>1:
+        raise ValueError("Four warehouse zones, four office rooms and at most one utility zone (pump room) are required")
     seen=set()
     for zone in zones:
         zid=_identifier(zone.get("id"),"zone.id")
         if zid in seen:
             raise ValueError(f"Duplicate zone id: {zid}")
         seen.add(zid)
-        if zone.get("kind") not in ("warehouse","office"):
-            raise ValueError(f"{zid}.kind must be warehouse or office")
+        if zone.get("kind") not in ("warehouse","office","utility"):
+            raise ValueError(f"{zid}.kind must be warehouse, office or utility")
         bounds=_vector(zone.get("bounds"),4,f"{zid}.bounds")
         if bounds[0]>=bounds[2] or bounds[1]>=bounds[3]:
             raise ValueError(f"{zid}.bounds must be xmin,ymin,xmax,ymax")
@@ -494,10 +495,10 @@ def build_scene(config_path: str | Path, upstream_root: str | Path, output_path:
     ET.SubElement(asset,"texture",name="factory_sky",type="skybox",builtin="gradient",
                   rgb1=".58 .66 .70",rgb2=".88 .91 .91",width="512",height="3072")
     output=Path(output_path).expanduser().resolve(); output.parent.mkdir(parents=True,exist_ok=True)
-    metadata={"scene_path":str(output),"config":copy.deepcopy(config),"zones":{},"obstacles":[],"camera_names":{"ego":"ego_rgb","map":"map_camera","head_rgbd":"head_rgbd"},"sensor_names":[],"synthetic_temperature":True,"bounds":[-25,-17,53,17],"warehouse_bounds":[-24,-16,24,16],"office_bounds":[28,-12,52,12]}
+    metadata={"scene_path":str(output),"config":copy.deepcopy(config),"zones":{},"obstacles":[],"camera_names":{"ego":"ego_rgb","map":"map_camera","head_rgbd":"head_rgbd"},"sensor_names":[],"synthetic_temperature":True,"bounds":[-25,-27,53,17],"warehouse_bounds":[-24,-16,24,16],"office_bounds":[28,-12,52,12],"free_areas":[]}
     for z in config["zones"]:
         metadata["zones"][z["id"]]={**copy.deepcopy(z),"shelves":{},"sensors":[],"origin":[0,0]}
-    ET.SubElement(world,"geom",name="factory_floor",type="plane",pos="14 0 0",size="40 18 .1",rgba=".66 .69 .69 1",contype="1",conaffinity="1",condim="3",friction=_fmt(config.get("simulation",{}).get("floor_friction",[1,.005,.0001])))
+    ET.SubElement(world,"geom",name="factory_floor",type="plane",pos="14 -5 0",size="40 23 .1",rgba=".66 .69 .69 1",contype="1",conaffinity="1",condim="3",friction=_fmt(config.get("simulation",{}).get("floor_friction",[1,.005,.0001])))
     for index,(x,y) in enumerate(((-12,8),(12,-8),(40,0))):
         ET.SubElement(world,"light",name=f"factory_light_{index}",pos=_fmt([x,y,14]),dir="0 0 -1",directional="true",diffuse=".18 .18 .17",ambient=".025 .025 .025",castshadow="true" if index==0 else "false")
     _camera(world,"map_camera",[14,0,94],[14,0,0],51)
@@ -520,6 +521,8 @@ def build_scene(config_path: str | Path, upstream_root: str | Path, output_path:
     _warehouse(world,asset,config,metadata,output.parent)
     from g1_factory.office import add_office
     add_office(world,asset,config,metadata,output.parent)
+    from g1_factory.utility import add_pump_room
+    add_pump_room(world,asset,config,metadata,output.parent)
     for zone in config["zones"]:
         zid=zone["id"]
         for sensor in zone.get("sensors",[]):

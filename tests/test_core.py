@@ -227,7 +227,7 @@ def test_scenarios_visit_semantic_zones_in_order_without_spawn_completion(factor
     assert visited == route["expected_zones"]
     assert len(visited) >= 2
     if scenario == "full_tour":
-        assert set(visited) == set(metadata["zones"])
+        assert set(visited) == {z for z, v in metadata["zones"].items() if v["kind"] != "utility"}
     assert route["length_m"] == pytest.approx(np.linalg.norm(np.diff(points, axis=0), axis=1).sum())
     np.testing.assert_allclose(route["goal"], metadata["zones"][visited[-1]]["goal"])
     follower = WaypointFollower(route["waypoints"])
@@ -294,8 +294,9 @@ def test_factory_config_rejects_duplicate_semantic_zone_ids():
 def test_large_connected_warehouse_and_office_preserve_g1_policy_interface(factory_scene):
     mujoco, model, data, metadata = factory_scene
     assert set(metadata["zones"]) == {
-        "material_storage", "assembly_line", "inspection", "charging", *OFFICE_ZONES,
+        "material_storage", "assembly_line", "inspection", "charging", *OFFICE_ZONES, "pump_room",
     }
+    assert metadata["zones"]["pump_room"]["kind"] == "utility"
     assert sum(zone["kind"] == "warehouse" for zone in metadata["zones"].values()) == 4
     assert sum(zone["kind"] == "office" for zone in metadata["zones"].values()) == 4
     xmin, ymin, xmax, ymax = metadata["config"]["layout"]["warehouse_bounds"]
@@ -374,7 +375,7 @@ def test_temperature_readings_are_labelled_synthetic_and_repeatable(factory_scen
     metadata = factory_scene[3]
     readings = temperature_readings(metadata, 0)
     assert readings == temperature_readings(metadata, 0)
-    assert len(readings) == len(metadata["sensor_names"]) == 8
+    assert len(readings) == len(metadata["sensor_names"]) == 9
     assert all(r["synthetic"] is True and np.isfinite(r["temperature_c"]) for r in readings)
     assert {r["zone_id"] for r in readings} == set(metadata["zones"])
     cfg = metadata["config"]["temperature"]

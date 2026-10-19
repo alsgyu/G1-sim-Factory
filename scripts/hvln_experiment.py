@@ -200,7 +200,8 @@ def main():
     parser.add_argument("--tasks", nargs="*", help="Subset of task ids")
     parser.add_argument("--seeds", nargs="*", type=int, help="Subset of seeds")
     parser.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE", help="Override launch_args")
-    parser.add_argument("--simulator", choices=["mujoco", "isaac"], default="mujoco")
+    parser.add_argument("--simulator", choices=["isaac", "mujoco"], default="isaac",
+                        help="isaac (default): Isaac Sim 5.1 container per episode; mujoco: development only")
     parser.add_argument("--isaac-image", default="nvcr.io/nvidia/isaac-sim:5.1.0")
     parser.add_argument("--isaac-ready-timeout", type=float, default=900.0,
                         help="seconds to wait for Isaac Sim's /clock (first start compiles shaders)")
@@ -226,8 +227,8 @@ def main():
     seeds = [s for s in spec["seeds"] if not args.seeds or s in args.seeds]
     timeout = float(spec.get("episode_wall_timeout_s", 3600))
     task_specs = yaml.safe_load(args.tasks_file.read_text(encoding="utf-8"))["tasks"]
+    extra["sim"] = args.simulator == "mujoco"  # the launch file starts the MuJoCo g1_sim only on request
     if args.simulator == "isaac":
-        extra["sim"] = False
         if not (ROOT/"outputs/isaac/campus.usd").is_file():
             parser.error("outputs/isaac/campus.usd missing: run scripts/export_campus_usd.py first")
     (out/"experiment.json").write_text(json.dumps({"config": spec, "launch_args": extra, "argv": sys.argv}, indent=2)+"\n")

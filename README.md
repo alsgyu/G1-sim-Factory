@@ -1,13 +1,14 @@
 # G1 Factory VLN — 지시문을 따라 걸어가 확인하는 Unitree G1
 
-**외부 에이전트가 "공장 ○○에 가서 △△를 확인해"라고 지시하면, Unitree G1이 목표 좌표를 모른 채 SLAM 지도와 머리 카메라만으로 길을 고르고, 대상을 눈으로 찾아 그 앞까지 걸어가 확인 결과를 돌려줍니다.** Isaac Sim 5.1과 MuJoCo에서 같은 ROS 2 스택으로 동작합니다.
+**외부 에이전트가 "공장 ○○에 가서 △△를 확인해"라고 지시하면, Unitree G1이 목표 좌표를 모른 채 SLAM 지도와 머리 카메라만으로 길을 고르고, 대상을 눈으로 찾아 그 앞까지 걸어가 확인 결과를 돌려줍니다.** 모든 실행과 실험은 Isaac Sim 5.1에서 합니다.
 
 | | |
 |---|---|
 | VLN | MapGPT 방식 지도 기반 계층형 VLN · 고수준 정책 **Qwen3-VL-8B-Instruct** (영상 위 번호 웨이포인트 중 선택) |
 | 로봇 | Unitree G1 + 공식 사전학습 보행 정책 (다리 12관절, 실제 물리 보행) |
 | 센서 | RealSense D435i 모사 RGB-D 640×480@30 Hz · Livox MID-360 모사 LiDAR 20,000 ray@10 Hz |
-| 시뮬레이터 | **Isaac Sim 5.1** (실험) · MuJoCo 3.5 (개발·검증) — 같은 토픽·QoS |
+| 시뮬레이터 | **Isaac Sim 5.1** · 캠퍼스(창고·사무동·펌프실)는 코드로 생성해 USD로 내보냄 |
+| 지도 | 점유 지도 + 시멘틱 레이어(구역·객체 91개) + 토폴로지 그래프(장소 13·연결 12), `/semantic_map` 발행 |
 | 파일럿 결과 | Isaac Sim, 지시 9개: **성공 5/9 · 대상 앞 도착 9/9 · 충돌 0** · VLM 결정당 4.3 s (RTX 5080 Laptop) |
 
 ## 지시문을 따라가는 모습 (Isaac Sim 5.1 + Qwen3-VL-8B 실제 실행)
@@ -88,6 +89,7 @@ bash scripts/g1_docker.sh python3 scripts/plot_vln_episode.py outputs/hvln_inspe
   - 회의실: 유리벽 너머 테이블을 봐서 깊이가 유리에 맞음.
   - 소화기함·분전반: 장면 결함(소화기가 패널 뒤에 가려짐, 경고 표지가 시야 밖).
 - 네 원인 모두 수정했고, 재실행 예정입니다. 과제당 1회라 성능 주장이 아닌 동작 확인입니다. 자세한 내용은 [VALIDATION.md](docs/VALIDATION.md)에 있습니다.
+- 펌프실 과제 2개(커플링 가드, 탱크 압력계)는 파일럿 이후에 추가해, 다음 실행부터 포함됩니다.
 
 ## 어떻게 동작하나
 
@@ -120,10 +122,10 @@ bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0
 터미널 2에서 VLN 스택과 지시를 실행합니다. 결정마다 VLM의 선택과 이유가 로그에 나옵니다.
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor
 ```
 
-실험 행렬(지시 9개 × seed 3 × 조건 3)을 돌리고 `results.md`를 만듭니다.
+실험 행렬(지시 11개 × seed 3 × 조건 3)을 돌리고 `results.md`를 만듭니다.
 
 ```bash
 python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)
@@ -132,7 +134,7 @@ python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(d
 직접 지시하려면 launch에 `agent:=false`를 붙여 띄우고, 다른 터미널에서 지시를 보냅니다.
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
+bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
 ```
 
 ## 외부 에이전트 인터페이스와 ROS 2 토픽
@@ -148,20 +150,45 @@ G1_DDS=fastdds bash scripts/g1_docker.sh python3 scripts/send_instruction.py "�
 
 센서는 BestEffort / KeepLast 5, 명령·이벤트는 Reliable, 지도와 정적 TF는 TransientLocal입니다. 전체 토픽 목록, 실제 데이터 크기, Publisher·Subscriber 옵션, 노드 그래프, 코드는 [ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md)에 있습니다.
 
-## MuJoCo 캠퍼스 (개발·검증 환경)
+## 캠퍼스와 펌프실
 
-![같은 MuJoCo 공간에 연결된 Warehouse와 Office](docs/images/campus.png)
+![창고·사무동·펌프실 캠퍼스의 시멘틱·토폴로지 맵](docs/images/semantic/semantic_topological_map.png)
 
 | 공간 | 구성 |
 |---|---|
 | Warehouse 48×32 m | 자재 창고 · 조립 라인 · 품질 검사 · 충전 구역. 구역 표지판과 설비 명판(STATION 1–4, CHARGER 1–5, CONVEYOR A/B …) |
 | Office 24×24 m | 업무실 · 회의실 · 휴게실 · 관제실 (방 문패, 서버 랙 명판) |
-| 연결 | 하나의 물리 장면, 폭 4 m 연결 통로 |
+| **Pump room 12×10 m** | 사무동 중앙 복도 남쪽 통로로 연결. 원심 펌프 P-101 + 전동기 M-101 스키드(커플링 가드), 흡입·토출 배관과 밸브·압력계, 압력 탱크 TK-101, 전동기 제어반 MCC-1, 부품 선반, 볼라드 |
 
-- Isaac Sim 장면은 이 MuJoCo 장면을 USD로 내보낸 것이라 배치, 좌표, 의미 주석이 같습니다(`scripts/export_campus_usd.py`).
-- MuJoCo로 VLN 스택 전체를 돌릴 때(Docker): `bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor`.
-- VLN 없이 정해진 구역 순서로 걷는 데모, 창 조작, 연구실 프리셋, 평가 출력: [MUJOCO.md](docs/MUJOCO.md).
-- 구역·선반·시나리오 편집: [FACTORY.md](docs/FACTORY.md). e2e 비교 기준선(NaVILA): [VLN.md](docs/VLN.md).
+![펌프실 전경 (장면 미리보기)](docs/images/pump_room/pump_room_overview.jpg)
+
+![로봇 머리 카메라로 본 펌프실: 입구, 펌프·모터 스키드, 압력 탱크](docs/images/pump_room/pump_room_head_views.jpg)
+
+펌프실 지시 예: "사무동 남쪽 펌프실에 가서 펌프와 모터 사이에 커플링 가드가 설치되어 있는지 확인해." / "Go to the pump room and check whether the pressure tank TK-101 has a pressure gauge."
+
+## 시멘틱·토폴로지 맵
+
+SLAM이 만든 점유 지도 위에 두 층을 얹은 구조입니다(위 그림).
+
+- **시멘틱 레이어**: 구역 9개와 객체 91개(종류 33가지: 검사대, 충전 도크, 서버 랙, 펌프, 탱크, 밸브 …)로 이루어집니다. 객체마다 명판 글자, 소속 구역, 3D 상자가 있습니다.
+- **토폴로지 레이어**: 장소 13개(구역 9 + 창고 통로·연결 통로·사무동 복도·펌프실 통로)와 연결 12개(출입구 위치 포함), 그리고 사람이 단 기준점입니다. 예: 자재 창고 → 펌프실 = 창고 통로 → 연결 통로 → 사무동 복도 → 펌프실 통로 → 펌프실.
+- 실제 로봇이라면 SLAM(LiDAR SLAM이나 MASt3R 같은 SLAM 파운데이션 모델)이 기하 지도를 만들고, 사람이 주석을 달거나 개방어휘 인식(ConceptGraphs·HOV-SG 류)으로 위의 두 층을 채웁니다. 여기서는 시뮬레이터 정답으로 만들었습니다.
+- VLN에는 구역과 기준점만 주고, 객체 층은 아래 인식 정확도 평가의 정답으로만 씁니다.
+- 파일과 토픽: USD를 내보낼 때 `outputs/isaac/semantic_map.json`과 `.png`가 함께 생기고, Isaac 노드가 `/semantic_map`(JSON, latched)으로 발행합니다.
+
+## 인식 정확도 측정 (구역·객체)
+
+로봇은 어디서 지시를 받든 "지금 어느 구역에 있는지"와 "무엇이 보이는지"를 맞혀야 합니다. 이를 경로 이동과 따로 잽니다.
+
+1. Isaac Sim이 모든 장소에서 무작위 방향의 머리 카메라 영상, 깊이, 정확한 카메라 자세를 촬영합니다.
+2. VLM이 영상만 보고 구역을 고르고, 보이는 객체·명판·bbox를 답합니다.
+3. 정답과 비교합니다. 구역 정답은 촬영 자세의 구역이고, 객체 정답은 시멘틱 맵의 3D 상자를 카메라에 투영해 깊이로 가림을 확인한 것입니다.
+
+지표는 구역 정확도(혼동표), 객체 precision·recall·F1(클래스별), 명판 판독 정확도, 3D 위치 오차입니다. 실행 방법은 [UBUNTU_ISAAC.md](docs/UBUNTU_ISAAC.md) 9절에 있습니다.
+
+## 개발용 MuJoCo
+
+MuJoCo는 시뮬레이터로는 쓰지 않습니다. 캠퍼스 장면 생성기(MJCF → USD 내보내기)와 Mac에서 도는 단위 테스트(133개)에만 남아 있습니다. 고정 경로 보행 데모와 구역·선반 편집은 [MUJOCO.md](docs/MUJOCO.md)와 [FACTORY.md](docs/FACTORY.md)에 있습니다.
 
 ## 문서
 

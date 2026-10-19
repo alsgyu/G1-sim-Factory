@@ -42,6 +42,7 @@ class SimTopics:
         self.tf = pub("/tf", TFMessage)
         self.tf_static = pub("/tf_static", TFMessage)
         self.map = pub("/map", OccupancyGrid)
+        self.semantic_map = pub("/semantic_map", String)
         self.status = pub("/sim/status", String)
         node.create_subscription(Twist, "/cmd_vel", self._on_cmd, TOPICS["/cmd_vel"][1])
         self.command = np.zeros(3, dtype=np.float32)
@@ -67,7 +68,7 @@ class SimTopics:
         self.timing[key] = (total+time.perf_counter()-begin, n+1)
 
     # ------------------------------------------------------------------ static
-    def publish_static(self, t, camera_xyz, camera_pitch, lidar_xyz, grid):
+    def publish_static(self, t, camera_xyz, camera_pitch, lidar_xyz, grid, semantic_json=None):
         def tf(parent, child, xyz, quat):
             msg = TransformStamped()
             msg.header.stamp, msg.header.frame_id, msg.child_frame_id = M.stamp(t), parent, child
@@ -82,6 +83,8 @@ class SimTopics:
             tf("base_link", "livox_frame", lidar_xyz, (0, 0, 0, 1)),
         ]))
         self.map.publish(M.occupancy_msg(t, "map", grid.origin, grid.resolution, grid.data))
+        if semantic_json:  # zones, objects, places/edges/anchors (g1_factory.semantic_world)
+            self.semantic_map.publish(String(data=semantic_json))
 
     # ------------------------------------------------------------------ periodic
     def publish_clock(self, t):

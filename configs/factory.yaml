@@ -1,5 +1,6 @@
 # All positions are world coordinates, in metres. Yaw is radians.
-# One shared campus: a 48 x 32 m warehouse and a 24 x 24 m office.
+# One shared campus: a 48 x 32 m warehouse, a 24 x 24 m office and a 12 x 10 m pump room
+# south of the office (reached through the office's central corridor).
 # Warehouse quadrants have different functions, NOT laboratory ownership.
 layout:
   warehouse_bounds: [-24, -16, 24, 16]
@@ -97,6 +98,16 @@ zones:
     goal: [46, -4]
     sensors:
       - {id: room_temperature, position: [51.75, -3.0, 1.5]}
+  - id: pump_room
+    label: Pump room
+    kind: utility
+    bounds: [34, -26, 46, -16]
+    center: [40, -21]
+    goal: [40, -17.6]
+    sensors:
+      - {id: pump_temperature, position: [45.75, -20.0, 1.5]}
+    hotspots:
+      - {position: [42.0, -22.0], amplitude_c: 7.0, sigma_m: 2.0}
 scenarios:
   warehouse_tour: [material_storage, assembly_line, inspection, charging]
   office_tour: [office_workstations, office_meeting, office_lounge, office_control]

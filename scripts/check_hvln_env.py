@@ -33,11 +33,12 @@ def check_ros():
         report("PASS", "rclpy", f"ROS_DISTRO={os.environ.get('ROS_DISTRO', '?')}")
     except ImportError as exc:
         report("FAIL", "rclpy", f"{exc} - source /opt/ros/<distro>/setup.bash")
+    # Isaac Sim's bundled ROS 2 uses Fast DDS: the whole graph must use it (scripts/g1_docker.sh sets both).
     rmw = os.environ.get("RMW_IMPLEMENTATION", "")
-    report("PASS" if rmw == "rmw_cyclonedds_cpp" else "WARN", "RMW", rmw or "default (set rmw_cyclonedds_cpp)")
-    uri = os.environ.get("CYCLONEDDS_URI", "")
-    path = Path(uri.replace("file://", "")) if uri else None
-    report("PASS" if path and path.is_file() else "WARN", "CYCLONEDDS_URI", uri or "unset (configs/cyclonedds.xml)")
+    report("PASS" if rmw == "rmw_fastrtps_cpp" else "WARN", "RMW", rmw or "default (set rmw_fastrtps_cpp)")
+    profile = os.environ.get("FASTRTPS_DEFAULT_PROFILES_FILE", "")
+    report("PASS" if profile and Path(profile).is_file() else "WARN", "FASTRTPS_DEFAULT_PROFILES_FILE",
+           profile or "unset (configs/fastdds.xml: UDP, 16 MB buffers)")
     try:
         rmem = int(Path("/proc/sys/net/core/rmem_max").read_text())
         report("PASS" if rmem >= 64*1024*1024 else "WARN", "net.core.rmem_max",
@@ -46,12 +47,18 @@ def check_ros():
         report("WARN", "net.core.rmem_max", "not readable (non-Linux host)")
 
 
-def check_sim(frames: int):
+def check_assets() -> bool:
     upstream = ROOT/"external/unitree_rl_gym"
     if not (upstream/"resources/robots/g1_description/g1_12dof.xml").is_file():
         report("FAIL", "G1 assets", "missing - python3 scripts/fetch_assets.py")
-        return
+        return False
     report("PASS", "G1 assets", str(upstream))
+    return True
+
+
+def check_sim(frames: int):
+    """MuJoCo sensor rendering speed (development path only: --mujoco)."""
+    upstream = ROOT/"external/unitree_rl_gym"
     os.environ.setdefault("MUJOCO_GL", "egl")
     import tempfile
     import mujoco
@@ -119,7 +126,8 @@ def check_isaac():
                       (ROOT/"outputs/isaac/campus_meta.json", "python3 scripts/export_campus_usd.py --out outputs/isaac"),
                       (ROOT/"external/unitree_rl_gym/resources/robots/g1_description/g1_12dof.urdf",
                        "python3 scripts/fetch_assets.py"),
-                      (ROOT/"configs/fastdds.xml", "git pull")):
+                      (ROOT/"configs/fastdds.xml", "git pull"),
+                      (ROOT/"outputs/isaac/semantic_map.json", "python3 scripts/export_campus_usd.py --out outputs/isaac")):
         report("PASS" if path.is_file() else "WARN", f"Isaac file {path.relative_to(ROOT)}",
                "present" if path.is_file() else f"missing (MuJoCo runs without it): {how}")
 
@@ -130,9 +138,11 @@ def main():
     parser.add_argument("--vlm-model", default="qwen3-vl:8b-instruct")
     parser.add_argument("--frames", type=int, default=30)
     parser.add_argument("--skip-vlm", action="store_true")
+    parser.add_argument("--mujoco", action="store_true", help="also time MuJoCo RGB-D/LiDAR rendering (dev path)")
     args = parser.parse_args()
     check_ros()
-    check_sim(args.frames)
+    if check_assets() and args.mujoco:
+        check_sim(args.frames)
     check_isaac()
     if not args.skip_vlm:
         check_vlm(args.vlm_url, args.vlm_model)

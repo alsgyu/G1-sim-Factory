@@ -235,11 +235,24 @@ def main():
              for zid, z in meta["zones"].items()}
     out_meta = {"source": "g1_factory.scene.build_scene", "bounds": meta["bounds"],
                 "warehouse_bounds": meta["warehouse_bounds"], "office_bounds": meta["office_bounds"],
+                "free_areas": meta.get("free_areas", []), "utility_bounds": meta.get("utility_bounds"),
                 "config": {"layout": meta["config"]["layout"]}, "zones": zones, "obstacles": meta["obstacles"],
                 "camera": {"name": "head_rgbd", "pos_in_pelvis": [0.12, 0.0, 0.45], "pitch_down_deg": 10.0,
                            "fovy_deg": 54.9, "width": 640, "height": 480},
                 "lidar": {"pos_in_pelvis": [0.05, 0.0, 0.42]}}
     (out/"campus_meta.json").write_text(json.dumps(out_meta, indent=1)+"\n")
+
+    # Semantic + topological map (the annotated layers on the SLAM map), published by the Isaac node.
+    from g1_factory.grounding import SemanticMap
+    from g1_factory.planning import OccupancyGrid
+    from g1_factory.scene import load_config
+    from g1_factory.semantic_world import build_semantic_map, draw_semantic_map
+    smap = SemanticMap.load(load_config(args.config), ROOT/"configs/semantic_map.yaml").annotated()
+    anchors = {p.label: p.pose[:2] for p in smap.places.values() if p.kind == "landmark"}
+    semantic = build_semantic_map(model, data, meta, anchors)
+    (out/"semantic_map.json").write_text(json.dumps(semantic, indent=1, ensure_ascii=False)+"\n")
+    draw_semantic_map(semantic, OccupancyGrid.from_scene(meta, 0.1)).save(out/"semantic_map.png")
+    counts.update(objects=len(semantic["objects"]), places=len(semantic["places"]), edges=len(semantic["edges"]))
     print(json.dumps({"usd": str(usd_path), "materials": len(materials), **counts}))
 
 

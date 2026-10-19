@@ -1,6 +1,6 @@
 # Ubuntu 스테이션 실행 순서: Isaac Sim 5.1 + G1 + 계층형 VLN
 
-**`git pull` 이후 위에서부터 한 단계씩 실행. 각 단계 끝의 "확인"이 통과해야 다음 단계로.** 모든 명령은 저장소 루트에서 실행(`cd ~/Workspace/G1-sim-test`).
+**`git pull` 이후 위에서부터 한 단계씩 실행. 각 단계 끝의 "확인"이 통과해야 다음 단계로.** 시뮬레이터는 Isaac Sim 5.1만 사용(MuJoCo는 장면 생성기와 개발용 단위 테스트로만 남음). 모든 명령은 저장소 루트에서 실행(`cd ~/Workspace/G1-sim-test`).
 구조·모델 선정 이유: [HVLN.md](HVLN.md) · 토픽·QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md)
 
 | 구성 | 실행 위치 |
@@ -11,6 +11,8 @@
 | 연결 | 호스트 네트워크, 같은 `ROS_DOMAIN_ID`, Fast DDS(UDP) `configs/fastdds.xml` |
 
 필요: Ubuntu 22.04/24.04 x86_64, NVIDIA RTX GPU + 드라이버, 디스크 여유 약 60 GB(Isaac 이미지 약 20 GB + ROS 이미지 약 5 GB + 모델 10 GB + 캐시), 인터넷.
+
+> **이미 설치한 뒤 `git pull`만 하는 경우**: 장면(`configs/factory.yaml`, `g1_factory/scene.py`·`office.py`·`utility.py`)이 바뀌었으면 2.3(USD 다시 내보내기), `docker/Dockerfile.ros2`가 바뀌었으면 2.1(이미지 다시 빌드)만 다시 하면 됨. 펌프실을 추가한 업데이트는 **2.3이 필요**함.
 
 ## 0. 현재 상태 확인
 
@@ -206,7 +208,7 @@ printf 'net.core.rmem_max=2147483647\nnet.core.wmem_max=2147483647\nnet.ipv4.ipf
 bash scripts/g1_docker.sh python3 scripts/check_hvln_env.py
 ```
 
-확인: 마지막 줄 `… PASS, … WARN, 0 FAIL`. 특히 `RGB-D render`(GPU EGL이면 수 ms/프레임), `Isaac file` 4개 PASS, `VLM four-image request (look-around)` PASS.
+확인: 마지막 줄 `… PASS, … WARN, 0 FAIL`. 특히 `RMW`·`FASTRTPS_DEFAULT_PROFILES_FILE`(Fast DDS), `Isaac file` 5개(USD·메타·URDF·Fast DDS 프로파일·시멘틱 맵) PASS, `VLM four-image request (look-around)` PASS.
 
 단위 테스트(다른 ROS 그래프와 섞이지 않게 도메인 99):
 
@@ -214,7 +216,7 @@ bash scripts/g1_docker.sh python3 scripts/check_hvln_env.py
 ROS_DOMAIN_ID=99 bash scripts/g1_docker.sh python3 -m pytest -q -p no:cacheprovider
 ```
 
-확인: `128 passed`(실패 0).
+확인: `133 passed`(실패 0).
 
 ## 6. Isaac Sim 스모크 테스트 (ROS 없이 G1이 서서 걷는지)
 
@@ -238,7 +240,7 @@ bash scripts/run_isaac_sim.sh --spawn -12 3.8 0
 `Isaac Sim G1 ready at …`가 나오면 준비 완료. 토픽이 나오는지 확인(다른 터미널):
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh ros2 topic hz /clock
+bash scripts/g1_docker.sh ros2 topic hz /clock
 ```
 
 `average rate: …`가 나오면 Ctrl-C.
@@ -246,7 +248,7 @@ G1_DDS=fastdds bash scripts/g1_docker.sh ros2 topic hz /clock
 터미널 2 — VLN 스택 + 과제 "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해":
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor
 ```
 
 - 진행 로그: `planned` → `decision`(VLN 선택·생각) … `step_done` → `decision … looked around` → `target_located` → `arrived` → `inspecting` → `done`. 끝나면 launch가 스스로 종료.
@@ -271,26 +273,26 @@ bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0
 평가기 없이 그래프만 띄우고(`agent:=false`, Ctrl-C까지 계속 실행):
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false agent:=false monitor:=false
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false agent:=false monitor:=false
 ```
 
 다른 터미널에서 지시:
 
 ```bash
-G1_DDS=fastdds bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
+bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"
 ```
 
 - 진행 이벤트가 출력되고 확인 이미지는 `inspection.jpg`로 저장. 외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독(QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md) 3·4절).
 
 ## 8. 실험 행렬
 
-먼저 작은 부분(8B, seed 0, 과제 9개 = Isaac 기동 포함 약 1–2시간):
+먼저 작은 부분(8B, seed 0, 과제 11개 = Isaac 기동 포함 약 1.5–2.5시간):
 
 ```bash
 python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_pilot --conditions vln_8b --seeds 0
 ```
 
-전체(과제 9 × seed 3 × 조건 3 = 81회 + 토픽 측정 1회, 하루 이상):
+전체(과제 11 × seed 3 × 조건 3 = 99회 + 토픽 측정 1회, 하루 이상):
 
 ```bash
 python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(date +%F)
@@ -303,7 +305,32 @@ python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(d
 - MuJoCo로 같은 행렬(비교·재현용): `python3 scripts/hvln_experiment.py --out outputs/exp_mujoco_$(date +%F)`.
 - 다른 실험을 동시에 돌릴 때는 `--domain-id`를 다르게.
 
-## 9. 문제 해결
+## 9. 시멘틱·토폴로지 맵과 인식 정확도
+
+**시멘틱·토폴로지 맵**: 2.3의 USD 내보내기가 함께 만듦 → `outputs/isaac/semantic_map.json`(구역·객체·장소 그래프), `outputs/isaac/semantic_map.png`(그림). Isaac 노드가 `/map`과 함께 `/semantic_map`(`std_msgs/String` JSON, TransientLocal)으로 발행.
+
+**인식 정확도**: 로봇이 어디서 지시를 받든 "지금 어느 구역인지", "무엇이 보이는지"를 맞히는지, 경로 이동과 따로 측정.
+
+1) Isaac Sim에서 촬영: 모든 장소(구역 9 + 통로 4)에 장소당 N개 자세(무작위 방향), 머리 카메라 RGB·깊이·카메라 자세 저장(보행 없이 순간 이동, ROS 없이 실행). 장소당 8개면 104장, 약 10–15분:
+
+```bash
+bash scripts/run_isaac_sim.sh --capture 8 --capture-out /ws/outputs/recognition/run1
+```
+
+확인: 마지막 줄 `CAPTURE DONE 104 frames -> /ws/outputs/recognition/run1`.
+
+2) 채점(VLM 8B, 영상당 질문 2개: 구역, 보이는 객체·명판·bbox):
+
+```bash
+bash scripts/g1_docker.sh python3 scripts/recognition_eval.py outputs/recognition/run1 --vlm-model qwen3-vl:8b-instruct
+```
+
+- 정답: 구역 = 촬영 자세가 있는 구역(구역 밖은 `aisle`). 보이는 객체 = 시멘틱 맵의 각 객체 3D 상자를 카메라에 투영하고 깊이와 비교해 실제로 보이는 것(가려진 것 제외, 작게·일부만 보이면 "marginal" = 맞히면 무시, 못 맞혀도 감점 없음).
+- 지표: 구역 정확도(구역별·혼동표), 객체 precision/recall/F1(클래스별), 명판 판독 정확도, 찾은 객체의 3D 위치 오차, VLM 지연.
+- 결과: `outputs/recognition/run1/eval_qwen3-vl_8b-instruct/results.md`, `results.json`, `examples/*.jpg`(초록 = 정답, 주황 = VLM).
+- 4B와 비교하려면 같은 촬영본에 `--vlm-model qwen3-vl:4b-instruct`로 한 번 더(촬영은 다시 할 필요 없음).
+
+## 10. 문제 해결
 
 | 증상 | 원인 → 조치 |
 |---|---|
@@ -314,7 +341,7 @@ python3 scripts/hvln_experiment.py --simulator isaac --out outputs/exp_isaac_$(d
 | `Missing outputs/isaac/campus.usd` / `Missing G1 URDF` | 2.3 / 2.2 |
 | Isaac `docker pull`이 `unauthorized` | `docker login nvcr.io` (3절) |
 | 스모크 테스트가 오래 출력 없음 | 첫 실행 셰이더 컴파일(5–15분). `docker ps`로 컨테이너가 살아 있는지 확인 |
-| VLN 스택에서 Isaac 토픽이 안 보임 | 스택을 `G1_DDS=fastdds`로 실행했는지, 두 쪽 `ROS_DOMAIN_ID`가 같은지(기본 0) |
+| VLN 스택에서 Isaac 토픽이 안 보임 | `scripts/g1_docker.sh`로 실행했는지(Fast DDS 기본), `G1_DDS=cyclonedds`를 주지 않았는지, 두 쪽 `ROS_DOMAIN_ID`가 같은지(기본 0) |
 | 영상 주기가 낮거나 끊김 | 5절 `sysctl` 적용 여부(`sysctl net.core.rmem_max`가 2147483647) |
 | 피드백에 `look-around call failed: HTTP Error 400` | Ollama 문맥 4096 → 4절 설정 후 `sudo systemctl restart ollama` |
 | VLM 호출 시간 초과·매우 느림 | `ollama ps`, `nvidia-smi`. 8B와 Isaac이 VRAM을 나눠 씀 → 4B 조건부터, `OLLAMA_MAX_LOADED_MODELS=1` 확인 |

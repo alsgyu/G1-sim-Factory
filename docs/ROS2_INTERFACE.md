@@ -42,6 +42,7 @@
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | `g1_sim` → `vln_navigator`, `vln_agent` |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `g1_sim` → `use_sim_time` 노드 전부 |
 | `/sim/status` | `std_msgs/msg/String` (JSON) | `g1_sim` → `external_agent` (시뮬레이터 전용) |
+| `/semantic_map` | `std_msgs/msg/String` (JSON) | `g1_sim`(Isaac) → 외부 에이전트·시각화·지도 소비 노드 (시멘틱·토폴로지 레이어, `g1_factory/semantic_world.py`) |
 
 ### 1.3 VLN·계획·제어
 
@@ -75,7 +76,8 @@ ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `P
 | `/cmd_vel` | vx·vy·yaw rate | 52 B | 20 Hz | 1.0 KB/s |
 | `/clock` | sim time | 12 B | 100 Hz | 1.2 KB/s |
 | `/sim/status` | JSON | 436–452 B | 2 Hz | 0.9 KB/s |
-| `/map` | 0.1 m 격자 780×340 = 265,200 셀 | **265,304 B** | 1회 (latched) | - |
+| `/map` | 0.1 m 격자 780×440 = 343,200 셀 (펌프실 추가 후; 파일럿 측정 시 780×340 = 265,304 B) | **343,304 B** (계산값) | 1회 (latched) | - |
+| `/semantic_map` | JSON: 구역 9, 객체 91(클래스·명판·구역·3D 상자), 장소 13, 연결 12(출입구), 기준점 7 | 29,290 B | 1회 (latched) | - |
 | `/vln/decision_image` | JPEG q80 640×480 (VLM이 본 영상 + 번호 웨이포인트) | **25.7 KB** (20.3–29.4 KB) | VLN 결정마다 (측정 회차 5회) | - |
 | `/vln/inspection_image` | JPEG q85 640×480 | 19.3–20.7 KB | 작업당 1회 | - |
 | `/plan` | 0.1 m 간격 PoseStamped. VLN: 결정 1회의 직선 구간(≤8 m), 회전·정지 = 1점 | 100 B – 5.9 KB (평균 3.6 KB) | VLN 결정마다 + 우회 | - |
@@ -121,6 +123,7 @@ QoS 표기: 신뢰성 / 지속성 / 이력(깊이). 정의는 한 파일에 모�
 | `/tf` | `g1_sim` | 50 Hz | Reliable / Volatile / KeepLast(100) | odom→base_link |
 | `/tf_static` | `g1_sim` | 시작 시 1회 | Reliable / **TransientLocal** / KeepLast(1) | map→odom, base_link→camera_link→optical, base_link→livox_frame |
 | `/map` | `g1_sim` | 시작 시 1회 | Reliable / **TransientLocal** / KeepLast(1) | `map` |
+| `/semantic_map` | `g1_sim` (Isaac) | 시작 시 1회 (`outputs/isaac/semantic_map.json`) | Reliable / **TransientLocal** / KeepLast(1) | `map` |
 | `/clock` | `g1_sim` | 100 Hz (sim time) | BestEffort / Volatile / KeepLast(1) | - |
 | `/sim/status` | `g1_sim` | 2 Hz | Reliable / Volatile / KeepLast(10) | - |
 | `/vln/feedback` | `vln_agent` | 상태 변화·VLN 결정마다 | Reliable / Volatile / KeepLast(50) | - |
@@ -198,7 +201,7 @@ flowchart LR
 
 | 노드 | 발행 | 구독 |
 |---|---|---|
-| `g1_sim` (MuJoCo `sim_node` / Isaac `isaac_sim_node`) | `/clock`, color·depth `image_raw`·`camera_info`, `/livox/lidar`, `/livox/imu`, `/odom`, `/joint_states`, `/tf`, `/tf_static`, `/map`, `/sim/status` | `/cmd_vel` |
+| `g1_sim` (Isaac `isaac_sim_node`) | `/clock`, color·depth `image_raw`·`camera_info`, `/livox/lidar`, `/livox/imu`, `/odom`, `/joint_states`, `/tf`, `/tf_static`, `/map`, `/semantic_map`, `/sim/status` | `/cmd_vel` |
 | `vln_agent` | `/vln/feedback`, `/vln/inspection_image`, `/vln/nav_request` | `/vln/instruction`, `/vln/nav_status`, `/odom`, color `image_raw`·`camera_info`, depth `image_raw`, `/tf`, `/tf_static`, `/clock` |
 | `vln_navigator` | `/plan`, `/vln/nav_status`, `/vln/decision_image` | `/vln/nav_request`, `/map`, `/odom`, color `image_raw`·`camera_info`, depth `image_raw`, `/livox/lidar`, `/nav/status`, `/tf`, `/tf_static`, `/clock` |
 | `path_follower` | `/cmd_vel`, `/nav/status` | `/plan`, `/odom`, `/clock` |

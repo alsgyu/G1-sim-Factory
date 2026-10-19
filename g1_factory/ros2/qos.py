@@ -40,6 +40,7 @@ TOPICS = {
     "/tf": ("tf2_msgs/msg/TFMessage", TF),
     "/tf_static": ("tf2_msgs/msg/TFMessage", TF_STATIC),
     "/map": ("nav_msgs/msg/OccupancyGrid", LATCHED),
+    "/semantic_map": ("std_msgs/msg/String", LATCHED),
     "/sim/status": ("std_msgs/msg/String", STATE),
     "/cmd_vel": ("geometry_msgs/msg/Twist", STATE),
     "/vln/instruction": ("std_msgs/msg/String", COMMAND),

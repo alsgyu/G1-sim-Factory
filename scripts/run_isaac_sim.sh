@@ -4,6 +4,7 @@
 #   bash scripts/run_isaac_sim.sh --smoke-test 8                 # bring-up check, no ROS
 #   bash scripts/run_isaac_sim.sh --spawn -12 3.8 0              # publish /g1_sim topics for the VLN stack
 #   bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0        # same, with the Isaac Sim window (follow camera)
+#   bash scripts/run_isaac_sim.sh --capture 8 --capture-out /ws/outputs/recognition/run1   # recognition frames
 #   ISAAC_DETACH=1 ISAAC_NAME=g1_isaac bash scripts/run_isaac_sim.sh --spawn ...   # background (runner)
 #
 # Needs: NVIDIA driver + nvidia-container-toolkit, `docker pull nvcr.io/nvidia/isaac-sim:5.1.0`,
@@ -26,6 +27,8 @@ fi
 # The container user (uid 1234) reads the repository: make our files world-readable (assets fetched
 # by older versions of fetch_assets.py were owner-only).
 chmod -R a+rX external outputs/isaac configs g1_factory 2>/dev/null || true
+# The only writable path inside the container: recognition captures (--capture).
+mkdir -p outputs/recognition && chmod 777 outputs/recognition
 RUN=(docker run --rm --gpus all --network host --ipc host
   -e ACCEPT_EULA=Y -e PRIVACY_CONSENT="${PRIVACY_CONSENT:-N}"
   -e ROS_DISTRO=humble -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp
@@ -38,7 +41,7 @@ RUN=(docker run --rm --gpus all --network host --ipc host
   -v "$CACHE/config:/isaac-sim/.nvidia-omniverse/config:rw"
   -v "$CACHE/data:/isaac-sim/.local/share/ov/data:rw"
   -v "$CACHE/pkg:/isaac-sim/.local/share/ov/pkg:rw"
-  -v "$PWD:/ws:ro" -e PYTHONDONTWRITEBYTECODE=1 -u 1234:1234
+  -v "$PWD:/ws:ro" -v "$PWD/outputs/recognition:/ws/outputs/recognition:rw" -e PYTHONDONTWRITEBYTECODE=1 -u 1234:1234
   --entrypoint /isaac-sim/python.sh)
 if [[ " $* " == *" --gui "* ]]; then
   # Isaac Sim window on this desktop (X11): allow local containers to use the display once per login.

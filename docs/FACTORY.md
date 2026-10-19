@@ -23,6 +23,8 @@
 - VLN용 시각 단서: 구역 정면 표지판(높이 2.1m)·통로 쪽 돌출 표지판, 사무실 방 문패, 설비 명판(STATION 1–4, CHARGER 1–5, CONVEYOR A/B, WORKBENCH 1/2, CNC MACHINE 1/2, METROLOGY, BATTERY STORAGE, SERVER RACK 1–3), 비상구 표지.
 - 지도에 주석이 없는 탐색 대상: 창고 서쪽 끝 빨간 소화기함 `(-23.75, 1.0)`, 조립 구역 동쪽 벽 파란 분전반 `(23.75, 5.0)`, 사무동 소화기함 `(51.75, 1.0)`.
 - Isaac Sim 5.1용 USD: `scripts/export_campus_usd.py`가 같은 장면(로봇 제외)을 `outputs/isaac/campus.usd`로 내보냄. 장면을 바꾸면 다시 내보내야 Isaac 쪽에 반영됨.
+- 펌프실(`g1_factory/utility.py`, 구역 `pump_room`, 12×10 m `[34,-26,46,-16]`): 사무동 남쪽 벽 중앙 출입구(x 38–42) → 4 m 통로 → 펌프실. 원심 펌프 P-101·전동기 M-101 스키드(커플링 가드, 볼라드), 흡입 배관·게이트 밸브, 토출 배관·체크 밸브·압력계·헤더, 압력 탱크 TK-101(압력계), 전동기 제어반 MCC-1, 부품 선반. 모든 점검 대상에 명판.
+- 시멘틱·토폴로지 맵: `g1_factory/semantic_world.py`가 장면에서 객체(이름 규칙 `OBJECT_RULES`로 부품을 묶음)·장소·연결을 만듦. 새 설비를 추가하면 `OBJECT_RULES`에 이름 규칙을 추가해야 객체 층과 인식 평가에 들어감.
 
 ## 연구실과 의미 구역
 

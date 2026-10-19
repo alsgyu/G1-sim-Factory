@@ -95,7 +95,7 @@ class OccupancyGrid:
         layout = metadata["config"]["layout"]
         bridge_half = layout["corridor_width"]/2+0.15
         wb, ob = layout["warehouse_bounds"], layout["office_bounds"]
-        for b in (wb, ob, [wb[2]-0.2, -bridge_half, ob[0]+0.2, bridge_half]):
+        for b in (wb, ob, [wb[2]-0.2, -bridge_half, ob[0]+0.2, bridge_half], *metadata.get("free_areas", [])):
             grid.fill_box(b, FREE)
         for item in list(metadata.get("obstacles", []))+list(extra_obstacles):
             grid.fill_box(item["bounds"], OCCUPIED)

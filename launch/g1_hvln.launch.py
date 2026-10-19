@@ -39,7 +39,8 @@ DEFAULTS = {
     "realtime_factor": ("1.0", "Cap simulation speed; <= 0 runs as fast as possible"),
     "timeout_s": ("900.0", "Episode limit in simulation seconds"),
     "monitor": ("true", "Run topic_monitor (sizes, rates, QoS) - adds subscriber load"),
-    "sim": ("true", "false: do not start g1_sim (Isaac Sim / real robot provides topics)"),
+    "sim": ("false", "default: Isaac Sim (scripts/run_isaac_sim.sh) or the real robot provides the topics; "
+                     "true: start the MuJoCo g1_sim instead (development only)"),
     "use_sim_time": ("true", "Follow /clock (MuJoCo, Isaac Sim); false on a real robot"),
     "remaps": ("", "Comma-separated topic remaps applied to every node, e.g. /livox/lidar:=/point_cloud"),
     "agent": ("true", "false: no built-in external_agent/evaluator; send instructions yourself "

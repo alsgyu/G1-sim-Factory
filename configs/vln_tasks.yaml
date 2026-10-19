@@ -70,3 +70,13 @@ tasks:
     instruction: "Find the blue electrical panel on the east wall of the assembly area and check whether it carries a high-voltage warning."
     expected_place: electrical_panel
     expected_verdict: "yes"
+  inspect_pump_guard_ko:
+    spawn: [30.0, 0.0, 0.0]
+    instruction: "사무동 남쪽 펌프실에 가서 펌프와 모터 사이에 커플링 가드가 설치되어 있는지 확인해."
+    expected_place: pump_p101
+    expected_verdict: "yes"
+  check_tank_gauge_en:
+    spawn: [12.0, -3.8, 0.0]
+    instruction: "Go to the pump room and check whether the pressure tank TK-101 has a pressure gauge."
+    expected_place: tank_tk101
+    expected_verdict: "yes"

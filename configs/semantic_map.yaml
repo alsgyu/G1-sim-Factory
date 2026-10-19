@@ -27,6 +27,7 @@ zone_aliases:
   office_meeting: [meeting room, conference room, office meeting room, 회의실, 미팅룸]
   office_lounge: [staff lounge, lounge, break room, office lounge, 휴게실, 라운지]
   office_control: [operations control, control room, operations room, office control room, 관제실, 통제실, 운영실]
+  pump_room: [pump room, pump station, utility room, plant room, mechanical room, 펌프실, 펌프룸, 설비실, 기계실, 유틸리티실]
 landmarks:
   - id: main_aisle_crossing
     label: Main aisle crossing
@@ -209,3 +210,28 @@ landmarks:
     object: [51.75, 1.0]
     footprint: [[51.6, 0.68, 51.9, 1.32]]
     aliases: [office fire extinguisher cabinet, office fire cabinet, 사무동 소화기함]
+  # Pump room (utility building south of the office, g1_factory/utility.py). Not annotated: found by camera.
+  - id: pump_p101
+    label: Pump P-101
+    zone: pump_room
+    annotated: false
+    pose: [40.4, -18.6, -1.5708]
+    object: [40.5, -22.0]
+    footprint: [[37.3, -23.0, 43.7, -21.0]]   # plinth with pump, coupling guard and motor
+    aliases: [pump, centrifugal pump, pump p-101, p-101, motor pump, 펌프, 원심 펌프, 펌프 모터]
+  - id: tank_tk101
+    label: Pressure tank TK-101
+    zone: pump_room
+    annotated: false
+    pose: [44.4, -22.3, -1.5708]
+    object: [44.4, -24.4]
+    footprint: [[43.75, -25.05, 45.05, -23.75]]
+    aliases: [pressure tank, tank, tk-101, 압력 탱크, 탱크]
+  - id: mcc_1
+    label: Motor control centre MCC-1
+    zone: pump_room
+    annotated: false
+    pose: [36.4, -18.6, 3.1416]
+    object: [34.42, -18.6]
+    footprint: [[34.12, -19.4, 34.72, -17.8]]
+    aliases: [mcc, motor control centre, motor control center, control panel, 제어반, 전동기 제어반, 분전반 mcc]

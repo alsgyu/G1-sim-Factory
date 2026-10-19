@@ -49,6 +49,10 @@ def parse_args():
     p.add_argument("--gui", action="store_true", help="open the Isaac Sim window (default headless)")
     p.add_argument("--smoke-test", type=float, default=0.0,
                    help="seconds: no ROS; stand 2 s then walk forward at 0.3 m/s and report (bring-up check)")
+    p.add_argument("--capture", type=int, default=0,
+                   help="recognition capture: N poses per topological place (zones and aisles), no ROS")
+    p.add_argument("--capture-out", type=Path, default=ROOT/"outputs/recognition/capture")
+    p.add_argument("--capture-seed", type=int, default=0)
     return p.parse_args()
 
 
@@ -378,7 +382,9 @@ def run_ros(sim: IsaacG1):
     schedule = Scheduler(clock=100.0, camera=ARGS.camera_rate, lidar=ARGS.lidar_rate, imu=200.0, state=50.0,
                          status=2.0)
     grid = OccupancyGrid.from_scene(self_meta(sim), 0.1)
-    topics.publish_static(0.0, CAMERA_XYZ, CAMERA_PITCH, LIDAR_XYZ, grid)
+    semantic_path = ARGS.meta.parent/"semantic_map.json"
+    semantic = semantic_path.read_text() if semantic_path.is_file() else None
+    topics.publish_static(0.0, CAMERA_XYZ, CAMERA_PITCH, LIDAR_XYZ, grid, semantic)
     node.get_logger().info(f"Isaac Sim G1 ready at {ARGS.spawn}; robot {sim.root}")
     collision_events, prev_hit, fallen, travelled = 0, False, False, 0.0
     last_xy = sim.base_state()[0][:2].copy()
@@ -455,10 +461,51 @@ def self_meta(sim):
     return sim.meta
 
 
+def capture(sim: IsaacG1):
+    """Recognition capture: head RGB-D + exact camera pose at sampled poses (scored by recognition_eval.py)."""
+    try:
+        from PIL import Image
+    except ImportError:  # Pillow is not guaranteed on Isaac's Python path: fall back to raw arrays
+        Image = None
+    from g1_factory.recognition import map_from_optical, sample_poses, zone_of
+    os.umask(0)  # files stay removable by the host user (container runs as uid 1234)
+    out = ARGS.capture_out
+    (out/"frames").mkdir(parents=True, exist_ok=True)
+    semantic = json.loads((ARGS.meta.parent/"semantic_map.json").read_text())
+    (out/"semantic_map.json").write_text(json.dumps(semantic, ensure_ascii=False))
+    poses = sample_poses(semantic, sim.meta, ARGS.capture, ARGS.capture_seed)
+    index = []
+    for k, pose in enumerate(poses):
+        sim.reset(pose["x"], pose["y"], pose["yaw"])
+        sim.robot.set_linear_velocity(np.zeros(3))
+        sim.robot.set_angular_velocity(np.zeros(3))
+        for _ in range(12):  # 60 ms of standing (PD + policy, zero command) so render products update
+            sim.step(np.zeros(3, np.float32), render=True)
+        frame = sim.rgbd()
+        if frame is None:
+            continue
+        pos, quat, *_ = sim.base_state()
+        name = f"{k:04d}_{pose['place']}"
+        if Image is not None:
+            Image.fromarray(frame[0]).save(out/"frames"/f"{name}.jpg", quality=92)
+        else:
+            np.save(out/"frames"/f"{name}_rgb.npy", frame[0])
+        np.save(out/"frames"/f"{name}_depth.npy", frame[1].astype(np.float16))
+        index.append({**pose, "frame": name, "base_pos": [float(v) for v in pos], "base_quat": [float(v) for v in quat],
+                      "zone": zone_of(semantic, pos[:2]),
+                      "map_from_optical": map_from_optical(pos, quat).round(5).tolist()})
+        print(f"CAPTURE {k+1}/{len(poses)} {name}", flush=True)
+    (out/"index.json").write_text(json.dumps({"simulator": "isaac_sim_5.1", "per_place": ARGS.capture,
+                                              "seed": ARGS.capture_seed, "captures": index}, indent=1))
+    print(f"CAPTURE DONE {len(index)} frames -> {out}", flush=True)
+
+
 def main():
     sim = IsaacG1()
     try:
-        if ARGS.smoke_test > 0:
+        if ARGS.capture > 0:
+            capture(sim)
+        elif ARGS.smoke_test > 0:
             report = smoke_test(sim)
             ok = report["upright"] and report["walked_m"] > 0.5 and report["lidar_points"] > 1000
             print("SMOKE", "PASS" if ok else "FAIL", flush=True)

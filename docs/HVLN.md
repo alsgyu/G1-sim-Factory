@@ -4,7 +4,7 @@
 
 | 항목 | 구성 |
 |---|---|
-| 실험 대상 | **Isaac Sim 5.1 + Unitree G1** (Ubuntu GPU 스테이션). 개발·검증용 MuJoCo도 같은 ROS 2 토픽 |
+| 실험 대상 | **Isaac Sim 5.1 + Unitree G1** (Ubuntu GPU 스테이션). MuJoCo는 장면 생성기·단위 테스트로만 사용 |
 | VLN 모델 | **지도 기반 계층형 VLN** (MapGPT 방식 지도 프롬프트 + 이미지 위 번호 웨이포인트 시각 프롬프트) · 고수준 정책 **Qwen3-VL-8B-Instruct** (경량 비교 4B) |
 | 결정 방식 | 결정형(deterministic): 지도에서 갈 수 있는 후보 중 하나를 고름, greedy 디코딩(temperature 0), 출력 검증 |
 | 로봇이 아는 것 | SLAM 점유 지도(주행 가능 공간) + 사람이 단 의미 주석(구역 8개 + 고정 기준점 7개) |
@@ -144,8 +144,10 @@ flowchart TD
 | `json_agent_subgoals` | 충전 구역(북쪽 향함) | JSON `steps`: 연결 통로 → 휴게실 → 자판기 찾기 | 자판기 / yes |
 | `go_fire_cabinet_ko` | 주 통로 교차로 | 창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해. | 소화기함 / yes |
 | `check_electrical_panel_en` | 충전 구역(북쪽 향함) | Find the blue electrical panel on the east wall of the assembly area and check whether it carries a high-voltage warning. | 분전반 / yes |
+| `inspect_pump_guard_ko` | 사무동 입구 | 사무동 남쪽 펌프실에 가서 펌프와 모터 사이에 커플링 가드가 설치되어 있는지 확인해. | 펌프 P-101 / yes |
+| `check_tank_gauge_en` | 충전 구역 | Go to the pump room and check whether the pressure tank TK-101 has a pressure gauge. | 압력 탱크 TK-101 / yes |
 
-- 행렬: 과제 9 × seed 3 × 조건 3 = 81회 + 토픽 측정 1회. seed≠0은 시작 위치 ≤0.3m, ≤20° 섭동.
+- 행렬: 과제 11 × seed 3 × 조건 3 = 99회 + 토픽 측정 1회. seed≠0은 시작 위치 ≤0.3m, ≤20° 섭동.
 - 조건: `vln_8b`(주 조건), `vln_4b`(모델 크기), `oracle_8b`(목표 좌표를 아는 지도 조회 + A*, **VLN 아님, 상한 기준선**).
 - 통제: 같은 지도·주석·과제·센서·추종기·보행 정책. 시간 지표는 sim 시간.
 - 거리 기준: 대상 물체의 바닥 외곽(`semantic_map.yaml`의 `footprint`, 장면 형상과 일치하는지 테스트로 확인). 10m 컨베이어처럼 긴 물체도 공정하게 평가하고, "컨베이어"처럼 어느 개체든 맞는 지시는 해당 개체 모두(A·B)를 정답으로 인정.
@@ -160,9 +162,21 @@ flowchart TD
 | VLN 결정 수·지연 | 작업당 VLM 결정 수, 결정당 지연(벽시계) |
 | 경로추종 RMSE | 구간별 계획 경로 대비 횡방향 오차 |
 
-## 7. 검증 상태·한계
+## 7. 시멘틱·토폴로지 맵과 인식 정확도
 
-- 단위 테스트 128개: 후보 생성·투영·보행거리 힌트, 구역 이탈 거절·재질의, 명판 재판독, 2차 확인, 회전 제한(제자리 회전 중 밀림 포함), 둘러보기 1회·방향 선택·무효 응답·서버 오류 대체, 단계 자동 완료, 접근 자세(지도 외곽 기준 거리), 명판 라벨 grounding·식별자 비교, 단계 분해 검증(찾기 단계·지어낸 번호 제거), 평가용 대상 외곽이 실제 장면 형상과 일치, LiDAR 패턴·시작 섭동 결정성, 기존 계획기·추종기·grounding.
+| 층 | 내용 | VLN에 제공 |
+|---|---|---|
+| 기하 | 점유 지도 `/map` (0.1 m) — SLAM 결과에 해당 | O |
+| 시멘틱 | 구역 9개(이름·별칭·경계·입구), 객체 91개(종류 33, 명판 글자, 소속 구역, 3D 상자) | 구역만 O, 객체는 평가 정답 |
+| 토폴로지 | 장소 13개(구역 9 + 창고 통로·연결 통로·사무동 복도·펌프실 통로), 연결 12개(출입구 좌표·길이), 기준점 7개 | 기준점 O |
+
+- 생성: `g1_factory/semantic_world.py`(시뮬레이터 정답 = 사람이 SLAM 지도에 단 주석). `scripts/export_campus_usd.py`가 `outputs/isaac/semantic_map.json`·`.png`를 함께 만들고, Isaac 노드가 `/semantic_map`(JSON, TransientLocal)으로 발행.
+- 실로봇: SLAM(LiDAR SLAM, MASt3R-SLAM 같은 파운데이션 모델)이 기하 층과 자세를 만들고, 시멘틱·토폴로지 층은 사람 주석이나 개방어휘 인식(ConceptGraphs, HOV-SG)으로 그 지도 좌표계에 얹음.
+- 인식 정확도(`g1_factory/recognition.py`, `scripts/recognition_eval.py`): Isaac에서 장소마다 무작위 방향으로 촬영 → VLM이 영상만으로 구역·객체(명판·bbox)를 답함 → 정답(자세의 구역, 깊이로 가림을 확인한 객체 투영)과 비교. 구역 정확도·혼동표, 객체 precision·recall·F1, 명판 판독, 3D 위치 오차. 실행: [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 9절.
+
+## 8. 검증 상태·한계
+
+- 단위 테스트 133개: 후보 생성·투영·보행거리 힌트, 구역 이탈 거절·재질의, 명판 재판독, 2차 확인, 회전 제한(제자리 회전 중 밀림 포함), 둘러보기 1회·방향 선택·무효 응답·서버 오류 대체, 단계 자동 완료, 접근 자세(지도 외곽 기준 거리), 명판 라벨 grounding·식별자 비교, 단계 분해 검증(찾기 단계·지어낸 번호 제거), 평가용 대상 외곽이 실제 장면 형상과 일치, 시멘틱 객체·토폴로지 경로·촬영 자세·가림을 고려한 보이는 객체 정답·검출 매칭, LiDAR 패턴·시작 섭동 결정성, 기존 계획기·추종기·grounding.
 - macOS(M1, Docker CPU 렌더링, Qwen3-VL 4B/Ollama)에서 MuJoCo + 전체 ROS 2 그래프 VLN 실행 검증: [VALIDATION.md](VALIDATION.md#지도-기반-계층형-vln).
 - **Isaac Sim 5.1 경로는 Mac에서 실행 불가**: USD 장면(MuJoCo와 같은 배치) 내보내기, 쿼터니언·LiDAR 에뮬레이션 수학, Fast DDS 프로파일까지만 오프라인 검증. Ubuntu에서 `--smoke-test`부터 실행해 확인 필요([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md)).
 - 8B 결과·실시간 실행은 Ubuntu GPU에서 측정.
