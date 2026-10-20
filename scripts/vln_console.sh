@@ -6,6 +6,8 @@
 #   VLM_MODEL=qwen3-vl:4b-instruct bash scripts/vln_console.sh
 #   VLN_MAP_FILE=maps/campus/map_world.yaml bash scripts/vln_console.sh   # on the robot's SLAM map
 #   VLN_MAP_PACKAGE=maps/campus bash scripts/vln_console.sh              # SLAM map + a person's annotations
+#   VLN_MAP_PACKAGE=maps/campus VLN_PACKAGE_FRAME=map VLN_INITIAL_POSE=24,-7.6,0 bash scripts/vln_console.sh
+#                         # the robot localises itself in the package (real-robot path; Isaac Sim with --no-map-tf)
 #
 # Each instruction is saved under outputs/console/<time>_<words>/ (feedback, decision images, inspection
 # image, route.png). The stack log: docker logs -f g1_vln_stack. Leaving the console stops the stack.
@@ -17,7 +19,8 @@ docker rm -f "$NAME" >/dev/null 2>&1 || true
 mkdir -p outputs/console
 G1_DOCKER_ARGS="-d --name $NAME" bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py \
   agent:=false monitor:=false vlm_model:="$MODEL" output_dir:=/ws/outputs/console/stack \
-  ${VLN_MAP_FILE:+map_file:=$VLN_MAP_FILE} ${VLN_MAP_PACKAGE:+map_package:=$VLN_MAP_PACKAGE} >/dev/null
+  ${VLN_MAP_FILE:+map_file:=$VLN_MAP_FILE} ${VLN_MAP_PACKAGE:+map_package:=$VLN_MAP_PACKAGE} \
+  ${VLN_PACKAGE_FRAME:+package_frame:=$VLN_PACKAGE_FRAME} ${VLN_INITIAL_POSE:+initial_pose:=$VLN_INITIAL_POSE} >/dev/null
 trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
 echo "VLN stack started in the background (model $MODEL; log: docker logs -f $NAME)"
 bash scripts/g1_docker.sh python3 scripts/vln_console.py

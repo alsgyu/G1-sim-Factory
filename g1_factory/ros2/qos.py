@@ -42,6 +42,7 @@ TOPICS = {
     "/map": ("nav_msgs/msg/OccupancyGrid", LATCHED),
     "/semantic_map": ("std_msgs/msg/String", LATCHED),
     "/sim/status": ("std_msgs/msg/String", STATE),
+    "/sim/ground_truth": ("nav_msgs/msg/Odometry", STATE),
     "/cmd_vel": ("geometry_msgs/msg/Twist", STATE),
     "/vln/instruction": ("std_msgs/msg/String", COMMAND),
     "/vln/feedback": ("std_msgs/msg/String", EVENTS),
@@ -53,6 +54,9 @@ TOPICS = {
     "/vln/nav_request": ("std_msgs/msg/String", COMMAND),
     "/vln/nav_status": ("std_msgs/msg/String", EVENTS),
     "/vln/decision_image": ("sensor_msgs/msg/CompressedImage", EVIDENCE),
+    "/initialpose": ("geometry_msgs/msg/PoseWithCovarianceStamped", COMMAND),
+    "/localization/pose": ("geometry_msgs/msg/PoseWithCovarianceStamped", STATE),
+    "/localization/status": ("std_msgs/msg/String", STATE),
 }
 
 

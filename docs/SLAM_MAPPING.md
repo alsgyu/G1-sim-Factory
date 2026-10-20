@@ -136,11 +136,79 @@ python3 scripts/hvln_experiment.py --out outputs/exp_package --set map_package=/
 
 지도 묶음을 쓰면 VLN(`vln_agent`, `vln_navigator`)의 점유 지도, 구역, 기준점, 토폴로지가 모두 지도 묶음에서 옵니다. 평가기는 계속 시뮬레이터 정답으로 결과를 잽니다. 점유 지도만 바꿔 보려면 `map_file:=maps/campus/map_world.yaml`을 씁니다.
 
+`package_frame:=world`는 시뮬레이터가 아는 시작 자세로 지도 묶음을 옮기는 지름길입니다. 실제 로봇처럼 로봇이 지도 안에서 스스로 위치를 찾게 하려면 `package_frame:=map`을 씁니다(아래 "지도 안에서 위치 찾기").
+
+```bash
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_gauge_en \
+  map_package:=maps/campus package_frame:=map initial_pose:=24.8,-7.0,0.2
+```
+
+## 지도 안에서 위치 찾기
+
+다른 날 로봇을 다시 세우면, 로봇은 저장한 지도 안에서 자기가 어디 있는지 모릅니다. odom(FAST-LIO2, G1 자체 추정, 시뮬레이터)은 켤 때마다 원점이 새로 잡히고 걷는 동안 조금씩 어긋납니다. `localizer` 노드가 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 map에서 odom으로의 변환을 찾아 TF로 발행합니다. AMCL 같은 ROS 위치 추정기와 같은 구조입니다. VLN 노드(`vln_navigator`, `vln_agent`, `path_follower`)는 `/odom`에 이 변환을 곱한 map 좌표의 자세를 쓰고, map에서 odom으로의 변환이 생기기 전에는 움직이지 않습니다.
+
+### 방식
+
+- 2D 점유 지도(`map.pgm`)에 맞춥니다. 지도의 장애물 칸은 SLAM이 바닥에서 0.15-1.6 m 높이에 점을 본 칸이고, 실시간 스캔도 그 스캔에서 본 바닥 기준으로 0.2-1.5 m 높이의 점만 골라 0.1 m 칸마다 한 점씩(최대 800점) 씁니다. VLN이 쓰는 것도 같은 2D 지도라서 둘이 같은 좌표를 봅니다.
+- 점마다 가장 가까운 장애물 칸까지의 거리로 점수를 매깁니다(likelihood field, AMCL과 같은 점수). 초기 자세 주변의 회전과 이동을 모두 시험하고(correlative scan matching), 첫 위치 추정에서는 점수가 높은 후보 3개를, 추적 중에는 가장 좋은 후보를 1 cm, 0.1도 간격까지 촘촘하게 다듬습니다. 한 점에서 출발해 내려가는 ICP와 달리 국소 최솟값에 갇히지 않아, 대략의 초기 자세(1.5 m, 20도 안)면 됩니다.
+- 걷는 동안에는 0.5초마다 odom이 예측한 자세 주변의 작은 창(0.4 m, 5도)에서 다시 맞춥니다. 예측에 약한 사전 분포(0.5 m, 8도)를 두어, 벽만 이어지는 긴 통로처럼 스캔으로 알 수 없는 방향은 odom을 따릅니다.
+- 바닥 높이도 스캔에서 잽니다(지도의 바닥이 z = 0). VLN이 LiDAR 점을 map 좌표의 높이로 거르기 때문입니다.
+- numpy만 씁니다. Docker 이미지(Ubuntu 22.04, ROS 2 Humble, arm64와 amd64)에 새로 설치할 것이 없고, 지도를 읽는 데 0.1초, 첫 위치 추정 0.6초, 추적 한 번 0.1초입니다(M1 Pro, Docker arm64, 822x481 칸 지도).
+- 3D 점군(`cloud.pcd`)에 ICP나 NDT로 맞추는 방법(FAST_LIO_LOCALIZATION, hdl_localization 등)도 있습니다. 경사로나 층이 있는 현장에서 6자유도가 필요하면 그쪽이 맞습니다. 평평한 공장 바닥을 걷는 G1에는 x, y, 방향과 바닥 높이면 충분하고, 2D 방식은 빠르고 따로 빌드할 것이 없어 이것을 골랐습니다.
+
+### 받아들이는 기준
+
+- 첫 위치 추정은 스캔 점의 80% 이상이 지도 장애물 0.2 m 안에 놓이고, 다른 곳에 같은 만큼 맞는 자세가 없을 때만 받아들입니다. 추적 중에는 50% 이상이면 받아들입니다. 시험에서 맞는 자세는 거의 100%, 초기 자세가 2.5-5 m 틀렸을 때 잘못 맞춘 자세는 60-70%였습니다.
+- 맞지 않는 스캔이 6번(3초) 이어지면 상태가 lost가 되고, 마지막 추정 주변을 초기 자세와 같은 크기의 창으로 다시 찾습니다. 그동안 TF는 마지막 변환에 odom을 이어 붙여 계속 나갑니다. 로봇을 들어 옮기는 등 그 창(1.5 m, 20도)보다 크게 어긋나면 다시 찾지 못하고 거절만 이어지므로(틀린 곳에 맞추지는 않음) 초기 자세를 다시 줍니다.
+- 지도를 만든 뒤 선반을 옮기는 등 현장이 많이 바뀌면 지도에 맞는 점이 줄어듭니다. 첫 위치 추정이 계속 거절되면 `init_min_inliers`를 낮추거나 지도를 다시 만듭니다.
+
+### 초기 자세 주는 법
+
+- `initial_pose:=x,y,yaw`: 지도 묶음 좌표(m, rad)의 대략의 자세. 매핑을 시작한 자리에 세웠으면 `0,0,0`입니다.
+- RViz "2D Pose Estimate"(`/initialpose`, frame `map`): 지도에서 로봇이 선 곳을 누르고 보는 방향으로 끕니다. 걷는 중에 다시 주면 그 자세 주변을 다시 찾습니다.
+- 둘 다 없으면 `/initialpose`를 기다립니다.
+- 시뮬레이션에서는 `initial_pose:=spawn`이 과제의 시작 자세(seed 흔들림 없이)를 `evaluation.json`으로 지도 좌표에 옮겨 줍니다. 사람이 지도에서 출발점을 짚어 주는 것과 같고, 실험 행렬에서 과제마다 자세를 적지 않아도 됩니다.
+
+### 토픽
+
+| 토픽 | 내용 |
+|---|---|
+| `/tf` map에서 odom | 20 Hz, stamp를 0.5초 앞당겨 발행(AMCL의 transform_tolerance와 같은 이유: 센서 stamp로 찾을 때 다음 추정을 기다리지 않음) |
+| `/localization/pose` | map 좌표의 로봇 자세(`PoseWithCovarianceStamped`, 10 Hz). 공분산은 스캔만으로 거의 같은 점수가 나오는 자세의 퍼짐(통로 방향으로 큼) |
+| `/localization/status` | JSON: state(waiting, initializing, localized, lost), score, inliers, correction_m, latency_s, map_from_odom |
+| `/initialpose` | 초기 자세 입력 |
+
+평가기(`external_agent`)는 `package_frame:=map`이면 첫 위치 추정 뒤에 지시를 보내고, `/localization/pose`를 `evaluation.json`의 변환으로 시뮬레이터 좌표에 옮겨 정답 자세와 비교합니다(`summary.json`의 `localization`, `localization.csv`). 로봇이 보고하는 대상 위치도 지도 묶음 좌표라서 같은 변환으로 옮겨 채점합니다.
+
+시뮬레이터의 odom은 정답이라 어긋나지 않습니다. 추적을 시험하려면 MuJoCo에서 `odom_drift:=0.05,1.0`으로 odom을 걸은 거리 1 m마다 1도, 5% 길게 어긋나게 합니다(다리 odom처럼). 이때 정답은 `/sim/ground_truth`로 따로 나가고 평가기는 그것으로 채점합니다.
+
+### 결과 (Mac 개발 그래프)
+
+- 정지 스캔 224회: 초기 자세가 1.5 m, 20도 안에서 틀렸을 때 112회 중 110회 맞음(평균 0.06 m), 2회 거절, 틀린 위치 0회. 2.5-5 m 틀렸을 때 112회 모두 거절.
+- 탱크 압력계 과제(매핑 시작점에서 24 m 떨어진 곳에서 출발, 146 m): 위치 오차 평균 0.09 m, 최대 0.21 m. 매핑 시작점 근처는 0.02 m, 가장 먼 펌프실 쪽은 0.14 m로, 지도 자체의 오차(SLAM 경로 오차 최대 0.25 m)와 같은 크기입니다.
+- 컨베이어 과제(odom이 1도/m, 5% 어긋남): 위치 오차 최대 0.03 m(odom만으로는 6.0 m), 과제 성공.
+- 탱크 압력계 과제(같은 odom 어긋남, 125 m): 위치 오차 평균 0.10 m, 최대 0.20 m(odom만으로는 35.8 m). 오차는 odom이 정답일 때와 같은 모양이라 지도의 오차에서 옵니다.
+
+![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](images/slam/localization.png)
+- 자세한 내용은 [VALIDATION.md](VALIDATION.md).
+
+Isaac Sim에서는 시뮬레이터가 map에서 odom으로의 고정 변환을 내지 않게 `--no-map-tf`로 띄웁니다(`hvln_experiment.py`는 `package_frame=map`이면 알아서 붙입니다).
+
+```bash
+bash scripts/run_isaac_sim.sh --spawn 12 -3.8 0 --no-map-tf
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_gauge_en \
+  map_package:=maps/campus package_frame:=map initial_pose:=spawn
+VLN_MAP_PACKAGE=maps/campus VLN_PACKAGE_FRAME=map VLN_INITIAL_POSE=24.8,-7.0,0.2 bash scripts/vln_console.sh
+python3 scripts/hvln_experiment.py --out outputs/exp_localized --set map_package=/ws/maps/campus package_frame=map initial_pose=spawn
+```
+
 ## 실제 로봇에서
 
 - LiDAR 드라이버: `livox_ros_driver2`를 CustomMsg(xfer_format 1)로 실행합니다.
 - FAST-LIO2: 저장소의 `config/mid360.yaml`(lidar_type 1, LiDAR-IMU 외부 파라미터 T = [-0.011, -0.02329, 0.04412])을 쓰고, `imu_topic`은 드라이버의 `/livox/imu` 그대로 둡니다.
 - `slam_map` 노드는 `evaluate:=false`로 실행합니다(정답이 없으므로).
-- VLN은 `package_frame:=map`으로 실행합니다. 이때 로봇이 이 지도 안에서 자기 위치를 계속 추정해야 합니다(재위치 추정으로 map에서 odom으로의 변환을 발행). 시뮬레이션은 시작 자세를 알기 때문에 이 단계를 생략했습니다.
+- VLN은 `sim:=false use_sim_time:=false agent:=false map_package:=maps/<이름> package_frame:=map`으로 실행하고(지시는 외부 에이전트가 보냄), 로봇을 세운 자리를 `initial_pose`나 RViz로 알려 줍니다. `localizer`가 지도 안의 위치를 찾아 map에서 odom으로의 변환을 발행할 때까지 VLN은 움직이지 않습니다.
+- `/odom`과 TF odom에서 base_link는 중력 방향으로 수평인 좌표계(z가 위)여야 합니다. VLN 노드와 `localizer`가 모두 그렇게 가정합니다. G1 자체의 odom을 쓰거나, FAST-LIO2를 쓸 때는 `camera_init`(켤 때의 LiDAR IMU 자세라 머리에 달린 각도만큼 기울어 있음)을 시작 때 잰 중력으로 수평을 맞추고 LiDAR 자세를 base_link 자세로 바꿔 `/odom`으로 내보냅니다(`slam_map` 노드가 지도를 만들 때 하는 수평 보정과 같음). 이 변환 노드는 아직 없습니다.
+- TF base_link에서 LiDAR 프레임(드라이버의 frame_id)으로의 고정 변환이 있어야 스캔을 odom 좌표로 옮길 수 있습니다.
 - 넓은 현장이나 긴 경로에서는 오차가 쌓이므로 루프 클로저가 있는 방식(FAST-LIO-SAM, GLIM 등)을 더하는 것을 검토합니다.
 - 시뮬레이션과 다른 점: 시뮬레이션 LiDAR는 한 스캔의 점을 한순간에 찍으므로 점별 시간 없이 읽는 일반 PointCloud2 방식(lidar_type 5)으로 읽고, 시뮬레이터 IMU를 RELIABLE로 다시 발행한 `/slam/imu`를 씁니다(`configs/fast_lio_g1_sim.yaml`).

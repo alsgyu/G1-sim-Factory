@@ -27,7 +27,7 @@ from g1_factory.planning import OccupancyGrid as Grid
 from g1_factory.routes import zone_at
 from g1_factory.run import environment_contacts
 from g1_factory.scene import build_scene
-from g1_factory.sensors import Mid360Lidar, RGBDCamera, imu_reading
+from g1_factory.sensors import DriftingOdometry, Mid360Lidar, RGBDCamera, imu_reading
 from g1_factory.ros2.sim_bridge import Scheduler, SimTopics
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +57,10 @@ class G1SimNode(Node):
         self.max_sim_time = float(p("max_sim_time_s", 1800.0).value)
         unmapped = json.loads(p("unmapped_obstacles", "[]").value)
         map_resolution = float(p("map_resolution", 0.1).value)
+        map_tf = bool(p("map_tf", True).value)  # false: a localizer owns map -> odom (package_frame:=map)
+        drift = [float(v) for v in str(p("odom_drift", "").value).replace(",", " ").split()]
+        # "scale yaw_deg_per_m": /odom drifts like leg odometry, the truth goes to /sim/ground_truth
+        self.drift = DriftingOdometry(*drift) if drift else None
         self.schedule = Scheduler(clock=float(p("clock_rate_hz", 100.0).value),
                                   camera=float(p("camera_rate_hz", 30.0).value),
                                   lidar=float(p("lidar_rate_hz", 10.0).value),
@@ -82,7 +86,8 @@ class G1SimNode(Node):
         self.wall_start, self.sim_start = time.monotonic(), self.data.time
         site = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "livox_frame")
         self.topics.publish_static(self.data.time, self.model.cam_pos[self.camera.camera_id], math.radians(10),
-                                   self.model.site_pos[site], Grid.from_scene(self.meta, map_resolution))
+                                   self.model.site_pos[site], Grid.from_scene(self.meta, map_resolution),
+                                   map_tf=map_tf)
         self.get_logger().info(f"G1 sim ready: spawn={spawn} camera {width}x{height}@{self.schedule.rates['camera']}Hz "
                                f"lidar {lidar_points} rays@{self.schedule.rates['lidar']}Hz")
 
@@ -104,8 +109,17 @@ class G1SimNode(Node):
     def publish_state(self, t):
         q, v = self.data.qpos, self.data.qvel
         rot = self.data.xmat[self.pelvis].reshape(3, 3)
+        position, quat = q[:3], q[3:7]
+        if self.drift is not None:
+            self.topics.publish_truth(t, position, quat)
+            yaw = yaw_from_quat(quat)
+            x, y, odom_yaw = self.drift.update(float(q[0]), float(q[1]), yaw)
+            h = (odom_yaw-yaw)/2  # turn the true orientation about z by the heading drift
+            w, z = math.cos(h), math.sin(h)
+            quat = np.array([w*quat[0]-z*quat[3], w*quat[1]-z*quat[2], w*quat[2]+z*quat[1], w*quat[3]+z*quat[0]])
+            position = np.array([x, y, q[2]])
         # Free-joint linear velocity is world-frame; angular velocity is body-frame.
-        self.topics.publish_state(t, q[:3], q[3:7], rot.T@v[:3], v[3:6], self.walk.joint_names,
+        self.topics.publish_state(t, position, quat, rot.T@v[:3], v[3:6], self.walk.joint_names,
                                   q[self.walk.qpos_indices], v[self.walk.dof_indices],
                                   self.data.ctrl[self.walk.actuator_ids])
 

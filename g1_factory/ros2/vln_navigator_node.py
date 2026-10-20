@@ -35,6 +35,7 @@ from g1_factory.vlm import VLMClient, encode_jpeg
 from g1_factory.vln_navigator import (NavStep, NavTask, VLNNavigator, already_in_front, approach_pose,
                                       behind_partition, outside_region)
 from g1_factory.ros2 import messages as M
+from g1_factory.ros2.frames import MapPose
 from g1_factory.ros2.qos import TOPICS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,6 +66,7 @@ class VLNNavigatorNode(Node):
                                    f"{len(self.package['places'])} places, {len(self.package['edges'])} doorways")
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
+        self.map_pose = MapPose(self, self.buffer)  # /odom in the map frame (map -> odom: simulator or localizer)
         sub = lambda name, msg, cb: self.create_subscription(msg, name, cb, TOPICS[name][1])
         sub("/vln/nav_request", String, self.on_request)
         sub("/map", OccupancyGrid, self.on_map)
@@ -118,7 +120,10 @@ class VLNNavigatorNode(Node):
                                f"{len(self.topology.get('edges', []))} openings")
 
     def on_odom(self, msg):
-        self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
+        pose = self.map_pose(msg)
+        if pose is None:
+            return
+        self.pose = pose
         if self.navigator and self.state != "idle":
             self.navigator.note_position(np.array(self.pose[:2]))
 

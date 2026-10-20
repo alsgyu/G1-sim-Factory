@@ -10,9 +10,13 @@ Metrics (per episode): success, grounding correctness, subgoals reached, final
 distance to the expected place, SPL against the A* shortest path on /map,
 collisions/falls, cross-track RMSE, inspection verdict vs. the expected verdict,
 VLM latency. A wall-clock watchdog ends the episode if simulation time stalls.
+/odom is the simulator's ground truth here (world frame), never the robot's localisation. With a map package in its
+own frame (package_frame:=map) the instruction waits for the localizer's first fix, and the localizer's map-frame pose
+is compared with the truth through the package's world_from_map (summary.json "localization", localization.csv).
 """
 from __future__ import annotations
 
+from collections import deque
 import csv
 import json
 import math
@@ -22,6 +26,7 @@ import time
 import numpy as np
 import rclpy
 import yaml
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav_msgs.msg import OccupancyGrid, Odometry, Path as PathMsg
 from rclpy.clock import Clock, ClockType
 from rclpy.node import Node
@@ -29,6 +34,7 @@ from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 
 from g1_factory.grounding import SemanticMap
+from g1_factory.localization import compose, wrap
 from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, plan_path
 from g1_factory.scene import load_config
 from g1_factory.ros2 import messages as M
@@ -60,6 +66,13 @@ class ExternalAgentNode(Node):
         self.grounding_radius = float(p("grounding_radius_m", 1.0).value)  # VLN: localized target to footprint
         self.condition = p("condition", "").value
         self.seed = int(p("seed", 0).value)
+        package = p("map_package", "").value
+        self.localizing = bool(package) and p("package_frame", "world").value == "map"
+        evaluation = Path(package)/"evaluation.json" if package else None
+        w = json.loads(evaluation.read_text())["world_from_map"] if self.localizing and evaluation.is_file() else None
+        self.world_from_map = (w["x"], w["y"], w["yaw_rad"]) if w else None
+        self.loc_state, self.loc_fix_at, self.loc_lost = None, None, 0
+        self.loc_samples, self.truth = [], deque(maxlen=250)
         smap = SemanticMap.load(load_config(ROOT/"configs/factory.yaml"))
         self.expected = smap.places[self.task["expected_place"]]
         instruction = self.task["instruction"]
@@ -69,11 +82,19 @@ class ExternalAgentNode(Node):
         sub("/vln/feedback", String, self.on_feedback)
         sub("/vln/inspection_image", CompressedImage, self.on_image)
         sub("/vln/decision_image", CompressedImage, self.on_decision_image)
-        sub("/odom", Odometry, self.on_odom)
+        # The simulator's truth: /odom, or /sim/ground_truth when /odom drifts (g1_sim odom_drift)
+        truth_topic = p("truth_topic", "/odom").value
+        self.create_subscription(Odometry, truth_topic, self.on_odom, TOPICS["/odom"][1])
+        self.drifted = None  # last drifting /odom pose (starts at the truth): how far odometry alone would be off
+        if truth_topic != "/odom":
+            sub("/odom", Odometry, lambda m: setattr(self, "drifted", (m.pose.pose.position.x, m.pose.pose.position.y)))
         sub("/sim/status", String, self.on_sim)
         sub("/nav/status", String, self.on_nav)
         sub("/plan", PathMsg, self.on_plan)
         sub("/map", OccupancyGrid, self.on_map)
+        if self.localizing:
+            sub("/localization/status", String, self.on_loc_status)
+            sub("/localization/pose", PoseWithCovarianceStamped, self.on_loc_pose)
         self.sent_at, self.finished = None, False
         self.have_image, self.pending_done, self.pending_since = False, None, 0.0
         self.feedback, self.nav, self.plans, self.trajectory = [], [], [], []
@@ -90,7 +111,9 @@ class ExternalAgentNode(Node):
     # ------------------------------------------------------------------ timers
     def tick(self):
         t = self.now()
-        if self.sent_at is None and t >= self.send_after and self.pub.get_subscription_count() > 0 and self.pose:
+        localized = not self.localizing or self.loc_fix_at is not None
+        if self.sent_at is None and t >= self.send_after and self.pub.get_subscription_count() > 0 and self.pose \
+                and localized:
             self.start_pose = self.pose
             self.pub.publish(String(data=self.payload))
             self.sent_at = t
@@ -116,9 +139,49 @@ class ExternalAgentNode(Node):
     def on_odom(self, msg):
         self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
         t = M.to_seconds(msg.header.stamp)
+        self.truth.append((t, *self.pose))
         if t-self.last_traj >= 0.2:
             self.last_traj = t
             self.trajectory.append([round(t, 3), *(round(v, 4) for v in self.pose)])
+
+    def on_loc_status(self, msg):
+        status = json.loads(msg.data)
+        if status["state"] == "localized" and self.loc_fix_at is None:
+            self.loc_fix_at = self.now()
+            self.get_logger().info(f"localized in the map package after {self.loc_fix_at:.1f} s; sending the instruction")
+        self.loc_lost += status["state"] == "lost" and self.loc_state != "lost"
+        self.loc_state = status["state"]
+
+    def on_loc_pose(self, msg):
+        """Localisation error: the map-frame pose moved to the world with world_from_map vs the simulator's truth."""
+        t = M.to_seconds(msg.header.stamp)
+        if self.world_from_map is None or not self.truth or (self.loc_samples and t-self.loc_samples[-1][0] < 0.2):
+            return
+        tt, tx, ty, tyaw = min(self.truth, key=lambda s: abs(s[0]-t))
+        if abs(tt-t) > 0.05:
+            return
+        est = compose(self.world_from_map, (msg.pose.pose.position.x, msg.pose.pose.position.y,
+                                            M.quaternion_yaw(msg.pose.pose.orientation)))
+        self.loc_samples.append((round(t, 3), round(math.hypot(est[0]-tx, est[1]-ty), 4),
+                                 round(math.degrees(abs(float(wrap(est[2]-tyaw)))), 3),
+                                 *(round(v, 3) for v in (est[0], est[1], tx, ty)),
+                                 *((round(self.drifted[0], 3), round(self.drifted[1], 3)) if self.drifted else ("", ""))))
+
+    def localization_summary(self):
+        if not self.localizing:
+            return None
+        out = {"fix_after_s": round(self.loc_fix_at, 2) if self.loc_fix_at is not None else None,
+               "lost_events": self.loc_lost, "samples": len(self.loc_samples)}
+        if self.drifted is not None and self.pose is not None:
+            out["odometry_error_final_m"] = round(math.hypot(self.drifted[0]-self.pose[0], self.drifted[1]-self.pose[1]), 3)
+        if self.loc_samples:
+            e = np.array([s[1] for s in self.loc_samples])
+            y = np.array([s[2] for s in self.loc_samples])
+            out.update(position_error_m={"mean": round(float(e.mean()), 3), "rmse": round(float(np.sqrt((e**2).mean())), 3),
+                                         "p95": round(float(np.percentile(e, 95)), 3), "max": round(float(e.max()), 3),
+                                         "final": round(float(e[-1]), 3)},
+                       yaw_error_deg={"mean": round(float(y.mean()), 2), "max": round(float(y.max()), 2)})
+        return out
 
     def on_sim(self, msg):
         self.sim = json.loads(msg.data)
@@ -186,6 +249,8 @@ class ExternalAgentNode(Node):
         final_error = float(math.hypot(x-ex, y-ey))
         to_object = float(self.expected.distance_to_object(x, y))
         found = done.get("target_xy")
+        if found and self.localizing and self.world_from_map:  # the robot reports in the package's map frame
+            found = [round(v, 3) for v in compose(self.world_from_map, (*found[:2], 0.0))[:2]]
         target_error = float(self.expected.distance_to_object(*found)) if found else None
         decisions = [e for e in self.feedback if e.get("state") == "decision"]
         vln = not subgoals
@@ -214,7 +279,8 @@ class ExternalAgentNode(Node):
             "vln_actions": [e.get("action") for e in decisions],
             "start_pose": self.start_pose, "final_pose": self.pose,
             "final_distance_to_expected_place_m": round(final_error, 3),
-            "target_xy": done.get("target_xy"), "inspection": inspection or None,
+            "target_xy": found, "target_xy_robot_frame": done.get("target_xy") if self.localizing else None,
+            "inspection": inspection or None,
             "expected_verdict": expected_verdict,
             "verdict_correct": (inspection.get("verdict") == expected_verdict) if expected_verdict and inspection else None,
             "collision_events": self.sim.get("collision_events"), "collision_geoms": self.sim.get("collision_geoms"),
@@ -224,6 +290,7 @@ class ExternalAgentNode(Node):
             "cross_track_rmse_m_per_goal": rmse, "vlm_calls": calls,
             "vlm_latency_mean_s": round(float(np.mean(latencies)), 3) if latencies else None,
             "realtime_factor": self.sim.get("realtime_factor"), "sim_timing_ms_mean": self.sim.get("timing_ms_mean"),
+            "localization": self.localization_summary(),
         }
         # Success: in front of the right object, no collision/fall, check answered correctly.
         near = to_object <= self.success_radius if vln else final_error <= 1.5
@@ -239,6 +306,12 @@ class ExternalAgentNode(Node):
             writer = csv.writer(f)
             writer.writerow(["sim_time_s", "x_m", "y_m", "yaw_rad"])
             writer.writerows(self.trajectory)
+        if self.loc_samples:
+            with (self.out/"localization.csv").open("w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["sim_time_s", "position_error_m", "yaw_error_deg", "x_m", "y_m", "true_x_m", "true_y_m",
+                                 "odom_x_m", "odom_y_m"])  # world frame; odom only when /odom drifts
+                writer.writerows(self.loc_samples)
         self.get_logger().info(f"Task finished ({state}); success={success}; results in {self.out}")
         raise SystemExit(0 if success else 1)
 

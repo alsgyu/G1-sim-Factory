@@ -20,6 +20,7 @@ from tf2_ros import Buffer, TransformListener
 
 from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, path_blocked, plan_path
 from g1_factory.ros2 import messages as M
+from g1_factory.ros2.frames import MapPose
 from g1_factory.ros2.qos import TOPICS
 
 
@@ -39,6 +40,7 @@ class GlobalPlannerNode(Node):
         self.progress = 0
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
+        self.map_pose = MapPose(self, self.buffer)
         sub = lambda name, msg, cb: self.create_subscription(msg, name, cb, TOPICS[name][1])
         sub("/map", OccupancyGrid, self.on_map)
         sub("/odom", Odometry, self.on_odom)
@@ -59,7 +61,7 @@ class GlobalPlannerNode(Node):
         self.get_logger().info(f"Static map {grid.width}x{grid.height} @ {grid.resolution} m")
 
     def on_odom(self, msg: Odometry):
-        self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
+        self.pose = self.map_pose(msg) or self.pose
 
     def on_cloud(self, msg: PointCloud2):
         if self.costmap is None:

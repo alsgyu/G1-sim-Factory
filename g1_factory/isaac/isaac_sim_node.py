@@ -46,6 +46,8 @@ def parse_args():
     p.add_argument("--realtime-factor", type=float, default=1.0, help="<= 0: as fast as possible")
     p.add_argument("--max-sim-time", type=float, default=1800.0)
     p.add_argument("--cmd-timeout", type=float, default=0.5)
+    p.add_argument("--no-map-tf", action="store_true",
+                   help="do not publish map -> odom: the localizer does (VLN with package_frame:=map)")
     p.add_argument("--gui", action="store_true", help="open the Isaac Sim window (default headless)")
     p.add_argument("--smoke-test", type=float, default=0.0,
                    help="seconds: no ROS; stand 2 s then walk forward at 0.3 m/s and report (bring-up check)")
@@ -384,7 +386,7 @@ def run_ros(sim: IsaacG1):
     grid = OccupancyGrid.from_scene(self_meta(sim), 0.1)
     semantic_path = ARGS.meta.parent/"semantic_map.json"
     semantic = semantic_path.read_text() if semantic_path.is_file() else None
-    topics.publish_static(0.0, CAMERA_XYZ, CAMERA_PITCH, LIDAR_XYZ, grid, semantic)
+    topics.publish_static(0.0, CAMERA_XYZ, CAMERA_PITCH, LIDAR_XYZ, grid, semantic, map_tf=not ARGS.no_map_tf)
     node.get_logger().info(f"Isaac Sim G1 ready at {ARGS.spawn}; robot {sim.root}")
     collision_events, prev_hit, fallen, travelled = 0, False, False, 0.0
     last_xy = sim.base_state()[0][:2].copy()

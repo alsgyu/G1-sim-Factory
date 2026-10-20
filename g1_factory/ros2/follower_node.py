@@ -17,6 +17,7 @@ from std_msgs.msg import String
 
 from g1_factory.planning import PathTracker
 from g1_factory.ros2 import messages as M
+from g1_factory.ros2.frames import MapPose
 from g1_factory.ros2.qos import TOPICS
 
 
@@ -35,6 +36,7 @@ class PathFollowerNode(Node):
         self.timeout = float(p("goal_timeout_s", 240.0).value)
         self.odom_timeout = float(p("odom_timeout_s", 0.5).value)
         self.pose, self.odom_time = None, -math.inf
+        self.map_pose = MapPose(self)  # plans are in the map frame; /odom is in odom
         self.plan_id, self.plan_start = None, 0.0
         self.errors = []
         self.create_subscription(Path, "/plan", self.on_plan, TOPICS["/plan"][1])
@@ -49,8 +51,10 @@ class PathFollowerNode(Node):
         return self.get_clock().now().nanoseconds*1e-9
 
     def on_odom(self, msg: Odometry):
-        self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
-        self.odom_time = self.now()
+        pose = self.map_pose(msg)
+        if pose is None:  # no map -> odom (not localised): treated like missing odometry, the robot stops
+            return
+        self.pose, self.odom_time = pose, self.now()
 
     def on_plan(self, msg: Path):
         points, final_yaw = M.path_to_numpy(msg)

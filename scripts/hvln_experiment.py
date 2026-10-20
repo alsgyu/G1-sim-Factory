@@ -87,6 +87,8 @@ def start_isaac(args, task: dict, seed: int, extra: dict, name: str):
            "--unmapped", json.dumps(task.get("unmapped_obstacles", [])),
            "--camera-rate", str(extra.get("camera_rate_hz", 30.0)),
            "--realtime-factor", str(extra.get("realtime_factor", 1.0))]
+    if extra.get("map_package") and extra.get("package_frame") == "map":
+        cmd.append("--no-map-tf")  # the localizer owns map -> odom
     subprocess.run(["docker", "rm", "-f", name], capture_output=True)
     started = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
     if started.returncode:  # setup problems (cache ownership, missing USD/URDF) stop the whole matrix

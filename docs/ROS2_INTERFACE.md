@@ -69,6 +69,16 @@ SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](SLAM_MAPPING.m
 | `/slam_map` | `nav_msgs/msg/OccupancyGrid` (TransientLocal) | `map_file` → `vln_navigator` (`map_file:=`, `map_package:=`로 실행할 때 `/map` 대신), 외부 에이전트 |
 | `/slam/semantic_map` | `std_msgs/msg/String` (JSON, TransientLocal) | `map_file` (`map_package:=`) → 외부 에이전트, 시각화 (사람이 그린 방·기준점과 자동 토폴로지) |
 
+지도 묶음 좌표계로 VLN을 돌릴 때(`package_frame:=map`, 실제 로봇 방식)만 쓰는 토픽. 이때 map→odom은 시뮬레이터가 아니라 `localizer`가 발행하고, VLN 노드는 `/odom`에 이 변환을 곱해 map 좌표의 자세를 씁니다([SLAM_MAPPING.md](SLAM_MAPPING.md) "실제 로봇에서"):
+
+| 토픽 | 메시지 타입 | 발행 노드 → 구독 노드 |
+|---|---|---|
+| `/tf` map→odom | `tf2_msgs/msg/TFMessage` | `localizer` (20 Hz, 0.5 s 앞선 stamp, 첫 위치 추정 전에는 발행 안 함) → `vln_navigator`, `vln_agent`, `path_follower` |
+| `/initialpose` | `geometry_msgs/msg/PoseWithCovarianceStamped` (frame `map`) | RViz "2D Pose Estimate", 외부 에이전트 → `localizer` (대략의 시작 자세, 1.5 m와 20도 안) |
+| `/localization/pose` | `geometry_msgs/msg/PoseWithCovarianceStamped` (frame `map`) | `localizer` (10 Hz) → 외부 에이전트, `external_agent` (정답과 비교) |
+| `/localization/status` | `std_msgs/msg/String` (JSON) | `localizer` (정합마다, 약 2 Hz: state, score, inliers, correction) → `external_agent` (첫 위치 추정 뒤 지시 전송) |
+| `/sim/ground_truth` | `nav_msgs/msg/Odometry` (frame `world`) | `g1_sim` (MuJoCo, `odom_drift:=`로 `/odom`을 일부러 어긋나게 할 때만) → `external_agent` (채점용 정답) |
+
 ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `POST /v1/chat/completions` (JPEG base64 + 프롬프트). 5절 참고.
 
 ## 2. 실제 데이터 크기
@@ -133,7 +143,7 @@ QoS 표기: 신뢰성 / 지속성 / 이력(깊이). 정의는 한 파일에 모�
 | `/livox/imu` | `g1_sim` | 200 Hz | BestEffort / Volatile / KeepLast(50) | `livox_frame` |
 | `/odom`, `/joint_states` | `g1_sim` | 50 Hz (보행 정책 주기) | Reliable / Volatile / KeepLast(10) | `odom` → `base_link` |
 | `/tf` | `g1_sim` | 50 Hz | Reliable / Volatile / KeepLast(100) | odom→base_link |
-| `/tf_static` | `g1_sim` | 시작 시 1회 | Reliable / **TransientLocal** / KeepLast(1) | map→odom, base_link→camera_link→optical, base_link→livox_frame |
+| `/tf_static` | `g1_sim` | 시작 시 1회 | Reliable / **TransientLocal** / KeepLast(1) | map→odom(`package_frame:=map`에서는 빼고 `localizer`가 발행), base_link→camera_link→optical, base_link→livox_frame |
 | `/map` | `g1_sim` | 시작 시 1회 | Reliable / **TransientLocal** / KeepLast(1) | `map` |
 | `/semantic_map` | `g1_sim` (Isaac) | 시작 시 1회 (`outputs/isaac/semantic_map.json`) | Reliable / **TransientLocal** / KeepLast(1) | `map` |
 | `/clock` | `g1_sim` | 100 Hz (sim time) | BestEffort / Volatile / KeepLast(1) | - |
@@ -221,6 +231,7 @@ flowchart LR
 | `external_agent` (평가기) | `/vln/instruction` | `/vln/feedback`, `/vln/inspection_image`, `/vln/decision_image`, `/odom`, `/sim/status`, `/nav/status`, `/plan`, `/map`, `/clock` |
 | `topic_monitor` (측정 전용) | - | 위 토픽 전부 (raw) |
 | `global_planner` (`oracle` 기준선 전용) | `/plan`, `/nav/status` | `/map`, `/odom`, `/goal_pose`, `/livox/lidar`, `/tf` |
+| `localizer` (`package_frame:=map` 전용) | `/tf` map→odom, `/localization/pose`, `/localization/status` | `/livox/lidar`, `/odom`, `/initialpose`, `/tf`, `/tf_static` |
 
 로봇 내부 vs 외부 경계:
 - **로봇 내부(온보드)**: `g1_sim`(실로봇에서는 센서 드라이버 + 보행 제어) → `vln_navigator`·`vln_agent`·`path_follower`. 영상·깊이·LiDAR 같은 대용량 토픽은 이 안에서만 흐름.

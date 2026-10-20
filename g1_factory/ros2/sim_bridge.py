@@ -44,6 +44,7 @@ class SimTopics:
         self.map = pub("/map", OccupancyGrid)
         self.semantic_map = pub("/semantic_map", String)
         self.status = pub("/sim/status", String)
+        self.truth = None  # /sim/ground_truth, only when /odom is made to drift (publish_truth)
         node.create_subscription(Twist, "/cmd_vel", self._on_cmd, TOPICS["/cmd_vel"][1])
         self.command = np.zeros(3, dtype=np.float32)
         self.last_cmd_time = -math.inf
@@ -68,7 +69,8 @@ class SimTopics:
         self.timing[key] = (total+time.perf_counter()-begin, n+1)
 
     # ------------------------------------------------------------------ static
-    def publish_static(self, t, camera_xyz, camera_pitch, lidar_xyz, grid, semantic_json=None):
+    def publish_static(self, t, camera_xyz, camera_pitch, lidar_xyz, grid, semantic_json=None, map_tf=True):
+        """map_tf=False leaves map -> odom to a localizer (the VLN in the frame of a map package)."""
         def tf(parent, child, xyz, quat):
             msg = TransformStamped()
             msg.header.stamp, msg.header.frame_id, msg.child_frame_id = M.stamp(t), parent, child
@@ -77,7 +79,7 @@ class SimTopics:
              msg.transform.rotation.z, msg.transform.rotation.w) = map(float, quat)
             return msg
         self.tf_static.publish(TFMessage(transforms=[
-            tf("map", "odom", (0, 0, 0), (0, 0, 0, 1)),
+            *([tf("map", "odom", (0, 0, 0), (0, 0, 0, 1))] if map_tf else []),
             tf("base_link", "camera_link", camera_xyz, (0, math.sin(camera_pitch/2), 0, math.cos(camera_pitch/2))),
             tf("camera_link", "camera_color_optical_frame", (0, 0, 0), OPTICAL),
             tf("base_link", "livox_frame", lidar_xyz, (0, 0, 0, 1)),
@@ -137,6 +139,17 @@ class SimTopics:
         js.velocity = [float(v) for v in dq]
         js.effort = [float(v) for v in tau]
         self.joints.publish(js)
+
+    def publish_truth(self, t, position, quat_wxyz):
+        """True base pose (frame world) for the evaluator when /odom drifts."""
+        if self.truth is None:
+            self.truth = self.node.create_publisher(Odometry, "/sim/ground_truth", TOPICS["/sim/ground_truth"][1])
+        msg = Odometry()
+        msg.header.stamp, msg.header.frame_id, msg.child_frame_id = M.stamp(t), "world", "base_link"
+        msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = map(float, position)
+        (msg.pose.pose.orientation.w, msg.pose.pose.orientation.x,
+         msg.pose.pose.orientation.y, msg.pose.pose.orientation.z) = map(float, quat_wxyz)
+        self.truth.publish(msg)
 
     def publish_status(self, t, **fields):
         fields["timing_ms_mean"] = {k: round(1000*v[0]/max(v[1], 1), 2) for k, v in self.timing.items()}

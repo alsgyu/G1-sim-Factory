@@ -375,6 +375,14 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_con
 
 점유 지도만 바꿔 보려면 `map_file:=maps/campus/map_world.yaml`.
 
+위 실행은 시뮬레이터가 아는 시작 자세로 지도 묶음을 옮깁니다. 실제 로봇처럼 로봇이 지도 안에서 스스로 위치를 찾게 하려면, Isaac Sim을 `--no-map-tf`로 띄우고(시뮬레이터가 map에서 odom으로의 변환을 내지 않음) `package_frame:=map`으로 실행합니다. `initial_pose:=spawn`은 과제의 시작 자세를 지도 좌표로 옮긴 대략의 초기 자세이고, 직접 줄 때는 `initial_pose:=x,y,yaw`(지도 묶음 좌표)나 RViz "2D Pose Estimate"를 씁니다([SLAM_MAPPING.md](SLAM_MAPPING.md) "지도 안에서 위치 찾기").
+
+```bash
+bash scripts/run_isaac_sim.sh --gui --spawn 12 -3.8 0 --no-map-tf                     # 터미널 1
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_gauge_en \
+  map_package:=maps/campus package_frame:=map initial_pose:=spawn                     # 터미널 2
+```
+
 ## 10. 문제 해결
 
 | 증상 | 원인 → 조치 |

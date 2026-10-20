@@ -118,6 +118,7 @@ flowchart TD
 - `done.result`: `{"observed", "target_visible", "verdict": "yes|no|unknown", "status", "answer"}` + `final_pose`, `target_xy`(VLN이 영상으로 찾은 대상 위치), `vlm_calls`.
 - `/vln/inspection_image` (`sensor_msgs/CompressedImage` JPEG): 판정에 쓴 바로 그 프레임.
 - 지도 묶음으로 실행: launch 인자 `map_package:=maps/<이름>`(콘솔은 `VLN_MAP_PACKAGE=...`). 로봇이 SLAM으로 만든 점유 지도, 사람이 그 지도에 그린 구역·기준점, 자동으로 만든 장소 그래프를 모두 지도 묶음에서 읽고 시뮬레이터 정답은 평가에만 씀. 점유 지도만 바꾸려면 `map_file:=maps/<이름>/map_world.yaml`. 지도 만들기와 주석은 [SLAM_MAPPING.md](SLAM_MAPPING.md).
+- 지도 안에서 위치 찾기: `package_frame:=map`이면 시뮬레이터 시작 자세 대신 `localizer`가 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 map→odom을 발행(초기 자세 `initial_pose:=x,y,yaw`나 RViz `/initialpose`, 시뮬레이션은 `spawn`). `vln_navigator`·`vln_agent`·`path_follower`는 `/odom`에 map→odom을 곱한 map 좌표 자세를 쓰고(`g1_factory/ros2/frames.py`), 위치를 찾기 전에는 움직이지 않음. 설계와 결과는 [SLAM_MAPPING.md](SLAM_MAPPING.md) "지도 안에서 위치 찾기".
 - 대화형 콘솔: `bash scripts/vln_console.sh` → `지시>`에 직접 입력, 결정과 판정을 실시간 표시, 지시마다 `outputs/console/…`에 기록([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 7.1절).
 - 명령행 클라이언트: `python3 scripts/send_instruction.py "검사 구역 2번 검사대에 부품이 있는지 확인해"`.
 
@@ -183,9 +184,9 @@ flowchart TD
 
 ## 8. 검증 상태·한계
 
-- 단위 테스트 152개: 후보 생성·투영·보행거리 힌트, 구역 이탈 거절·재질의, 명판 재판독, 2차 확인, 회전 제한(제자리 회전 중 밀림 포함), 둘러보기 1회·방향 선택·무효 응답·서버 오류 대체, 단계 자동 완료, 접근 자세(지도 외곽 기준 거리), 명판 라벨 grounding·식별자 비교, 단계 분해 검증(찾기 단계·지어낸 번호 제거), 평가용 대상 외곽이 실제 장면 형상과 일치, 시멘틱 객체·토폴로지 경로·촬영 자세·가림을 고려한 보이는 객체 정답·검출 매칭, LiDAR 패턴·시작 섭동 결정성, 기존 계획기·추종기·grounding.
+- 단위 테스트 161개: 후보 생성·투영·보행거리 힌트, 구역 이탈 거절·재질의, 명판 재판독, 2차 확인, 회전 제한(제자리 회전 중 밀림 포함), 둘러보기 1회·방향 선택·무효 응답·서버 오류 대체, 단계 자동 완료, 접근 자세(지도 외곽 기준 거리), 명판 라벨 grounding·식별자 비교, 단계 분해 검증(찾기 단계·지어낸 번호 제거), 평가용 대상 외곽이 실제 장면 형상과 일치, 시멘틱 객체·토폴로지 경로·촬영 자세·가림을 고려한 보이는 객체 정답·검출 매칭, LiDAR 패턴·시작 섭동 결정성, 지도 안 위치 찾기(초기 자세 보정·odom 흔들림 추적·odom 급변 뒤 재탐색·먼 초기 자세 거절·통로 방향 사전 분포), 기존 계획기·추종기·grounding.
 - macOS(M1, Docker CPU 렌더링, Qwen3-VL 4B/Ollama)에서 MuJoCo + 전체 ROS 2 그래프 VLN 실행 검증: [VALIDATION.md](VALIDATION.md#지도-기반-계층형-vln).
 - **Isaac Sim 5.1 경로는 Mac에서 실행 불가**: USD 장면(MuJoCo와 같은 배치) 내보내기, 쿼터니언·LiDAR 에뮬레이션 수학, Fast DDS 프로파일까지만 오프라인 검증. Ubuntu에서 `--smoke-test`부터 실행해 확인 필요([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md)).
 - 8B 결과·실시간 실행은 Ubuntu GPU에서 측정.
-- 위치 = 시뮬레이터 정답 odom. 실환경은 SLAM/LIO 필요. 의미 주석은 사람이 지도에 단 것으로 가정.
+- 위치: 기본은 시뮬레이터 정답 odom. `package_frame:=map`이면 로봇이 만든 지도 안에서 LiDAR로 위치를 찾음(`localizer`). 실로봇의 odom(G1 자체 추정이나 수평을 맞춘 FAST-LIO2)을 `/odom`으로 내보내는 노드는 아직 없음. 의미 주석은 사람이 지도에 단 것으로 가정.
 - 보행 정책: 다리 12관절, 상체 고정. 계단·문 열기·조작 없음.

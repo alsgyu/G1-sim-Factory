@@ -164,3 +164,31 @@ def imu_reading(model, data):
         adr = model.sensor_adr[sid]
         return data.sensordata[adr:adr+3].copy()
     return read("livox_imu_gyro"), read("livox_imu_accel")
+
+
+class DriftingOdometry:
+    """Dead reckoning from the true base motion with a scale error and a heading drift per metre walked.
+
+    Leg odometry drifts like this; the simulator's /odom is otherwise perfect. Development check for the localizer
+    (VLN with package_frame:=map): map -> odom has to keep moving with the drift.
+    """
+
+    def __init__(self, scale: float = 0.0, yaw_deg_per_m: float = 0.0):
+        self.scale, self.yaw_per_m = float(scale), math.radians(yaw_deg_per_m)
+        self.prev = self.pose = None
+
+    def update(self, x: float, y: float, yaw: float):
+        """True (x, y, yaw) -> drifting odometry (x, y, yaw), equal at the first call."""
+        if self.prev is None:
+            self.prev = self.pose = (x, y, yaw)
+            return self.pose
+        px, py, pyaw = self.prev
+        c, s = math.cos(pyaw), math.sin(pyaw)
+        bx, by = c*(x-px)+s*(y-py), -s*(x-px)+c*(y-py)  # motion in the body frame
+        dyaw = math.remainder(yaw-pyaw, 2*math.pi)+math.hypot(bx, by)*self.yaw_per_m
+        bx, by = bx*(1+self.scale), by*(1+self.scale)
+        ox, oy, oyaw = self.pose
+        c, s = math.cos(oyaw), math.sin(oyaw)
+        self.pose = (ox+c*bx-s*by, oy+s*bx+c*by, math.remainder(oyaw+dyaw, 2*math.pi))
+        self.prev = (x, y, yaw)
+        return self.pose

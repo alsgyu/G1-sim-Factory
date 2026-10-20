@@ -36,6 +36,7 @@ from g1_factory.vlm import HierarchicalVLM, VLMClient, encode_jpeg
 from g1_factory.vln_navigator import NavStep, NavTask, decompose
 import uuid
 from g1_factory.ros2 import messages as M
+from g1_factory.ros2.frames import MapPose
 from g1_factory.ros2.qos import TOPICS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +70,7 @@ class VLNAgentNode(Node):
         self.settle = float(p("settle_s", 1.0).value)
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
+        self.map_pose = MapPose(self, self.buffer)  # /odom in the map frame (map -> odom: simulator or localizer)
         sub = lambda name, msg, cb: self.create_subscription(msg, name, cb, TOPICS[name][1])
         sub("/vln/instruction", String, self.on_instruction)
         sub("/nav/status", String, self.on_nav_status)
@@ -97,7 +99,7 @@ class VLNAgentNode(Node):
         return self.get_clock().now().nanoseconds*1e-9
 
     def on_odom(self, msg):
-        self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y, M.quaternion_yaw(msg.pose.pose.orientation))
+        self.pose = self.map_pose(msg) or self.pose
 
     def on_rgb(self, msg):
         self.rgb = msg

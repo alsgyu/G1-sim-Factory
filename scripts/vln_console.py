@@ -29,7 +29,7 @@ from std_msgs.msg import String
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from g1_factory.ros2.messages import quaternion_yaw  # noqa: E402
+from g1_factory.ros2.frames import MapPose  # noqa: E402
 from g1_factory.ros2.qos import TOPICS  # noqa: E402
 
 BOLD, DIM, GREEN, RED, CYAN, YELLOW, RESET = "\033[1m", "\033[2m", "\033[32m", "\033[31m", "\033[36m", "\033[33m", "\033[0m"
@@ -61,6 +61,11 @@ class Console(Node):
         sub("/vln/inspection_image", CompressedImage, self.on_inspection)
         sub("/vln/decision_image", CompressedImage, self.on_decision_image)
         sub("/odom", Odometry, self.on_odom)
+        # A map package (map_file node): rooms in the frame the VLN runs in; its own map frame means the simulator
+        # campus is not the right background for route.png.
+        self.create_subscription(String, "/slam/semantic_map", self.on_package, TOPICS["/semantic_map"][1])
+        self.map_pose = MapPose(self)  # the map frame the VLN plans in (map -> odom: simulator or localizer)
+        self.zones, self.package_frame = None, False
         self.pose, self.run, self.lock = None, None, threading.Lock()
         self.finished = threading.Event()
         self.decision_count = 0
@@ -80,8 +85,13 @@ class Console(Node):
         return folder
 
     def on_odom(self, msg):
-        p = msg.pose.pose
-        self.pose = [p.position.x, p.position.y, quaternion_yaw(p.orientation)]
+        pose = self.map_pose(msg)
+        self.pose = list(pose) if pose else self.pose
+
+    def on_package(self, msg):
+        semantic = json.loads(msg.data)
+        self.zones = {z["id"]: (z["label"], z["bounds"]) for z in semantic["zones"]}
+        self.package_frame = semantic.get("frame") == "map"
 
     def on_decision_image(self, msg):
         with self.lock:
@@ -148,6 +158,8 @@ class Console(Node):
                    "task": run["folder"].name, "expected_place": None}
         (run["folder"]/"summary.json").write_text(json.dumps(summary, indent=1, ensure_ascii=False))
         try:
+            if self.package_frame:
+                raise RuntimeError("the robot runs in the map package's own frame; route.png draws the simulator campus")
             from plot_vln_episode import route_figure
             route_figure(run["folder"])
             print(f"{DIM}  → 결과: {run['folder'].relative_to(ROOT)} (route.png, decisions/, inspection.jpg){RESET}")
@@ -190,9 +202,9 @@ def main():
             if text == ":where":
                 if node.pose:
                     x, y, yaw = node.pose
-                    print(f"위치 ({x:.2f}, {y:.2f}), 방향 {yaw*57.2958:.0f}°, 구역: {zone_name(zones, x, y)}")
+                    print(f"위치 ({x:.2f}, {y:.2f}), 방향 {yaw*57.2958:.0f}°, 구역: {zone_name(node.zones or zones, x, y)}")
                 else:
-                    print("아직 /odom을 받지 못했습니다.")
+                    print("아직 지도 좌표의 위치가 없습니다(/odom 또는 위치 추정을 기다리는 중).")
                 continue
             if text == ":tasks":
                 import yaml
