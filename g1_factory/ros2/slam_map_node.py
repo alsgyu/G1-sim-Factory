@@ -11,8 +11,9 @@ Publishes /slam/map (OccupancyGrid, frame slam_map, latched, every 2 s) and /sla
 
 Saves <output_root>/<name>/ (g1_factory.slam_map): map.yaml + map.pgm (ROS map_server / Nav2 format),
 map.png, cloud.pcd, trajectory.csv, meta.json; with ground truth also map_world.yaml/.pgm (same map in the
-simulator frame, for the VLN in simulation), semantic_map.json (annotations in the robot's map frame),
-evaluation.json and comparison.png.
+simulator frame, for the VLN in simulation), semantic_truth.json (the simulator's semantic map in the robot's map
+frame, only to check annotations against), evaluation.json and comparison.png. The package's semantic_map.json is
+built from a person's annotations (scripts/build_map_package.py).
 """
 from __future__ import annotations
 
@@ -220,7 +221,7 @@ class SlamMapNode(Node):
             S.comparison_image(world, gt).save(folder/"comparison.png")
         if self.semantic_path.is_file():
             semantic = json.loads(self.semantic_path.read_text())
-            (folder/"semantic_map.json").write_text(json.dumps(
+            (folder/"semantic_truth.json").write_text(json.dumps(
                 S.transform_semantic(semantic, np.linalg.inv(T)), indent=1, ensure_ascii=False))
         (folder/"evaluation.json").write_text(json.dumps(out, indent=1))
         return out

@@ -27,6 +27,7 @@ from std_msgs.msg import String
 from tf2_ros import Buffer, TransformListener
 
 from g1_factory.grounding import SemanticMap
+from g1_factory.map_package import load_package, vln_inputs
 from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, astar, path_blocked, smooth_path, densify
 from g1_factory.roadmap import RoadMap, region_at
 from g1_factory.scene import load_config
@@ -55,6 +56,13 @@ class VLNNavigatorNode(Node):
         self.region_labels = {z["id"]: z["label"] for z in config["zones"]} | {"aisle": "aisle / corridor"}
         self.entrances = {z["id"]: tuple(z["goal"]) for z in config["zones"]}
         self.anchors = {pl.label: pl.pose[:2] for pl in annotations.places.values() if pl.kind == "landmark"}
+        package = p("map_package", "").value
+        self.package = None
+        if package:  # rooms, anchors and topology from the map package (a person's annotations of the SLAM map)
+            self.package = load_package(package, p("package_frame", "world").value)[3]
+            self.regions, self.region_labels, self.entrances, self.anchors, _ = vln_inputs(self.package)
+            self.get_logger().info(f"map package {package}: {len(self.regions)} rooms, "
+                                   f"{len(self.package['places'])} places, {len(self.package['edges'])} doorways")
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
         sub = lambda name, msg, cb: self.create_subscription(msg, name, cb, TOPICS[name][1])
@@ -68,7 +76,7 @@ class VLNNavigatorNode(Node):
         sub("/nav/status", String, self.on_nav_status)
         sub("/semantic_map", String, self.on_semantic_map)
         exported = ROOT/"outputs/isaac/semantic_map.json"  # fallback when no node publishes /semantic_map
-        self.topology = json.loads(exported.read_text()) if exported.is_file() else None
+        self.topology = self.package or (json.loads(exported.read_text()) if exported.is_file() else None)
         pub = lambda name, msg: self.create_publisher(msg, name, TOPICS[name][1])
         self.pub_plan = pub("/plan", PathMsg)
         self.pub_status = pub("/vln/nav_status", String)
@@ -101,6 +109,8 @@ class VLNNavigatorNode(Node):
 
     def on_semantic_map(self, msg):
         """Topological layer (places, openings) for the VLN prompt; zones/anchors stay from the annotations."""
+        if self.package is not None:  # the map package already brought its own topology
+            return
         self.topology = json.loads(msg.data)
         if self.navigator:
             self.navigator.topology = self.topology

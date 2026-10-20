@@ -198,6 +198,8 @@ def route(topo: dict, start: str, goal: str) -> list:
 def buildings_from(meta: dict) -> dict:
     """Aisle segments of the campus by building footprint."""
     out = {"warehouse_aisle": meta["warehouse_bounds"], "office_corridor": meta["office_bounds"]}
+    half = meta.get("config", {}).get("layout", {}).get("corridor_width", 4.0)/2
+    out["bridge"] = [meta["warehouse_bounds"][2], -half, meta["office_bounds"][0], half]
     if meta.get("utility_bounds"):
         out["pump_passage"] = [38.0, -16.2, 42.0, -11.8]
     return out
@@ -293,12 +295,26 @@ def draw_semantic_map(semantic: dict, grid, scale: float = 14.0):
     return out
 
 
+def place_at(topo: dict, xy) -> str:
+    """Place of a point: the room containing it, else the nearest place rectangle (corridors, unnamed areas)."""
+    x, y = float(xy[0]), float(xy[1])
+    rooms = [(p["id"], r) for p in topo["places"] if p.get("kind") == "zone"
+             for r in (p.get("rects") or ([p["bounds"]] if p.get("bounds") else []))]  # annotated rectangles
+    for pid, (x0, y0, x1, y1) in rooms:
+        if x0 <= x <= x1 and y0 <= y <= y1:
+            return pid
+    rects = list(topo.get("aisle_segments", {}).items())+rooms
+    if not rects:
+        return "aisle"
+    gap = lambda b: math.hypot(max(b[0]-x, 0, x-b[2]), max(b[1]-y, 0, y-b[3]))
+    return min(rects, key=lambda item: gap(item[1]))[0]
+
+
 def topological_hint(topo: dict, xy, yaw: float, goal: str) -> str | None:
     """One prompt line: the place route to `goal` and where the next opening is, relative to the robot."""
     from g1_factory.roadmap import compass_name, describe_direction
     from g1_factory.navigation import wrap_angle
-    regions = {p["id"]: p["bounds"] for p in topo["places"] if p.get("bounds")}
-    here = place_of(xy, regions, topo.get("aisle_segments", {}))
+    here = place_at(topo, xy)
     if here == goal:
         return None
     path = route(topo, here, goal)

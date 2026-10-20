@@ -48,6 +48,10 @@ DEFAULTS = {
     "output_dir": ("", "Episode output directory (default outputs/hvln_<task>)"),
     "map_file": ("", "Run the VLN on a saved map (map_server YAML in the simulator frame, e.g. "
                      "maps/campus/map_world.yaml from g1_slam_mapping.launch.py) instead of the simulator's /map"),
+    "map_package": ("", "Run the VLN on a map package (maps/<name>: the robot's SLAM map + a person's annotations, "
+                        "scripts/build_map_package.py): occupancy, rooms, anchors and topology all from the package"),
+    "package_frame": ("world", "world: package moved into the simulator frame with the known start pose (simulation); "
+                               "map: the robot's own map frame (real robot localised in that map)"),
 }
 
 
@@ -82,12 +86,15 @@ def setup(context):
                   "timeout_s": arg("timeout_s"), "condition": arg("condition") or arg("planner_mode"), "seed": seed},
                  remaps)
     use_agent = arg("agent").lower() == "true"
+    package = ({"map_package": str(Path(arg("map_package")).resolve()), "package_frame": arg("package_frame")}
+               if arg("map_package") else {})
     actions = [
         node("vln_agent_node", "vln_agent", {**sim_time, "planner_mode": arg("planner_mode"),
-                                             "vlm_url": arg("vlm_url"), "vlm_model": arg("vlm_model")}, remaps),
+                                             "vlm_url": arg("vlm_url"), "vlm_model": arg("vlm_model"), **package},
+             remaps),
         (node("vln_navigator_node", "vln_navigator", {**sim_time, "vlm_url": arg("vlm_url"),
-                                                      "vlm_model": arg("vlm_model")},
-              remaps+(["/map:=/slam_map"] if arg("map_file") else []))
+                                                      "vlm_model": arg("vlm_model"), **package},
+              remaps+(["/map:=/slam_map"] if arg("map_file") or arg("map_package") else []))
          if arg("planner_mode") == "vln" else node("planner_node", "global_planner", sim_time, remaps)),
         node("follower_node", "path_follower", sim_time, remaps),
     ]
@@ -101,7 +108,10 @@ def setup(context):
             "render_shadows": arg("render_shadows").lower() == "true",
             # Quoted so ROS parses it as a YAML string, not a nested list.
             "unmapped_obstacles": "'" + json.dumps(task.get("unmapped_obstacles", [])) + "'"}))
-    if arg("map_file"):
+    if package:
+        actions.append(node("map_file_node", "map_file", {**sim_time, "package": package["map_package"],
+                                                          "frame": arg("package_frame"), "topic": "/slam_map"}))
+    elif arg("map_file"):
         actions.append(node("map_file_node", "map_file", {**sim_time, "yaml": str(Path(arg("map_file")).resolve()),
                                                           "topic": "/slam_map"}))
     if arg("monitor").lower() == "true":

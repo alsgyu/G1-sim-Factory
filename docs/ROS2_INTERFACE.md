@@ -66,7 +66,8 @@ SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](SLAM_MAPPING.m
 | `/slam/map` | `nav_msgs/msg/OccupancyGrid` (frame `slam_map`, TransientLocal) | `slam_map` → 외부 에이전트, 시각화 (매핑 중 2초마다) |
 | `/slam/status` | `std_msgs/msg/String` (JSON) | `slam_map` → `mapping_tour`, 외부 에이전트 |
 | `/mapping/done` | `std_msgs/msg/String` | `mapping_tour` → `slam_map` (지도 저장) |
-| `/slam_map` | `nav_msgs/msg/OccupancyGrid` (TransientLocal) | `map_file` → `vln_navigator` (`map_file:=` 로 실행할 때 `/map` 대신) |
+| `/slam_map` | `nav_msgs/msg/OccupancyGrid` (TransientLocal) | `map_file` → `vln_navigator` (`map_file:=`, `map_package:=`로 실행할 때 `/map` 대신), 외부 에이전트 |
+| `/slam/semantic_map` | `std_msgs/msg/String` (JSON, TransientLocal) | `map_file` (`map_package:=`) → 외부 에이전트, 시각화 (사람이 그린 방·기준점과 자동 토폴로지) |
 
 ROS 토픽이 아닌 흐름: `vln_navigator`·`vln_agent` ⇄ VLM 서버 HTTP `POST /v1/chat/completions` (JPEG base64 + 프롬프트). 5절 참고.
 

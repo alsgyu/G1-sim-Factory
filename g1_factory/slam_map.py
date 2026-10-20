@@ -303,10 +303,10 @@ def trajectory_error(slam_xy: np.ndarray, truth_xy: np.ndarray) -> dict:
             "final_drift_pct": round(float(100*d[-1]/max(steps.sum(), 1e-6)), 2)}
 
 
-def transform_semantic(semantic: dict, T_map_world: np.ndarray) -> dict:
-    """Annotations (world frame) re-expressed in the robot's map frame: what a person would draw on the SLAM map."""
-    yaw = math.atan2(T_map_world[1, 0], T_map_world[0, 0])
-    pt = lambda x, y: (T_map_world@np.array([x, y, 1.0]))[:2].round(3).tolist()
+def transform_semantic(semantic: dict, T: np.ndarray) -> dict:
+    """Semantic map with every point moved by the 2-D transform T (e.g. world -> map, or map -> world)."""
+    yaw = math.atan2(T[1, 0], T[0, 0])
+    pt = lambda x, y: (T@np.array([x, y, 1.0]))[:2].round(3).tolist()
 
     def box(b):
         corners = np.array([pt(b[0], b[1]), pt(b[2], b[1]), pt(b[2], b[3]), pt(b[0], b[3])])
@@ -315,17 +315,21 @@ def transform_semantic(semantic: dict, T_map_world: np.ndarray) -> dict:
     out["frame"] = "map (robot SLAM map: origin = floor under the LiDAR at start-up, x = start heading)"
     for z in out.get("zones", []):
         z["bounds"] = box(z["bounds"])
-        if z.get("entry"):
-            z["entry"] = pt(*z["entry"][:2])
+        z["rects"] = [box(r) for r in z.get("rects", [])]
+        for key in ("entry", "entrance", "center"):
+            if z.get(key):
+                z[key] = pt(*z[key][:2])
     for o in out.get("objects", []):
         o["center"] = [*pt(*o["center"][:2]), o["center"][2]]
         a = o["aabb"]
         lo_hi = box([a[0], a[1], a[3], a[4]])
         o["aabb"] = [lo_hi[0], lo_hi[1], a[2], lo_hi[2], lo_hi[3], a[5]]
     for p in out.get("places", []):
-        p["center"] = pt(*p["center"][:2])
+        if p.get("center"):
+            p["center"] = pt(*p["center"][:2])
         if p.get("bounds"):
             p["bounds"] = box(p["bounds"])
+        p["rects"] = [box(r) for r in p.get("rects", [])]
     for e in out.get("edges", []):
         e["door"] = pt(*e["door"][:2])
     for a in out.get("anchors", []):
@@ -333,6 +337,6 @@ def transform_semantic(semantic: dict, T_map_world: np.ndarray) -> dict:
         if "yaw" in a:
             a["yaw"] = round(a["yaw"]+yaw, 4)
     if "aisle_segments" in out:
-        out["aisle_segments"] = {k: box(v) for k, v in out["aisle_segments"].items()}
+        out["aisle_segments"] = {k: box(v) for k, v in out["aisle_segments"].items() if v}
     out.pop("occupancy", None)
     return out

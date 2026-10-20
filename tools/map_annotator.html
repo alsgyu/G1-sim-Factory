@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map Annotator</title>
+<style>
+  :root { --bg: #f6f7f9; --panel: #ffffff; --ink: #1f2328; --muted: #6a737d; --line: #d8dde3; --accent: #2f6fde; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 -apple-system, "Segoe UI", "Noto Sans KR", sans-serif; color: var(--ink); background: var(--bg);
+         display: flex; flex-direction: column; height: 100vh; overflow: hidden; }  /* the page never scrolls: clicks stay on the map point */
+  header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0 12px 0 0; }
+  button, select, input { font: inherit; }
+  button { padding: 5px 10px; border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer; }
+  button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  main { display: grid; grid-template-columns: 1fr 360px; flex: 1; min-height: 0; }
+  #stage { overflow: auto; position: relative; background: #e9ecef; }
+  #view { display: block; cursor: crosshair; image-rendering: pixelated; }
+  aside { overflow: auto; background: var(--panel); border-left: 1px solid var(--line); padding: 10px 12px; }
+  aside h2 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: none; }
+  .item { border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+  .item.sel { border-color: var(--accent); box-shadow: 0 0 0 2px #2f6fde33; }
+  .row { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  .row label { width: 52px; color: var(--muted); font-size: 12px; flex: none; }
+  .row input, .row select { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .meta { color: var(--muted); font-size: 12px; }
+  #status { position: sticky; bottom: 0; left: 0; padding: 4px 8px; background: #ffffffd9; font-size: 12px; color: var(--muted); }
+  #json { width: 100%; height: 180px; font: 11px/1.3 ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-radius: 6px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+  @media (max-width: 800px) { body { height: auto; overflow: auto; } main { grid-template-columns: 1fr; } #stage { height: 60vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>지도 주석 도구</h1>
+  <label><input type="file" id="files" multiple accept=".yaml,.yml,.pgm,.json"> 지도 열기 (map.yaml + map.pgm, 기존 annotations.json)</label>
+  <span class="meta" id="mapinfo">지도 없음</span>
+  <span style="flex:1"></span>
+  <button id="mode-zone" class="on" title="끌어서 새 구역">새 구역</button>
+  <select id="new-kind" title="새 구역 종류"><option value="room">방</option><option value="corridor">통로</option></select>
+  <button id="mode-rect" title="선택한 구역에 사각형 추가">사각형 추가</button>
+  <button id="mode-entrance" title="선택한 구역의 입구를 클릭">입구</button>
+  <button id="mode-anchor" title="클릭해서 기준점">기준점</button>
+  <button id="zoom-out">-</button><button id="zoom-in">+</button>
+  <button id="save">annotations.json 저장</button>
+</header>
+<main>
+  <div id="stage"><canvas id="view"></canvas><div id="status">지도를 여세요.</div></div>
+  <aside>
+    <div class="hint">끌어서 사각형을 그리면 구역이 생깁니다. 방은 VLN이 찾아가는 장소, 통로는 방 사이를 잇는 길입니다. 모양이 사각형 하나로 안 되면 구역을 고르고 "사각형 추가"로 더 그립니다. 입구를 비우면 문 위치를 지도에서 자동으로 찾습니다.</div>
+    <h2>구역</h2><div id="zones"></div>
+    <h2>기준점</h2><div id="anchors"></div>
+    <h2>annotations.json</h2><textarea id="json" readonly></textarea>
+  </aside>
+</main>
+<script>
+"use strict";
+const COLORS = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#b07aa1", "#76b7b2", "#edc948", "#ff9da7", "#9c755f", "#2f6fde", "#8cd17d", "#d37295"];
+const state = { map: null, zones: [], anchors: [], selected: null, mode: "zone", zoom: 2, drag: null, cursor: null };
+const view = document.getElementById("view"), ctx = view.getContext("2d");
+const base = document.createElement("canvas");
+
+function parseYaml(text) {
+  const out = {};
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_]+)\s*:\s*(.*?)\s*$/);
+    if (!m) continue;
+    let v = m[2].replace(/#.*$/, "").trim();
+    if (v.startsWith("[")) v = v.slice(1, -1).split(",").map(Number);
+    else if (/^-?[\d.]+(e-?\d+)?$/i.test(v)) v = Number(v);
+    else v = v.replace(/^['"]|['"]$/g, "");
+    out[m[1]] = v;
+  }
+  return out;
+}
+
+function parsePgm(buf) {
+  const bytes = new Uint8Array(buf);
+  const tokens = []; let i = 0;
+  while (tokens.length < 4) {
+    while (i < bytes.length && /\s/.test(String.fromCharCode(bytes[i]))) i++;
+    if (bytes[i] === 35) { while (i < bytes.length && bytes[i] !== 10) i++; continue; }  // comment
+    let t = ""; while (i < bytes.length && !/\s/.test(String.fromCharCode(bytes[i]))) t += String.fromCharCode(bytes[i++]);
+    tokens.push(t);
+  }
+  if (tokens[0] !== "P5") throw new Error("PGM P5 형식이 아닙니다");
+  const w = +tokens[1], h = +tokens[2];
+  return { w, h, data: bytes.subarray(i + 1, i + 1 + w * h) };
+}
+
+function setMap(meta, pgm, name) {
+  base.width = pgm.w; base.height = pgm.h;
+  const img = base.getContext("2d").createImageData(pgm.w, pgm.h);
+  for (let k = 0; k < pgm.w * pgm.h; k++) {
+    const v = pgm.data[k];
+    const c = v >= 250 ? [255, 255, 255] : v <= 10 ? [45, 49, 56] : [208, 212, 218];
+    img.data.set([...c, 255], k * 4);
+  }
+  base.getContext("2d").putImageData(img, 0, 0);
+  state.map = { w: pgm.w, h: pgm.h, res: meta.resolution, origin: meta.origin.slice(0, 2), image: meta.image || "map.pgm", name };
+  const fit = Math.max(1, Math.floor((document.getElementById("stage").clientWidth - 20) / pgm.w * 2) / 2);
+  state.zoom = Math.min(4, fit);
+  document.getElementById("mapinfo").textContent = `${name}: ${pgm.w}x${pgm.h} 칸, ${meta.resolution} m`;
+  restore(); render(); panel();
+}
+
+function loadAnnotations(a) {
+  state.zones = (a.zones || []).map((z, k) => ({ id: z.id || "", label: z.label || `구역 ${k + 1}`, aliases: (z.aliases || []).join(", "),
+    kind: z.kind || "room", rects: z.rects || [], entrance: z.entrance || null }));
+  state.anchors = (a.anchors || []).map((p, k) => ({ id: p.id || "", label: p.label || `기준점 ${k + 1}`, xy: p.xy }));
+  state.selected = null; render(); panel();
+}
+
+// map frame <-> canvas pixels (row 0 of the image = highest y)
+const toPx = (x, y) => [((x - state.map.origin[0]) / state.map.res) * state.zoom, (state.map.h - (y - state.map.origin[1]) / state.map.res) * state.zoom];
+const toMap = (u, v) => [state.map.origin[0] + (u / state.zoom) * state.map.res, state.map.origin[1] + (state.map.h - v / state.zoom) * state.map.res];
+const r2 = v => Math.round(v * 20) / 20;
+
+function render() {
+  if (!state.map) return;
+  view.width = state.map.w * state.zoom; view.height = state.map.h * state.zoom;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(base, 0, 0, view.width, view.height);
+  state.zones.forEach((z, k) => {
+    const col = COLORS[k % COLORS.length], sel = state.selected && state.selected.type === "zone" && state.selected.index === k;
+    for (const r of z.rects) {
+      const [x0, y0] = toPx(r[0], r[3]), [x1, y1] = toPx(r[2], r[1]);
+      ctx.fillStyle = col + (z.kind === "room" ? "40" : "22"); ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.setLineDash(z.kind === "room" ? [] : [8, 5]); ctx.lineWidth = sel ? 3 : 2; ctx.strokeStyle = col; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    }
+    ctx.setLineDash([]);
+    if (z.rects.length) {
+      const r = z.rects[0], [cx, cy] = toPx((r[0] + r[2]) / 2, (r[1] + r[3]) / 2);
+      ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = "#fff";
+      ctx.strokeText(z.label, cx, cy); ctx.fillStyle = "#1f2328"; ctx.fillText(z.label, cx, cy);
+    }
+    if (z.entrance) { const [ex, ey] = toPx(...z.entrance); ctx.fillStyle = "#2e7d32"; ctx.fillRect(ex - 5, ey - 5, 10, 10); }
+  });
+  state.anchors.forEach((a, k) => {
+    const [x, y] = toPx(...a.xy), sel = state.selected && state.selected.type === "anchor" && state.selected.index === k;
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 6); ctx.lineTo(x - 8, y + 6); ctx.closePath();
+    ctx.fillStyle = "#c62828"; ctx.fill(); if (sel) { ctx.lineWidth = 2; ctx.strokeStyle = "#2f6fde"; ctx.stroke(); }
+    ctx.font = "12px sans-serif"; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = "#fff";
+    ctx.strokeText(a.label, x + 9, y + 4); ctx.fillStyle = "#7f1d1d"; ctx.fillText(a.label, x + 9, y + 4);
+  });
+  if (state.drag) {
+    const { u0, v0, u1, v1 } = state.drag;
+    ctx.setLineDash([6, 4]); ctx.lineWidth = 2; ctx.strokeStyle = "#2f6fde";
+    ctx.strokeRect(Math.min(u0, u1), Math.min(v0, v1), Math.abs(u1 - u0), Math.abs(v1 - v0)); ctx.setLineDash([]);
+  }
+  document.getElementById("json").value = JSON.stringify(exportData(), null, 1);
+  save();
+}
+
+function exportData() {
+  return {
+    format: "g1-map-annotations/1", frame: "map",
+    map: state.map ? { image: state.map.image, resolution: state.map.res, origin: state.map.origin } : null,
+    zones: state.zones.map(z => ({ id: z.id || undefined, label: z.label, aliases: z.aliases.split(",").map(s => s.trim()).filter(Boolean),
+      kind: z.kind, rects: z.rects, entrance: z.entrance })),
+    anchors: state.anchors.map(a => ({ id: a.id || undefined, label: a.label, xy: a.xy })),
+  };
+}
+
+function field(labelText, input) {
+  const row = document.createElement("div"); row.className = "row";
+  const l = document.createElement("label"); l.textContent = labelText; row.append(l, input); return row;
+}
+
+function panel() {
+  const zl = document.getElementById("zones"); zl.innerHTML = "";
+  state.zones.forEach((z, k) => {
+    const box = document.createElement("div");
+    box.className = "item" + (state.selected && state.selected.type === "zone" && state.selected.index === k ? " sel" : "");
+    box.onclick = e => { if (e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT" && e.target.tagName !== "BUTTON") select("zone", k); };
+    const head = document.createElement("div"); head.className = "row";
+    const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = COLORS[k % COLORS.length];
+    const name = document.createElement("input"); name.value = z.label; name.setAttribute("aria-label", "구역 이름");
+    name.oninput = () => { z.label = name.value; render(); }; name.onfocus = () => select("zone", k, false);
+    const del = document.createElement("button"); del.textContent = "삭제";
+    del.onclick = () => { state.zones.splice(k, 1); state.selected = null; render(); panel(); };
+    head.append(sw, name, del); box.append(head);
+    const id = document.createElement("input"); id.value = z.id; id.placeholder = "자동 (이름에서)"; id.oninput = () => { z.id = id.value.trim(); render(); };
+    const kind = document.createElement("select"); kind.innerHTML = '<option value="room">방</option><option value="corridor">통로</option>';
+    kind.value = z.kind; kind.onchange = () => { z.kind = kind.value; render(); };
+    const al = document.createElement("input"); al.value = z.aliases; al.placeholder = "다른 이름, 쉼표로"; al.oninput = () => { z.aliases = al.value; render(); };
+    box.append(field("id", id), field("종류", kind), field("별칭", al));
+    const meta = document.createElement("div"); meta.className = "meta";
+    meta.textContent = `사각형 ${z.rects.length}개, 입구 ${z.entrance ? z.entrance.map(v => v.toFixed(1)).join(", ") : "자동"}`;
+    box.append(meta); zl.append(box);
+  });
+  const al = document.getElementById("anchors"); al.innerHTML = "";
+  state.anchors.forEach((a, k) => {
+    const box = document.createElement("div");
+    box.className = "item" + (state.selected && state.selected.type === "anchor" && state.selected.index === k ? " sel" : "");
+    const row = document.createElement("div"); row.className = "row";
+    const name = document.createElement("input"); name.value = a.label; name.setAttribute("aria-label", "기준점 이름");
+    name.oninput = () => { a.label = name.value; render(); }; name.onfocus = () => select("anchor", k, false);
+    const del = document.createElement("button"); del.textContent = "삭제";
+    del.onclick = () => { state.anchors.splice(k, 1); state.selected = null; render(); panel(); };
+    const meta = document.createElement("span"); meta.className = "meta"; meta.textContent = a.xy.map(v => v.toFixed(1)).join(", ");
+    row.append(name, meta, del); box.append(row); al.append(box);
+  });
+}
+
+function select(type, index, redraw = true) {
+  state.selected = { type, index }; render(); if (redraw) panel();
+}
+
+function focusLast(listId) {
+  const inputs = document.querySelectorAll(`#${listId} .item:last-child input`);
+  if (inputs.length) { inputs[0].focus(); inputs[0].select(); }
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  for (const m of ["zone", "rect", "entrance", "anchor"]) document.getElementById("mode-" + m).classList.toggle("on", m === mode);
+}
+
+view.addEventListener("mousedown", e => {
+  if (!state.map) return;
+  const u = e.offsetX, v = e.offsetY;
+  if (state.mode === "zone" || state.mode === "rect") { state.drag = { u0: u, v0: v, u1: u, v1: v }; return; }
+  const [x, y] = toMap(u, v).map(r2);
+  if (state.mode === "anchor") {
+    state.anchors.push({ id: "", label: `기준점 ${state.anchors.length + 1}`, xy: [x, y] });
+    state.selected = { type: "anchor", index: state.anchors.length - 1 }; render(); panel(); focusLast("anchors");
+  } else if (state.mode === "entrance") {
+    if (!state.selected || state.selected.type !== "zone") { status("입구를 정할 구역을 먼저 고르세요."); return; }
+    state.zones[state.selected.index].entrance = [x, y]; render(); panel();
+  }
+});
+view.addEventListener("mousemove", e => {
+  if (!state.map) return;
+  const [x, y] = toMap(e.offsetX, e.offsetY);
+  status(`x ${x.toFixed(2)} m, y ${y.toFixed(2)} m`);
+  if (state.drag) { state.drag.u1 = e.offsetX; state.drag.v1 = e.offsetY; render(); }
+});
+window.addEventListener("mouseup", e => {
+  if (!state.drag) return;
+  const d = state.drag; state.drag = null;
+  const [xa, ya] = toMap(d.u0, d.v0), [xb, yb] = toMap(d.u1, d.v1);
+  const rect = [r2(Math.min(xa, xb)), r2(Math.min(ya, yb)), r2(Math.max(xa, xb)), r2(Math.max(ya, yb))];
+  if (rect[2] - rect[0] < 0.3 || rect[3] - rect[1] < 0.3) { render(); return; }
+  if (state.mode === "rect" && state.selected && state.selected.type === "zone") {
+    state.zones[state.selected.index].rects.push(rect); render(); panel();
+  } else {
+    const kind = document.getElementById("new-kind").value;
+    state.zones.push({ id: "", label: `${kind === "room" ? "방" : "통로"} ${state.zones.length + 1}`, aliases: "", kind, rects: [rect], entrance: null });
+    state.selected = { type: "zone", index: state.zones.length - 1 }; render(); panel(); focusLast("zones");
+  }
+});
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape") { state.drag = null; render(); }
+});
+
+function status(text) { document.getElementById("status").textContent = text; }
+function storageKey() { return state.map ? `map-annotator:${state.map.name}:${state.map.w}x${state.map.h}:${state.map.origin.join(",")}` : null; }
+function save() { try { if (storageKey()) localStorage.setItem(storageKey(), JSON.stringify(exportData())); } catch (e) { /* storage unavailable */ } }
+function restore() {
+  try { const s = storageKey() && localStorage.getItem(storageKey()); if (s && !state.zones.length) loadAnnotations(JSON.parse(s)); } catch (e) { /* ignore */ }
+}
+
+document.getElementById("mode-zone").onclick = () => setMode("zone");
+document.getElementById("mode-rect").onclick = () => setMode("rect");
+document.getElementById("mode-entrance").onclick = () => setMode("entrance");
+document.getElementById("mode-anchor").onclick = () => setMode("anchor");
+document.getElementById("zoom-in").onclick = () => { state.zoom = Math.min(8, state.zoom + 0.5); render(); };
+document.getElementById("zoom-out").onclick = () => { state.zoom = Math.max(0.5, state.zoom - 0.5); render(); };
+document.getElementById("save").onclick = () => {
+  const blob = new Blob([JSON.stringify(exportData(), null, 1)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "annotations.json"; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+document.getElementById("files").addEventListener("change", async e => {
+  const files = [...e.target.files];
+  const yaml = files.find(f => /\.ya?ml$/i.test(f.name)), pgm = files.find(f => /\.pgm$/i.test(f.name)), json = files.find(f => /\.json$/i.test(f.name));
+  try {
+    if (yaml && pgm) setMap(parseYaml(await yaml.text()), parsePgm(await pgm.arrayBuffer()), yaml.name);
+    else if (yaml || pgm) status("map.yaml과 map.pgm을 함께 고르세요.");
+    if (json) loadAnnotations(JSON.parse(await json.text()));
+  } catch (err) { status("열기 실패: " + err.message); }
+});
+
+// ?map=<url of map.yaml>&annotations=<url> when the page is served over http (python3 -m http.server)
+(async () => {
+  const q = new URLSearchParams(location.search);
+  if (!q.get("map")) return;
+  try {
+    const url = new URL(q.get("map"), location.href), meta = parseYaml(await (await fetch(url)).text());
+    const pgm = parsePgm(await (await fetch(new URL(meta.image, url))).arrayBuffer());
+    setMap(meta, pgm, url.pathname.split("/").slice(-2).join("/"));
+    if (q.get("annotations")) loadAnnotations(await (await fetch(new URL(q.get("annotations"), location.href))).json());
+  } catch (err) { status("불러오기 실패: " + err.message); }
+})();
+</script>
+</body>
+</html>

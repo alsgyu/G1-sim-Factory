@@ -30,6 +30,7 @@ from std_msgs.msg import String
 from tf2_ros import Buffer, TransformListener
 
 from g1_factory.grounding import GroundingError, SemanticMap, ground_instruction
+from g1_factory.map_package import load_package, vln_inputs
 from g1_factory.scene import load_config
 from g1_factory.vlm import HierarchicalVLM, VLMClient, encode_jpeg
 from g1_factory.vln_navigator import NavStep, NavTask, decompose
@@ -52,6 +53,13 @@ class VLNAgentNode(Node):
         self.smap = SemanticMap.load(config, p("semantic_map", str(ROOT/"configs/semantic_map.yaml")).value)
         self.regions = {z["id"]: z["bounds"] for z in config["zones"]}
         self.region_labels = {z["id"]: z["label"] for z in config["zones"]}
+        package = p("map_package", "").value
+        if package:  # rooms a person annotated on the robot's SLAM map, instead of the simulator's zones
+            semantic = load_package(package, p("package_frame", "world").value)[3]
+            regions, labels, _, _, aliases = vln_inputs(semantic)
+            self.regions = regions
+            self.region_labels = {rid: labels[rid]+(f" ({', '.join(aliases[rid])})" if aliases.get(rid) else "")
+                                  for rid in regions}
         self.client = VLMClient(p("vlm_url", "http://127.0.0.1:11434/v1").value,
                                 p("vlm_model", "qwen3-vl:8b-instruct").value,
                                 timeout=float(p("vlm_timeout_s", 180.0).value))

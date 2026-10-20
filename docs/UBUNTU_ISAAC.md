@@ -361,11 +361,19 @@ bash scripts/g1_docker.sh python3 scripts/plot_slam_map.py maps/campus
 cat maps/campus/evaluation.json
 ```
 
-이 지도로 VLN 실행(`map_world.yaml` = 시뮬레이터 좌표로 옮긴 같은 지도):
+사람 주석: 브라우저로 `tools/map_annotator.html`을 열고 `maps/campus/map.yaml`, `map.pgm`을 골라 방과 통로를 그린 뒤 `annotations.json`으로 저장해 `maps/campus/`에 넣습니다(시작 자세가 같으면 `configs/annotations_campus.json`을 불러와 고쳐도 됨). 그다음 토폴로지를 자동으로 만들어 지도 묶음을 완성합니다:
 
 ```bash
-bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor map_file:=maps/campus/map_world.yaml
+bash scripts/g1_docker.sh python3 scripts/build_map_package.py maps/campus
 ```
+
+지도 묶음으로 VLN 실행(점유 지도, 구역, 기준점, 토폴로지 모두 지도 묶음에서):
+
+```bash
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_conveyor map_package:=maps/campus
+```
+
+점유 지도만 바꿔 보려면 `map_file:=maps/campus/map_world.yaml`.
 
 ## 10. 문제 해결
 
