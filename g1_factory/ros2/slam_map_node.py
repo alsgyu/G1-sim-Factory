@@ -64,6 +64,7 @@ class SlamMapNode(Node):
         self.traj, self.truth, self.truth_map, self.lidar_xyz = [], [], None, None
         self.traj_last_raw = None  # latest FAST-LIO2 position, camera_init frame
         self.scans, self.saved, self.started = 0, False, time.time()
+        self.clouds = 0  # /cloud_registered messages received (FAST-LIO2 is running)
 
         self.imu_relay = self.create_publisher(Imu, "/slam/imu", RELIABLE)
         self.create_subscription(Imu, "/livox/imu", self.on_imu, IMU)
@@ -98,6 +99,7 @@ class SlamMapNode(Node):
     def on_cloud(self, msg: PointCloud2):
         if self.R is None or self.saved:
             return
+        self.clouds += 1
         pts = self.levelled(M.cloud_xyz(msg))
         if self.floor is None:
             sensor = self.levelled(self.traj_last_raw) if self.traj_last_raw is not None else np.zeros(3)
@@ -111,6 +113,8 @@ class SlamMapNode(Node):
         pts[:, 2] -= self.floor
         self.grid.add(pts)
         self.scans += 1
+        if self.scans == 1:
+            self.status("tracking", floor_below_lidar_m=round(-self.floor, 2))
 
     def on_slam_odom(self, msg: Odometry):
         p, q = msg.pose.pose.position, msg.pose.pose.orientation
@@ -135,7 +139,18 @@ class SlamMapNode(Node):
                 self.lidar_xyz = np.array([t.transform.translation.x, t.transform.translation.y])
 
     def publish_map(self):
-        if self.scans == 0 or self.saved:
+        if self.saved:
+            return
+        if self.scans == 0:  # say what is missing instead of mapping nothing in silence
+            if self.R is None:
+                reason = f"no IMU on /livox/imu yet ({len(self.accel)} samples): the simulator or LiDAR driver is not publishing it"
+            elif self.clouds == 0:
+                reason = ("no /cloud_registered from FAST-LIO2 yet: check the fast_lio process in this log "
+                          "(missing package = rebuild the image, docker/Dockerfile.ros2)")
+            else:
+                reason = f"FAST-LIO2 publishes ({self.clouds} scans) but the floor was not found under the LiDAR yet"
+            self.get_logger().warning(reason)
+            self.status("waiting", message=reason)
             return
         grid, origin = self.grid.occupancy()
         self.pub_map.publish(M.occupancy_msg(self.now(), "slam_map", origin, self.grid.resolution, grid))
@@ -143,6 +158,8 @@ class SlamMapNode(Node):
                     known_m2=round(float((grid != S.UNKNOWN).sum())*self.grid.resolution**2))
 
     def status(self, state, **extra):
+        if not rclpy.ok():  # shutting down (Ctrl-C or the launch ending): nobody is listening any more
+            return
         self.pub_status.publish(String(data=json.dumps({"state": state, "sim_time_s": round(self.now(), 2), **extra})))
 
     # ------------------------------------------------------------------ saving

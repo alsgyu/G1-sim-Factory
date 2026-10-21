@@ -1,6 +1,8 @@
 """mapping_tour: walks the G1 through the campus once for SLAM mapping (in place of a person with a joystick).
 
-Stands still for `settle_s` (FAST-LIO2 initialises and the map node measures gravity), then sends the waypoints of
+Stands still for `settle_s` (FAST-LIO2 initialises and the map node measures gravity) and until slam_map reports
+that scans come in (gives up after `slam_timeout_s` instead of walking a tour that maps nothing), then sends the
+waypoints of
 the tour (configs/slam_mapping.yaml) one by one on /goal_pose to global_planner + path_follower. A waypoint ends
 with reached or failed on /nav/status; failures are logged and skipped. At the end it publishes /mapping/done,
 waits until slam_map reports the map saved on /slam/status, and exits (the mapping launch then shuts down).
@@ -31,6 +33,8 @@ class MappingTour(Node):
         cfg = yaml.safe_load(Path(p("tour_file", str(ROOT/"configs/slam_mapping.yaml")).value).read_text())
         self.waypoints = [tuple(w) for w in cfg["tours"][p("tour", "campus").value]["waypoints"]]
         self.settle = float(p("settle_s", 6.0).value)
+        self.slam_timeout = float(p("slam_timeout_s", 90.0).value)
+        self.slam_ready, self.last_wait_log, self.slam_message = False, 0.0, ""
         self.save_timeout = float(p("save_timeout_s", 120.0).value)
         self.pose, self.index, self.goal_id, self.t0 = None, -1, None, None
         self.done_at, self.finished = None, False
@@ -55,8 +59,17 @@ class MappingTour(Node):
         if self.t0 is None:
             self.t0 = self.now()
             self.get_logger().info(f"standing {self.settle:.0f} s for SLAM initialisation, then {len(self.waypoints)} waypoints")
-        if self.index < 0 and self.now()-self.t0 >= self.settle:
-            self.next_goal()
+        waited = self.now()-self.t0
+        if self.index < 0 and waited >= self.settle:
+            if self.slam_ready:
+                self.next_goal()
+            elif waited >= self.settle+self.slam_timeout:
+                self.get_logger().error(f"SLAM did not start in {self.slam_timeout:.0f} s, not walking the tour: "
+                                        f"{self.slam_message or 'no status from slam_map'}")
+                self.finished = True
+            elif waited-self.last_wait_log >= 10.0:
+                self.last_wait_log = waited
+                self.get_logger().info(f"waiting for SLAM scans ({waited:.0f} s) {self.slam_message}")
         if self.done_at is not None and self.now()-self.done_at > self.save_timeout:
             self.get_logger().error("map node did not report the map saved; exiting")
             self.finished = True
@@ -89,6 +102,10 @@ class MappingTour(Node):
 
     def on_slam(self, msg):
         s = json.loads(msg.data)
+        if s.get("state") in ("tracking", "mapping"):
+            self.slam_ready = True
+        elif s.get("state") == "waiting":
+            self.slam_message = s.get("message", "")
         if s.get("state") == "saved" and self.done_at is not None:
             self.get_logger().info(f"map saved: {s.get('folder')}")
             self.finished = True

@@ -13,6 +13,7 @@ SLAM map itself comes from the LiDAR and IMU alone.
 """
 from pathlib import Path
 
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 import yaml
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, EmitEvent, ExecuteProcess, OpaqueFunction, RegisterEventHandler
@@ -48,6 +49,11 @@ def node(module, name, params):
 
 def setup(context):
     arg = lambda key: LaunchConfiguration(key).perform(context)
+    try:
+        get_package_share_directory("fast_lio")
+    except PackageNotFoundError:
+        raise RuntimeError("FAST-LIO2 (ROS package fast_lio) is not in this Docker image. Rebuild it once: "
+                           "docker build -f docker/Dockerfile.ros2 -t g1-sim-ros2:humble .  (docs/UBUNTU_ISAAC.md 2.1)")
     sim_time = {"use_sim_time": True}
     tour = yaml.safe_load(Path(arg("tour_file")).read_text())["tours"][arg("tour")]
     fast_lio = ExecuteProcess(cmd=["ros2", "run", "fast_lio", "fastlio_mapping", "--ros-args", "-r", "__node:=fast_lio",
