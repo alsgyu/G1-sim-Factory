@@ -389,6 +389,7 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_
 |---|---|
 | `permission denied while trying to connect to the docker API at unix:///var/run/docker.sock` | 사용자가 docker 그룹에 없음 → 1.2 (`usermod` 후 로그아웃·로그인) |
 | `could not select device driver "" with capabilities: [[gpu]]` | NVIDIA Container Toolkit 없음 → 1.3 |
+| `Failed to initialize NVML: Driver/library version mismatch` (호스트 `nvidia-smi`), `nvidia-persistenced` 서비스 시작 실패 | 드라이버가 자동 업데이트되고 아직 재부팅하지 않아 커널 모듈과 라이브러리 버전이 다름 → `sudo reboot`. 재부팅 후 첫 Isaac Sim 실행은 셰이더를 다시 컴파일해 5-15분 더 걸림. 실험 중 자동 업데이트를 막으려면 `sudo apt-mark hold <nvidia-driver 패키지>` |
 | `failed to fulfil mount request: open /run/nvidia-persistenced/socket: no such file or directory` | `--gpus all`이 `nvidia-persistenced` 데몬의 소켓을 마운트하려는데 데몬이 꺼져 있음 → `sudo systemctl enable --now nvidia-persistenced` 후 `docker run --rm --gpus all g1-sim-ros2:humble nvidia-smi`로 확인. 서비스가 없으면 드라이버 버전에 맞는 `nvidia-compute-utils-<버전>` 설치, 드라이버를 바꾼 뒤 재부팅하지 않았으면 재부팅, CDI 방식이면 `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` 후 `sudo systemctl restart docker`. GPU가 필요 없는 명령(`build_map_package.py`, 단위 테스트 등)은 `G1_GPU=0 bash scripts/g1_docker.sh …`로 바로 실행 가능 |
 | `PermissionError` (`outputs/…`, `external/…`) | 예전에 `sudo docker …`로 만든 root 소유 파일 → `sudo chown -R $USER:$USER outputs external` 후 `scripts/g1_docker.sh`로 다시 실행 |
 | `run_isaac_sim.sh`가 캐시 소유자 안내 후 종료 | 3절의 `mkdir`·`chown` |
