@@ -36,7 +36,7 @@ DEFAULTS = {
 }
 
 
-def node(module, name, params):
+def node(module, name, params, **process):
     args = ["python3", "-m", f"g1_factory.ros2.{module}", "--ros-args", "-r", f"__node:={name}"]
     for key, value in params.items():
         if isinstance(value, (list, tuple)):
@@ -44,7 +44,7 @@ def node(module, name, params):
         elif isinstance(value, bool):
             value = str(value).lower()
         args += ["-p", f"{key}:={value}"]
-    return ExecuteProcess(cmd=args, name=name, output="screen", cwd=str(ROOT))
+    return ExecuteProcess(cmd=args, name=name, output="screen", cwd=str(ROOT), **process)
 
 
 def setup(context):
@@ -63,7 +63,8 @@ def setup(context):
     actions = [
         fast_lio,
         node("slam_map_node", "slam_map", {**sim_time, "name": arg("name"), "output_root": arg("output_root"),
-                                           "evaluate": arg("evaluate").lower() == "true"}),
+                                           "evaluate": arg("evaluate").lower() == "true"},
+             sigterm_timeout="60"),  # saving on Ctrl-C takes a few seconds: do not escalate to SIGTERM after 5 s
         node("planner_node", "global_planner", sim_time),
         node("follower_node", "path_follower", sim_time),
         tour_node,

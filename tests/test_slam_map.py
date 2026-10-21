@@ -154,3 +154,59 @@ def test_path_viewpoints_are_spaced_along_the_path():
     xy = np.c_[np.linspace(0, 10, 1001), np.zeros(1001)]
     vp = path_viewpoints(xy, spacing=1.0)
     assert len(vp) == 11 and np.allclose(np.diff(vp[:, 0]), 1.0, atol=0.02)
+
+
+def test_maps_are_turned_so_the_walls_run_along_x_and_y():
+    rng = np.random.default_rng(5)
+    floor = np.c_[rng.uniform(-10, 10, (120000, 2)), rng.normal(0, 0.01, 120000)]
+    walls = []
+    for x0, y0, x1, y1 in ((-8, -6, 8, -6), (-8, 6, 8, 6), (-8, -6, -8, 6), (8, -6, 8, 6), (0, -6, 0, 2)):
+        t = rng.uniform(0, 1, 3000)
+        walls.append(np.c_[x0+(x1-x0)*t, y0+(y1-y0)*t, rng.uniform(0, 2.0, 3000)])
+    room = np.concatenate([floor[(np.abs(floor[:, 0]) < 8) & (np.abs(floor[:, 1]) < 6)], *walls])
+    a = math.radians(30.0)  # the robot started facing 30 deg off the walls
+    Rz = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
+    g = S.SlamGrid()
+    g.add(room@Rz.T)
+    out = g.build()
+    assert abs(math.degrees(out["wall_yaw"])-30.0) < 0.3
+    occ = np.argwhere(out["grid"] == S.OCCUPIED)
+    rows, cols = np.bincount(occ[:, 0]), np.bincount(occ[:, 1])
+    # aligned walls pile into a few rows and columns (a wall line may straddle two cells); turned walls spread thin
+    assert 2 <= (rows >= 40).sum() <= 6 and 3 <= (cols >= 40).sum() <= 8
+    assert S.SlamGrid(align_walls=False).build()["wall_yaw"] == 0.0
+    b = math.radians(46.0)  # turned 46 deg: -44 deg is the smaller turn, but the robot faced 46 deg at the start
+    Rb = np.array([[math.cos(b), -math.sin(b), 0], [math.sin(b), math.cos(b), 0], [0, 0, 1]])
+    g2 = S.SlamGrid()
+    g2.add(room@Rb.T)
+    assert abs(math.degrees(g2.build()["wall_yaw"])+44.0) < 0.3
+    assert abs(math.degrees(g2.build(heading=b)["wall_yaw"])-46.0) < 0.3
+
+
+def test_depth_camera_lidar_points_lie_on_the_rendered_surfaces():
+    """Isaac Sim emulation: four depth cameras rendering a floor 1.25 m down and a wall 12 m ahead."""
+    from g1_factory.sensors import depth_cameras_to_points, mid360_directions
+
+    def rot_y(t):
+        return np.array([[math.cos(t), 0, math.sin(t)], [0, 1, 0], [-math.sin(t), 0, math.cos(t)]])
+
+    def rot_z(t):
+        return np.array([[math.cos(t), -math.sin(t), 0], [math.sin(t), math.cos(t), 0], [0, 0, 1]])
+    res, fov = 256, math.radians(100.0)
+    rots = [rot_z(k*math.pi/2)@rot_y(math.radians(22.5)) for k in range(4)]
+    f, c = res/(2*math.tan(fov/2)), res/2
+    jj, ii = np.meshgrid(np.arange(res), np.arange(res), indexing="ij")
+    depths = []
+    for rot in rots:  # planar depth: forward distance to the first of floor (z = -1.25) and wall (x = 12)
+        ray = np.stack([np.ones_like(ii, float), -(ii+0.5-c)/f, -(jj+0.5-c)/f], axis=-1)@rot.T
+        t_floor = np.where(ray[..., 2] < -1e-6, -1.25/np.minimum(ray[..., 2], -1e-6), np.inf)
+        t_wall = np.where(ray[..., 0] > 1e-6, 12.0/np.maximum(ray[..., 0], 1e-6), np.inf)
+        depths.append(np.minimum(t_floor, t_wall).astype(np.float32))
+    dirs = mid360_directions(20000, 3)
+    xyz, idx = depth_cameras_to_points(dirs, depths, rots, fov, res)
+    on_floor = np.abs(xyz[:, 2]+1.25) < 1e-3
+    on_wall = np.abs(xyz[:, 0]-12.0) < 1e-3
+    assert len(xyz) > 15000 and (on_floor | on_wall).mean() > 0.999
+    far_floor = on_floor & (np.hypot(xyz[:, 0], xyz[:, 1]) > 15)
+    assert far_floor.sum() > 200  # grazing floor 15-40 m away stays on the floor
+    assert np.all(np.diff(idx) >= 0)

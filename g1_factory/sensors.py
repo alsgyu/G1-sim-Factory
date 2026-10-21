@@ -86,6 +86,46 @@ def mid360_directions(n: int, frame: int, elevation_rad=(math.radians(-52.0), ma
     return np.stack([np.cos(el)*np.cos(az), np.cos(el)*np.sin(az), np.sin(el)], axis=1)
 
 
+def depth_cameras_to_points(dirs, depths, cam_rots, fov, res, min_range=0.1, max_range=40.0):
+    """MID-360-like scan from depth cameras around the sensor (the Isaac Sim emulation): (xyz (M, 3), ray index (M,)).
+
+    dirs: unit ray directions in the sensor frame. depths[k]: planar depth image (distance to the image plane,
+    res x res, fov wide) of camera k, whose axes (x forward, y left, z up) are cam_rots[k] in the sensor frame;
+    camera k serves the rays of the 90-degree sector around azimuth k * 90 deg. Each ray takes the pixel it falls in,
+    and the point is that pixel's own back-projection, so it lies exactly on the rendered surface. (Putting the
+    pixel's depth on the ray direction instead moves far floor points off the floor by up to tens of cm at grazing
+    angles, 0.4 deg pixels, which a LiDAR SLAM turns into a warped map.)
+    """
+    f, c = res/(2*math.tan(fov/2)), res/2
+    az = np.arctan2(dirs[:, 1], dirs[:, 0])
+    sector = np.mod(np.round(az/(math.pi/2)).astype(int), 4)
+    points, index = [], []
+    for k, (depth, rot) in enumerate(zip(depths, cam_rots)):
+        if depth is None:
+            continue
+        sel = np.nonzero(sector == k)[0]
+        d = dirs[sel]@rot                            # into camera axes (x fwd, y left, z up)
+        ok = d[:, 0] > 1e-3
+        fwd = np.maximum(d[:, 0], 1e-3)
+        u = np.floor(f*(-d[:, 1])/fwd+c).astype(int)  # image column (x right) and row (y down)
+        v = np.floor(f*(-d[:, 2])/fwd+c).astype(int)
+        ok &= (u >= 0) & (u < res) & (v >= 0) & (v < res)
+        sel, u, v = sel[ok], u[ok], v[ok]
+        z = np.asarray(depth, np.float32)[v, u]
+        good = np.isfinite(z) & (z > 0)  # no return (sky, beyond the far plane)
+        sel, u, v, z = sel[good], u[good], v[good], z[good]
+        cam = np.stack([np.ones_like(z), -(u+0.5-c)/f, -(v+0.5-c)/f], axis=1)*z[:, None]
+        points.append(cam@np.asarray(rot).T)
+        index.append(sel)
+    if not points:
+        return np.zeros((0, 3), np.float32), np.zeros(0, int)
+    xyz, idx = np.concatenate(points), np.concatenate(index)
+    rng = np.linalg.norm(xyz, axis=1)
+    keep = np.isfinite(rng) & (rng > min_range) & (rng < max_range)
+    order = np.argsort(idx[keep], kind="stable")
+    return xyz[keep][order].astype(np.float32), idx[keep][order]
+
+
 class Mid360Lidar:
     """Non-repetitive 360 deg scan, ``points_per_scan`` rays per frame, ray cast in MuJoCo.
 

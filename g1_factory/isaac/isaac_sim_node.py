@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+from collections import deque
 import math
 import os
 from pathlib import Path
@@ -105,9 +106,10 @@ from pxr import Gf, UsdGeom, UsdPhysics  # noqa: E402,F401
 from g1_factory.planning import OccupancyGrid  # noqa: E402
 from g1_factory.policy_core import JOINT_NAMES, G1PolicyCore, projected_gravity  # noqa: E402
 from g1_factory.routes import zone_at  # noqa: E402
-from g1_factory.sensors import mid360_directions  # noqa: E402
+from g1_factory.sensors import depth_cameras_to_points, mid360_directions  # noqa: E402
 
 PHYSICS_DT, DECIMATION = 0.005, 4          # 200 Hz physics, 50 Hz policy (as in training)
+IMU_WINDOW = 4                             # IMU acceleration from the velocity change over 20 ms
 CAMERA_XYZ, CAMERA_PITCH = (0.12, 0.0, 0.45), math.radians(10.0)
 LIDAR_XYZ, CAMERA_HFOV = (0.05, 0.0, 0.42), math.radians(69.4)
 LIDAR_CAM_RES, LIDAR_CAM_PITCH, LIDAR_CAM_FOV = 256, math.radians(22.5), math.radians(100.0)
@@ -261,7 +263,7 @@ class IsaacG1:
         self.reset(*ARGS.spawn)
         self.fx = 640/(2*math.tan(CAMERA_HFOV/2))
         self.lidar_frame = 0
-        self.prev_vel = np.zeros(3)
+        self.vel_hist = deque(maxlen=IMU_WINDOW+1)
         self.t = 0.0
 
     def reset(self, x, y, yaw):
@@ -306,32 +308,16 @@ class IsaacG1:
     def lidar(self):
         dirs = mid360_directions(ARGS.lidar_points, self.lidar_frame)
         self.lidar_frame += 1
-        az = np.arctan2(dirs[:, 1], dirs[:, 0])
-        sector = np.mod(np.round(az/(math.pi/2)).astype(int), 4)
-        f, c = LIDAR_CAM_RES/(2*math.tan(LIDAR_CAM_FOV/2)), LIDAR_CAM_RES/2
-        ranges = np.full(len(dirs), np.nan)
-        for k, cam in enumerate(self.lidar_cams):
-            depth = depth_of(cam)
-            if depth is None:
-                continue
-            sel = np.nonzero(sector == k)[0]
-            d = dirs[sel]@self.lidar_rot[k]          # into camera axes (x fwd, y left, z up)
-            zf, xr, yd = d[:, 0], -d[:, 1], -d[:, 2]  # optical: z forward, x right, y down
-            ok = zf > 1e-3
-            u = np.where(ok, f*xr/np.maximum(zf, 1e-3)+c-0.5, -1).astype(int)
-            v = np.where(ok, f*yd/np.maximum(zf, 1e-3)+c-0.5, -1).astype(int)
-            inside = ok & (u >= 0) & (u < LIDAR_CAM_RES) & (v >= 0) & (v < LIDAR_CAM_RES)
-            z = np.full(len(sel), np.nan)
-            z[inside] = depth[v[inside], u[inside]]
-            ranges[sel] = z/np.maximum(zf, 1e-3)
-        hit = np.isfinite(ranges) & (ranges > 0.1) & (ranges < 40.0)
-        idx = np.nonzero(hit)[0]
-        xyz = (dirs[idx]*ranges[idx, None]).astype(np.float32)
+        depths = [depth_of(cam) for cam in self.lidar_cams]
+        xyz, idx = depth_cameras_to_points(dirs, depths, self.lidar_rot, LIDAR_CAM_FOV, LIDAR_CAM_RES)
         return xyz, np.full(len(idx), 100.0, np.float32), (idx % 4).astype(np.uint8), idx
 
     def imu(self, rot, lin_w, ang_w):
-        accel_w = (lin_w-self.prev_vel)/PHYSICS_DT+np.array([0.0, 0.0, 9.81])
-        self.prev_vel = lin_w.copy()
+        # Velocity difference over the last IMU_WINDOW steps (20 ms): a one-step difference turns physics jitter into
+        # metres-per-second-squared noise that throws FAST-LIO2 off; real MEMS IMUs low-pass filter the same way.
+        self.vel_hist.append(lin_w.copy())
+        span = (len(self.vel_hist)-1)*PHYSICS_DT
+        accel_w = ((self.vel_hist[-1]-self.vel_hist[0])/span if span > 0 else np.zeros(3))+np.array([0.0, 0.0, 9.81])
         return rot.T@ang_w, rot.T@accel_w
 
     def collides(self, xy, margin=0.15):

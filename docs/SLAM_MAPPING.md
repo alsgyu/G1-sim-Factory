@@ -90,7 +90,7 @@ python3 -m http.server 8770
 | `topology.png` | 주석과 자동 토폴로지를 지도 위에 그린 확인용 그림 |
 | `map_world.yaml`, `evaluation.json`, `comparison.png`, `semantic_truth.json`, `annotation_check.json` | 시뮬레이션에서만: 시뮬레이터 좌표로 옮긴 지도, 정답과의 비교 |
 
-좌표계는 매핑을 시작할 때 LiDAR 바로 아래 바닥이 원점이고, x축은 그때 로봇이 보던 방향, z축은 위쪽입니다. 외부 에이전트가 위치나 경로를 말할 때도 이 좌표와 `semantic_map.json`의 이름을 씁니다.
+좌표계는 매핑을 시작할 때 LiDAR 바로 아래 바닥이 원점이고, z축은 위쪽입니다. x축과 y축은 주된 벽 방향에 맞추는데, 네 방향 중 시작할 때 로봇이 보던 방향에 가장 가까운 것을 x축으로 씁니다. 그래서 로봇이 어느 방향을 보고 시작했든 방이 축에 나란한 사각형이 되어 주석을 그리기 쉽고, 같은 자세에서 시작한 지도는 같은 방향으로 나옵니다. 외부 에이전트가 위치나 경로를 말할 때도 이 좌표와 `semantic_map.json`의 이름을 씁니다.
 
 ROS로 공유할 때 `map_file` 노드가 점유 지도와 시멘틱 맵을 latched 토픽으로 발행합니다(`map_package`로 VLN을 띄우면 함께 뜹니다).
 
@@ -211,4 +211,5 @@ python3 scripts/hvln_experiment.py --out outputs/exp_localized --set map_package
 - `/odom`과 TF odom에서 base_link는 중력 방향으로 수평인 좌표계(z가 위)여야 합니다. VLN 노드와 `localizer`가 모두 그렇게 가정합니다. G1 자체의 odom을 쓰거나, FAST-LIO2를 쓸 때는 `camera_init`(켤 때의 LiDAR IMU 자세라 머리에 달린 각도만큼 기울어 있음)을 시작 때 잰 중력으로 수평을 맞추고 LiDAR 자세를 base_link 자세로 바꿔 `/odom`으로 내보냅니다(`slam_map` 노드가 지도를 만들 때 하는 수평 보정과 같음). 이 변환 노드는 아직 없습니다.
 - TF base_link에서 LiDAR 프레임(드라이버의 frame_id)으로의 고정 변환이 있어야 스캔을 odom 좌표로 옮길 수 있습니다.
 - 넓은 현장이나 긴 경로에서는 오차가 쌓이므로 루프 클로저가 있는 방식(FAST-LIO-SAM, GLIM 등)을 더하는 것을 검토합니다.
+- Isaac Sim의 센서 흉내: LiDAR는 깊이 카메라 4대로, IMU는 로봇 속도를 미분해 만듭니다. 처음에는 LiDAR 광선 방향에 가까운 픽셀의 깊이를 광선 방향에 그대로 붙여, 15-40 m 앞 바닥 점이 최대 0.31 m(절반이 8 cm 이상) 바닥에서 벗어났습니다. 그 결과 지도 바닥이 휘어 빈 공간이 1%만 잡히고 바닥 일부가 장애물로 나왔습니다. 지금은 픽셀 자신의 방향으로 점을 만들어 렌더링된 면 위에 정확히 놓입니다(`g1_factory.sensors.depth_cameras_to_points`). IMU 가속도도 한 스텝(5 ms) 차분 대신 20 ms 동안의 속도 변화로 구해 물리 떨림을 줄였습니다.
 - 시뮬레이션과 다른 점: 시뮬레이션 LiDAR는 한 스캔의 점을 한순간에 찍으므로 점별 시간 없이 읽는 일반 PointCloud2 방식(lidar_type 5)으로 읽고, 시뮬레이터 IMU를 RELIABLE로 다시 발행한 `/slam/imu`를 씁니다(`configs/fast_lio_g1_sim.yaml`).

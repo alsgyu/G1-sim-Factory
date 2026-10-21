@@ -3,7 +3,8 @@
 Frames
   camera_init  FAST-LIO2's world frame = the LiDAR/IMU frame at start-up (not levelled).
   map          what this module saves: floor at z = 0 and level, origin on the floor under the LiDAR at start-up,
-               x = the LiDAR's heading at start-up. Scans are first levelled with the gravity measured at start-up;
+               x and y along the main walls, x the wall direction closest to the robot's heading at start-up (so
+               maps from the same start pose match), rooms are axis-aligned rectangles for annotation. Scans are first levelled with the gravity measured at start-up;
                the final levelling fits a plane to the floor of the whole 3-D map, because a robot that sways while
                it stands up gives a gravity estimate that is off by about a degree (1 deg = 0.7 m over 40 m).
                A person annotates this map; an external agent receives it with the annotations.
@@ -93,6 +94,31 @@ def visible_cells(blocked: np.ndarray, origin, res, viewpoints, max_range=25.0, 
     return seen
 
 
+def wall_yaw(xy: np.ndarray, res=0.1, coarse_deg=0.5, fine_deg=0.05) -> float:
+    """Yaw (rad, -45..45 deg) to rotate points by -yaw so the dominant walls lie along x and y.
+
+    Rotated walls spread over many x and y bins; aligned walls pile into a few, so the sum of squared bin counts of
+    both projections peaks at the wall direction. 0 when nothing clearly beats the current orientation.
+    """
+    xy = np.asarray(xy, float)
+    if len(xy) < 200:
+        return 0.0
+    if len(xy) > 200000:
+        xy = xy[np.random.default_rng(0).choice(len(xy), 200000, replace=False)]
+    xy = xy-xy.mean(axis=0)
+
+    def score(a):
+        c, s = math.cos(a), math.sin(a)
+        total = 0.0
+        for v in (xy[:, 0]*c+xy[:, 1]*s, -xy[:, 0]*s+xy[:, 1]*c):
+            counts = np.bincount(((v-v.min())/res).astype(int)).astype(float)
+            total += float((counts**2).sum())
+        return total
+    best = max(np.radians(np.arange(-45.0, 45.0, coarse_deg)), key=score)
+    best = max(best+np.radians(np.arange(-coarse_deg, coarse_deg+fine_deg/2, fine_deg)), key=score)
+    return float(best) if score(best) > 1.05*score(0.0) else 0.0
+
+
 @dataclass
 class SlamGrid:
     """Voxel map of all scans (0.1 m, 0.05 m in height) and the occupancy grid made from it."""
@@ -101,6 +127,7 @@ class SlamGrid:
     band: tuple = (0.15, 1.6)
     floor_tol: float = 0.08
     min_hits: int = 2
+    align_walls: bool = True   # rotate the map so the walls run along x and y (any start heading)
     _chunks: list = field(init=False, default_factory=list)
     _keys: np.ndarray = field(init=False, default_factory=lambda: np.empty(0, np.int64))
 
@@ -126,18 +153,30 @@ class SlamGrid:
         ijk = np.stack([(k >> 42) & ((1 << 21)-1), (k >> 21) & ((1 << 21)-1), k & ((1 << 21)-1)], axis=1)-(1 << 20)
         return (ijk+0.5)*self.voxel
 
-    def build(self, margin_m=1.0, viewpoints=None) -> dict:
+    def build(self, margin_m=1.0, viewpoints=None, heading=None) -> dict:
         """Levelled cloud, levelling (R, dz) and the occupancy grid cropped to the observed area.
 
         viewpoints: LiDAR positions along the walked path (levelled frame). Floor seen under a shelf or a pallet does
         not mean the robot fits there, so floor cells count as free only when visible at body height from the path.
+        heading: the robot's heading at start (levelled frame); of the four wall-aligned orientations the one closest
+        to it is used, so maps made from the same start pose come out the same way round.
         """
         raw = self.raw_cloud()
         if len(raw) < 100:
             return {"grid": np.full((1, 1), UNKNOWN, np.int8), "origin": (0.0, 0.0), "cloud": raw.astype(np.float32),
-                    "R": np.eye(3), "dz": 0.0}
+                    "R": np.eye(3), "dz": 0.0, "wall_yaw": 0.0}
         R, dz = floor_levelling(fit_floor_plane(raw))
         cloud = raw@R.T-np.array([0.0, 0.0, dz])
+        yaw = 0.0
+        if self.align_walls:
+            walls = cloud[(cloud[:, 2] >= self.band[0]) & (cloud[:, 2] <= self.band[1]), :2]
+            yaw = wall_yaw(walls)
+            if heading is not None:
+                yaw += round((heading-yaw)/(math.pi/2))*(math.pi/2)
+            if yaw:
+                c, s = math.cos(-yaw), math.sin(-yaw)
+                Rz = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+                cloud, R = cloud@Rz.T, Rz@R
         cells = np.floor(cloud[:, :2]/self.resolution).astype(np.int64)
         m = int(round(margin_m/self.resolution))
         lo = cells.min(axis=0)-m
@@ -160,11 +199,11 @@ class SlamGrid:
             grid[~visible_cells(thick, lo*self.resolution, self.resolution, vp)] = UNKNOWN
         grid[occupied] = OCCUPIED
         return {"grid": grid, "origin": (float(lo[0]*self.resolution), float(lo[1]*self.resolution)),
-                "cloud": cloud.astype(np.float32), "R": R, "dz": dz}
+                "cloud": cloud.astype(np.float32), "R": R, "dz": dz, "wall_yaw": yaw}
 
-    def occupancy(self, margin_m=1.0, viewpoints=None):
+    def occupancy(self, margin_m=1.0, viewpoints=None, heading=None):
         """(int8 grid, origin xy). Row 0 = lowest y, as nav_msgs/OccupancyGrid."""
-        out = self.build(margin_m, viewpoints)
+        out = self.build(margin_m, viewpoints, heading)
         return out["grid"], out["origin"]
 
 

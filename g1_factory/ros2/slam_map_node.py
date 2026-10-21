@@ -21,6 +21,7 @@ import csv
 import json
 import math
 from pathlib import Path
+import signal
 import time
 
 import numpy as np
@@ -187,10 +188,14 @@ class SlamMapNode(Node):
         folder.mkdir(parents=True, exist_ok=True)
         res = self.grid.resolution
         traj = np.array(self.traj)
-        built = self.grid.build(viewpoints=path_viewpoints(traj[:, 1:3]) if len(traj) else None)
+        built = self.grid.build(viewpoints=path_viewpoints(traj[:, 1:3]) if len(traj) else None,
+                                heading=float(traj[0, 4]) if len(traj) else None)
         grid, origin, cloud, R, dz = built["grid"], built["origin"], built["cloud"], built["R"], built["dz"]
         tilt = math.degrees(math.acos(np.clip(R[2, 2], -1, 1)))
-        self.get_logger().info(f"floor plane levelling: {tilt:.2f} deg, {dz:+.3f} m")
+        wall_deg = math.degrees(built["wall_yaw"])
+        self.get_logger().info(f"floor plane levelling: {tilt:.2f} deg, {dz:+.3f} m; walls aligned by {wall_deg:+.1f} deg")
+        if len(traj):
+            traj[:, 4] = (traj[:, 4]-built["wall_yaw"]+math.pi) % (2*math.pi)-math.pi
         if len(traj):
             traj[:, 1:4] = traj[:, 1:4]@R.T-np.array([0.0, 0.0, dz])
             self.traj = [tuple(row) for row in traj]
@@ -202,9 +207,9 @@ class SlamMapNode(Node):
             w = csv.writer(f)
             w.writerow(["t_s", "x_m", "y_m", "z_m", "yaw_rad"])
             w.writerows([[round(v, 4) for v in row] for row in self.traj])
-        meta = {"name": self.name, "frame": "map: origin on the floor under the LiDAR at start-up, x = start heading, "
-                                           "z up, floor at z = 0 (levelled on the floor plane), units m",
-                "floor_levelling_deg": round(tilt, 3),
+        meta = {"name": self.name, "frame": "map: origin on the floor under the LiDAR at start-up, x and y along the "
+                                           "main walls (x the one closest to the start heading), z up, floor at z = 0, units m",
+                "floor_levelling_deg": round(tilt, 3), "wall_alignment_deg": round(wall_deg, 2),
                 "slam": "FAST-LIO2 (LiDAR-inertial odometry, ROS 2 branch) + g1_factory.slam_map occupancy",
                 "sensor": "Livox MID-360 (head), internal IMU", "resolution_m": res, "origin": list(origin),
                 "size_cells": list(grid.shape[::-1]), "scans": self.scans, "cloud_points": int(len(cloud)),
@@ -255,6 +260,7 @@ def main():
         if not node.saved:
             node.get_logger().error(f"executor stopped: {exc}")
     finally:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)  # a second Ctrl-C must not cut the save (several seconds) short
         try:
             node.save()
         except Exception as exc:  # never lose the shutdown because of a failed save
