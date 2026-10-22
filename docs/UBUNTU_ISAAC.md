@@ -131,7 +131,7 @@ ls outputs/isaac
 
 에 `campus.usd  campus_meta.json  mjcf  textures`.
 
-- 장면(`configs/factory.yaml`, `g1_factory/scene.py`·`office.py`·`utility.py`)이 바뀐 `git pull` 뒤에는 다시 실행. 펌프실이 추가된 뒤(3898999) 다시 내보내지 않았으면 Isaac 장면에 펌프실이 없어, 매핑과 펌프실 과제의 경유점이 `plan_failed: goal pose is inside or too close to an obstacle`로 실패합니다.
+- 장면(`configs/factory.yaml`, `g1_factory/scene.py`·`office.py`·`utility.py`)이 바뀐 `git pull` 뒤에는 다시 실행. 펌프실이 추가된 뒤 다시 내보내지 않았으면 Isaac 장면에 펌프실이 없어, 매핑과 펌프실 과제의 경유점이 `plan_failed: goal pose is inside or too close to an obstacle`로 실패합니다.
 
 ## 3. Isaac Sim 5.1 컨테이너 (한 번만)
 
