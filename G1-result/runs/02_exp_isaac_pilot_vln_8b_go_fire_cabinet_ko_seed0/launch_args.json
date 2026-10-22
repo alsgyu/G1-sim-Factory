@@ -1,0 +1,26 @@
+{
+  "task": "go_fire_cabinet_ko",
+  "tasks_file": "",
+  "planner_mode": "vln",
+  "vlm_url": "http://127.0.0.1:11434/v1",
+  "vlm_model": "qwen3-vl:8b-instruct",
+  "condition": "vln_8b",
+  "seed": "0",
+  "spawn_noise_m": "0.3",
+  "spawn_noise_deg": "20.0",
+  "camera_rate_hz": "30.0",
+  "render_shadows": "True",
+  "realtime_factor": "1.0",
+  "timeout_s": "900.0",
+  "monitor": "False",
+  "sim": "False",
+  "use_sim_time": "true",
+  "remaps": "",
+  "agent": "true",
+  "output_dir": "/ws/outputs/exp_isaac_pilot/vln_8b/go_fire_cabinet_ko/seed0",
+  "spawn_used": [
+    0.0,
+    0.0,
+    0.0
+  ]
+}

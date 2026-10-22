@@ -1,0 +1,51 @@
+{
+ "name": "campus",
+ "frame": "map: origin on the floor under the LiDAR at start-up, x and y along the main walls (x the one closest to the start heading), z up, floor at z = 0, units m",
+ "floor_levelling_deg": 2.534,
+ "wall_alignment_deg": 16.7,
+ "slam": "FAST-LIO2 (LiDAR-inertial odometry, ROS 2 branch) + g1_factory.slam_map occupancy",
+ "sensor": "Livox MID-360 (head), internal IMU",
+ "resolution_m": 0.1,
+ "origin": [
+  -14.4,
+  -31.0
+ ],
+ "size_cells": [
+  792,
+  482
+ ],
+ "scans": 9374,
+ "cloud_points": 942621,
+ "obstacle_band_m": [
+  0.15,
+  1.6
+ ],
+ "duration_s": 937.3,
+ "files": {
+  "map.yaml": "occupancy grid (ROS map_server / Nav2)",
+  "cloud.pcd": "3-D voxel map, 0.1 m (0.05 m in height)",
+  "trajectory.csv": "SLAM poses of the LiDAR",
+  "map.png": "preview"
+ },
+ "world_from_map": {
+  "x": -11.679,
+  "y": 1.933,
+  "yaw_rad": -0.001
+ },
+ "trajectory": {
+  "ate_rmse_m": 0.069,
+  "max_m": 0.177,
+  "final_m": 0.057,
+  "path_m": 326.0,
+  "final_drift_pct": 0.02
+ },
+ "map": {
+  "obstacle_precision": 0.726,
+  "obstacle_recall": 1.0,
+  "free_marked_free": 0.0,
+  "free_marked_occupied": 0.09,
+  "free_unknown": 0.91,
+  "outside_marked_free": 0.0,
+  "tolerance_m": 0.2
+ }
+}

@@ -1,0 +1,10 @@
+condition,task,seed,state,success,grounding_correct,navigation_complete,spl,final_distance_to_expected_place_m,collision_events,fallen,replans,verdict_correct,vlm_latency_mean_s,task_sim_time_s,travelled_m,shortest_path_m,cross_track_rmse_m,planned_subgoals,verdict,answer
+vln_8b,check_electrical_panel_en,0,done,False,True,True,0.0,0.523,0,False,0,False,4.477,80.39,22.239,13.193894254590681,0.013,,no,The blue electrical panel does not have a high-voltage warning visible on it.
+vln_8b,go_fire_cabinet_ko,0,done,False,True,True,0.0,0.787,0,False,0,False,4.93,86.19,25.181,21.583098148103154,0.018,,no,"소화기함은 보이지만, 그 안에 소화기가 없습니다."
+vln_8b,inspect_conveyor,0,done,True,True,True,0.823,1.664,0,False,0,True,3.809,99.0,27.092,22.287046860830856,0.02175,,yes,컨베이어 위에 상자가 있습니다.
+vln_8b,inspect_dock_cart_ko,0,done,True,True,True,0.29,4.453,0,False,0,True,4.47,372.79,87.236,25.334874865864162,0.024363636363636365,,no,충전 구역의 3번 충전 도크에는 AMR 카트가 주차되어 있지 않습니다.
+vln_8b,inspect_dock_en,0,done,False,True,True,0.0,5.424,0,False,0,False,4.055,125.39,30.475,25.334874865864162,0.016,,no,No cart is parked at the free charging dock.
+vln_8b,inspect_meeting_table_en,0,done,False,False,True,0.0,6.181,0,False,0,True,3.886,55.19,16.539,23.468560026916688,0.025666666666666667,,no,No one is sitting at the meeting table; the chairs are empty.
+vln_8b,inspect_servers_office,0,done,True,True,True,0.629,2.81,0,False,0,True,4.779,236.39,62.974,39.61105837422101,0.036111111111111115,,yes,서버 랙의 상태 표시등이 켜져 있습니다.
+vln_8b,inspect_station_paraphrase,0,done,True,True,True,0.57,2.515,0,False,0,True,4.529,168.19,41.897,23.876873292559917,0.022,,yes,두 번째 비전 검사 장비 위에 부품이 올려져 있습니다.
+vln_8b,json_agent_subgoals,0,done,True,True,True,0.203,0.955,0,False,0,True,3.584,482.19,134.537,27.347522036595553,0.02535,,yes,자판기는 정상적으로 서 있으며 넘어져 있지 않습니다.

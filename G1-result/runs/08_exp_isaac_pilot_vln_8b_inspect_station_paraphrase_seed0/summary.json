@@ -1,0 +1,180 @@
+{
+  "task": "inspect_station_paraphrase",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "부품 품질을 확인하는 곳에 가서 두 번째 비전 검사 장비 위에 부품이 올려져 있는지 봐줘.",
+  "state": "done",
+  "expected_place": "inspection_station_2",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the quality inspection area",
+      "region": "inspection"
+    },
+    {
+      "goal": "find the second vision inspection station and stand in front of it",
+      "region": "inspection"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 0.9,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 11,
+  "vln_actions": [
+    "move",
+    "move",
+    "approach",
+    "turn",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "turn",
+    "turn",
+    "approach"
+  ],
+  "start_pose": [
+    12.027046203613281,
+    3.614896297454834,
+    3.102412561987806
+  ],
+  "final_pose": [
+    -12.358643531799316,
+    -6.47401762008667,
+    -0.5567030648091591
+  ],
+  "final_distance_to_expected_place_m": 2.515,
+  "target_xy": [
+    -9.972,
+    -8.098
+  ],
+  "inspection": {
+    "observed": "a yellow block on the second vision inspection station",
+    "target_visible": true,
+    "verdict": "yes",
+    "status": "ok",
+    "answer": "두 번째 비전 검사 장비 위에 부품이 올려져 있습니다."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 41.897,
+  "shortest_path_m": 23.876873292559917,
+  "task_sim_time_s": 168.19,
+  "plans": 15,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.011,
+    0.03,
+    0.012,
+    0.042,
+    0.015
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.946127363999949,
+      "request_bytes": 2046,
+      "response_bytes": 812,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the quality inspection area\",\n      \"region\": \"inspection\"\n    },\n    {\n      \"goal\": \"find the second vision inspection station and stand in front of it\",\n      \"region\": \"inspection\"\n    }\n  ],\n  \"target\": \"the second vision inspection station\",\n  \"target_label\": \"STATION 2\",\n  \"question\": \"is a part placed on top of the second vision inspection station?\",\n  \"language\": \"ko\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.42,
+      "request_bytes": 47227,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the assembly line region and need to reach the quality inspection area. Waypoint 1 is in view and closer to the quality inspection area, so I should move there first.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.17,
+      "request_bytes": 51135,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to move toward the quality inspection area, which is ahead-left. Waypoint 4 is the closest option in that direction and will bring me closer to the target region.\", \"action\": \"move\", \"waypoint\": 4}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.19,
+      "request_bytes": 45941,
+      "action": "approach",
+      "raw": "{\"thought\": \"I am in the quality inspection area and can see 'STATION 2' in the image. I should approach it to check if a part is on it.\", \"action\": \"approach\", \"bbox_2d\": [347, 227, 437, 300]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.93,
+      "request_bytes": 142091,
+      "action": "turn",
+      "raw": "{\"seen\": \"STATION 4 visible, METROLOGY area, open floor with equipment, QUALITY INSPECTION ZONE 02 and MATERIAL STORAGE ZONE 01 signs\", \"view\": 3, \"target_visible\": false}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 8.95,
+      "request_bytes": 90379,
+      "action": "turn",
+      "raw": "{\"thought\": \"The previous target did not have a readable 'STATION 2' plate. I need to look for the correct station by turning to scan other directions.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.16,
+      "request_bytes": 57515,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the second vision inspection station with the plate 'STATION 2'. I previously checked one that didn't match. I should turn to look for the correct one.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.32,
+      "request_bytes": 41901,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the second vision inspection station with the plate 'STATION 2'. The current view shows 'STATION 4', so I should turn to look for 'STATION 2'.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.68,
+      "request_bytes": 55789,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find the second vision inspection station with the plate 'STATION 2'. Since the current view shows 'METROLOGY' signs and not 'STATION 2', I should move to an unvisited waypoint that brings me closer to the target area.\", \"action\": \"move\", \"waypoint\": 4}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.23,
+      "request_bytes": 28044,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find the second vision inspection station with the name plate 'STATION 2'. The current view doesn't show it, so I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.2,
+      "request_bytes": 45747,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find 'STATION 2', but the visible stations are 'STATION 1' and 'STATION 3'. I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.59,
+      "request_bytes": 63005,
+      "action": "approach",
+      "raw": "{\"thought\": \"I need to find the second vision inspection station with the name plate 'STATION 2'. The current view shows a station with a visible 'STATION 2' sign, which matches the target.\", \"action\": \"approach\", \"bbox_2d\": [625, 127, 725, 225]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 3.0932382210003198,
+      "request_bytes": 36383,
+      "response_bytes": 575,
+      "raw": "{\"observed\": \"a yellow block on the second vision inspection station\", \"target_visible\": true, \"verdict\": \"yes\", \"status\": \"ok\", \"answer\": \"두 번째 비전 검사 장비 위에 부품이 올려져 있습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 4.529,
+  "realtime_factor": 0.601,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.46,
+    "camera_publish": 1.86
+  },
+  "success": true,
+  "spl": 0.57,
+  "attempts": 1
+}

@@ -1,0 +1,121 @@
+{
+  "task": "check_electrical_panel_en",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "Find the blue electrical panel on the east wall of the assembly area and check whether it carries a high-voltage warning.",
+  "state": "done",
+  "expected_place": "electrical_panel",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the assembly line",
+      "region": "assembly_line"
+    },
+    {
+      "goal": "find the east wall of the assembly area",
+      "region": "assembly_line"
+    },
+    {
+      "goal": "locate the blue electrical panel on the east wall",
+      "region": "assembly_line"
+    },
+    {
+      "goal": "find the blue electrical panel on the east wall and stand in front of it",
+      "region": "assembly_line"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 1.512,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 3,
+  "vln_actions": [
+    "move",
+    "turn",
+    "approach"
+  ],
+  "start_pose": [
+    12.016074180603027,
+    -4.067922115325928,
+    1.5624668169381346
+  ],
+  "final_pose": [
+    22.118112564086914,
+    4.927364826202393,
+    0.18244264384911213
+  ],
+  "final_distance_to_expected_place_m": 0.523,
+  "target_xy": [
+    23.635,
+    5.235
+  ],
+  "inspection": {
+    "observed": "a blue electrical panel",
+    "target_visible": true,
+    "verdict": "no",
+    "status": "ok",
+    "answer": "The blue electrical panel does not have a high-voltage warning visible on it."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": false,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 22.239,
+  "shortest_path_m": 13.193894254590681,
+  "task_sim_time_s": 80.39,
+  "plans": 7,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.015,
+    0.011
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 3.9867517490001774,
+      "request_bytes": 2057,
+      "response_bytes": 1025,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the assembly line\",\n      \"region\": \"assembly_line\"\n    },\n    {\n      \"goal\": \"find the east wall of the assembly area\",\n      \"region\": \"assembly_line\"\n    },\n    {\n      \"goal\": \"locate the blue electrical panel on the east wall\",\n      \"region\": \"assembly_line\"\n    },\n    {\n      \"goal\": \"find the blue electrical panel on the east wall and stand in front of it\",\n      \"region\": \"assembly_line\"\n    }\n  ],\n  \"target\": \"the blue electrical panel on the east wall\",\n  \"target_label\": \"\",\n  \"question\": \"does it carry a high-voltage warning?\",\n  \"language\": \"en\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.41,
+      "request_bytes": 56529,
+      "action": "move",
+      "raw": "{\"thought\": \"I am currently at the charging station and need to enter the assembly line region. Waypoint 1 is directly ahead and leads into the assembly line, which is the correct direction to proceed.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.19,
+      "request_bytes": 172742,
+      "action": "turn",
+      "raw": "{\"seen\": \"conveyor belts, charging station, assembly line\", \"view\": 4, \"target_visible\": false}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.94,
+      "request_bytes": 59192,
+      "action": "approach",
+      "raw": "{\"thought\": \"I am in the assembly line region and need to locate the blue electrical panel on the east wall. The blue panel is visible in the image, so I should approach it directly.\", \"action\": \"approach\", \"bbox_2d\": [478, 247, 540, 357]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.8560121009995783,
+      "request_bytes": 20071,
+      "response_bytes": 548,
+      "raw": "{\"observed\": \"a blue electrical panel\", \"target_visible\": true, \"verdict\": \"no\", \"status\": \"ok\", \"answer\": \"The blue electrical panel does not have a high-voltage warning visible on it.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 4.477,
+  "realtime_factor": 0.648,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.45,
+    "camera_publish": 1.79
+  },
+  "success": false,
+  "spl": 0.0,
+  "attempts": 1
+}

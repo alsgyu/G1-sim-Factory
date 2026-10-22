@@ -1,0 +1,26 @@
+{
+  "task": "inspect_conveyor",
+  "tasks_file": "",
+  "planner_mode": "vln",
+  "vlm_url": "http://127.0.0.1:11434/v1",
+  "vlm_model": "qwen3-vl:8b-instruct",
+  "condition": "",
+  "seed": "0",
+  "spawn_noise_m": "0.3",
+  "spawn_noise_deg": "20.0",
+  "camera_rate_hz": "30.0",
+  "render_shadows": "true",
+  "realtime_factor": "1.0",
+  "timeout_s": "900.0",
+  "monitor": "true",
+  "sim": "false",
+  "use_sim_time": "true",
+  "remaps": "",
+  "agent": "true",
+  "output_dir": "",
+  "spawn_used": [
+    -12.0,
+    3.8,
+    0.0
+  ]
+}

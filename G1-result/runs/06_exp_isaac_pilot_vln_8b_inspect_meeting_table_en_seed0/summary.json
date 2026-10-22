@@ -1,0 +1,130 @@
+{
+  "task": "inspect_meeting_table_en",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "Go to the meeting room and check whether anyone is sitting at the meeting table.",
+  "state": "done",
+  "expected_place": "meeting_table",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the meeting room",
+      "region": "office_meeting"
+    },
+    {
+      "goal": "find the meeting table and stand in front of it",
+      "region": "office_meeting"
+    }
+  ],
+  "grounding_correct": false,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 5.954,
+  "target_localization_error_m": 4.137,
+  "vln_decisions": 5,
+  "vln_actions": [
+    "move",
+    "move",
+    "approach",
+    "approach",
+    "stop"
+  ],
+  "start_pose": [
+    26.141220092773438,
+    -0.32602986693382263,
+    0.001558516735023381
+  ],
+  "final_pose": [
+    40.85424041748047,
+    1.9757683277130127,
+    0.7436039394172721
+  ],
+  "final_distance_to_expected_place_m": 6.181,
+  "target_xy": [
+    41.914,
+    3.468
+  ],
+  "inspection": {
+    "observed": "a meeting table with several chairs around it",
+    "target_visible": true,
+    "verdict": "no",
+    "status": "ok",
+    "answer": "No one is sitting at the meeting table; the chairs are empty."
+  },
+  "expected_verdict": "no",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 16.539,
+  "shortest_path_m": 23.468560026916688,
+  "task_sim_time_s": 55.19,
+  "plans": 4,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.017,
+    0.013,
+    0.047
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.571986977999586,
+      "request_bytes": 2016,
+      "response_bytes": 740,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the meeting room\",\n      \"region\": \"office_meeting\"\n    },\n    {\n      \"goal\": \"find the meeting table and stand in front of it\",\n      \"region\": \"office_meeting\"\n    }\n  ],\n  \"target\": \"the meeting table\",\n  \"target_label\": \"\",\n  \"question\": \"is anyone sitting at the meeting table?\",\n  \"language\": \"en\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.72,
+      "request_bytes": 42224,
+      "action": "move",
+      "raw": "{\"thought\": \"Move toward waypoint 1 to get closer to the meeting room entrance.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.56,
+      "request_bytes": 38998,
+      "action": "move",
+      "raw": "{\"thought\": \"Move toward waypoint 1 to get closer to the meeting room entrance.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.15,
+      "request_bytes": 46134,
+      "action": "approach",
+      "raw": "{\"thought\": \"The meeting room is visible through the glass wall, and I am close enough to enter.\", \"action\": \"approach\", \"bbox_2d\": [0, 277, 250, 400]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.63,
+      "request_bytes": 58847,
+      "action": "approach",
+      "raw": "{\"thought\": \"The meeting table is visible in the office meeting room, so I should approach it to check if anyone is sitting.\", \"action\": \"approach\", \"bbox_2d\": [150, 320, 650, 450]}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.63,
+      "request_bytes": 58847,
+      "action": "stop",
+      "raw": "{\"thought\": \"The meeting table is visible in the office meeting room, so I should approach it to check if anyone is sitting.\", \"action\": \"approach\", \"bbox_2d\": [150, 320, 650, 450]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.941046930999619,
+      "request_bytes": 27023,
+      "response_bytes": 554,
+      "raw": "{\"observed\": \"a meeting table with several chairs around it\", \"target_visible\": true, \"verdict\": \"no\", \"status\": \"ok\", \"answer\": \"No one is sitting at the meeting table; the chairs are empty.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 3.886,
+  "realtime_factor": 0.616,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.46,
+    "camera_publish": 1.85
+  },
+  "success": false,
+  "spl": 0.0,
+  "attempts": 1
+}

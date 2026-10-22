@@ -1,0 +1,338 @@
+{
+  "task": "inspect_dock_cart_ko",
+  "condition": "vln_8b",
+  "seed": 0,
+  "instruction": "충전 구역의 3번 충전 도크에 AMR 카트가 주차되어 있는지 확인해.",
+  "state": "done",
+  "expected_place": "charging_dock_3",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the charging station",
+      "region": "charging"
+    },
+    {
+      "goal": "find charging dock 3 and stand in front of it",
+      "region": "charging"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 0.0,
+  "target_localization_error_m": 0.0,
+  "vln_decisions": 30,
+  "vln_actions": [
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "turn",
+    "turn",
+    "turn",
+    "move",
+    "move",
+    "turn",
+    "turn",
+    "move",
+    "turn",
+    "approach"
+  ],
+  "start_pose": [
+    -11.855825424194336,
+    -4.127030849456787,
+    -4.9950812341181045e-05
+  ],
+  "final_pose": [
+    12.0641450881958,
+    -11.754040718078613,
+    -0.9619914437523122
+  ],
+  "final_distance_to_expected_place_m": 4.453,
+  "target_xy": [
+    12.933,
+    -13.071
+  ],
+  "inspection": {
+    "observed": "no cart visible on or near the charging dock",
+    "target_visible": true,
+    "verdict": "no",
+    "status": "ok",
+    "answer": "충전 구역의 3번 충전 도크에는 AMR 카트가 주차되어 있지 않습니다."
+  },
+  "expected_verdict": "no",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 87.236,
+  "shortest_path_m": 25.334874865864162,
+  "task_sim_time_s": 372.79,
+  "plans": 34,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.012,
+    0.022,
+    0.026,
+    0.028,
+    0.026,
+    0.034,
+    0.013,
+    0.031,
+    0.038,
+    0.018,
+    0.02
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.6978386079999837,
+      "request_bytes": 1979,
+      "response_bytes": 739,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the charging station\",\n      \"region\": \"charging\"\n    },\n    {\n      \"goal\": \"find charging dock 3 and stand in front of it\",\n      \"region\": \"charging\"\n    }\n  ],\n  \"target\": \"the free charging dock (no cart parked)\",\n  \"target_label\": \"\",\n  \"question\": \"is a cart parked at dock 3?\",\n  \"language\": \"ko\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.32,
+      "request_bytes": 45088,
+      "action": "move",
+      "raw": "{\"thought\": \"I am currently in the Quality inspection region and need to reach the charging station. Waypoint 1 is ahead and closer to the charging station, so I should move there first.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.29,
+      "request_bytes": 37124,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the charging station region and can see waypoints 1 and 2. Waypoint 2 is closer to the charging docks and likely leads to charging dock 3, which is the target.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.4,
+      "request_bytes": 127557,
+      "action": "turn",
+      "raw": "{\"seen\": \"charging station sign, warehouse shelves, quality inspection sign, charger 1 and 2 with AMR cart\", \"view\": 4, \"target_visible\": false}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 9.18,
+      "request_bytes": 71276,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. I should turn to get a better view of the area to locate it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.04,
+      "request_bytes": 42519,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, but the current view shows charging dock 4. I should turn to look for dock 3.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.99,
+      "request_bytes": 96941,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3 within the charging station. The current view shows waypoints 1, 2, and 3, but I must confirm if any of these correspond to charging dock 3. Since I haven't found it yet, I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.12,
+      "request_bytes": 81421,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3 within the charging station. Since I've already looked around and didn't find it, I should move to an unvisited waypoint inside the charging station that might lead me closer to the target.\", \"action\": \"move\", \"waypoint\": 8}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.46,
+      "request_bytes": 24204,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3 within the charging station. Since I'm currently in the charging station and need to locate the specific dock, I should move to a nearby waypoint that might lead me closer to the target.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.89,
+      "request_bytes": 17085,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, but the current view is not helpful. Turning to look in a different direction might reveal it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.25,
+      "request_bytes": 25862,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find charging dock 3. The current view shows a corridor with pillars and a yellow line, but no visible charging dock. I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 8.78,
+      "request_bytes": 111635,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible yet. Turning left might help me see more of the charging station area.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.13,
+      "request_bytes": 28265,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. Moving to waypoint 4 will bring me closer to the charging station area where the dock should be.\", \"action\": \"move\", \"waypoint\": 4}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.14,
+      "request_bytes": 29072,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which should be marked with a sign. The current view shows a cart parked, so I should turn to look for the correct dock.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.91,
+      "request_bytes": 38433,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. Turning left might reveal it.\", \"action\": \"turn\", \"turn\": \"left\", \"waypoint\": null}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.1,
+      "request_bytes": 35166,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible from the current position. Turning right might help me see more of the charging station area.\", \"action\": \"turn\", \"turn\": \"right\", \"waypoint\": null}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.48,
+      "request_bytes": 74187,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible from the current position. Moving to an unvisited waypoint may reveal it.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.83,
+      "request_bytes": 41080,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.14,
+      "request_bytes": 57007,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find charging dock 3. The current view shows a charging dock with a nameplate, but I cannot confirm if it is dock 3. I should turn to look for more options.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.02,
+      "request_bytes": 23991,
+      "action": "turn",
+      "raw": "{\"thought\": \"I am in the charging station and need to find charging dock 3. Since I cannot see it from my current position, I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.62,
+      "request_bytes": 85953,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. I should move to a new waypoint to get a better view.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 9.29,
+      "request_bytes": 76127,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, but the current view doesn't show it. I should turn to scan other directions within the charging station.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.94,
+      "request_bytes": 37766,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. Turning to look in other directions may reveal it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.83,
+      "request_bytes": 37056,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. Turning right might reveal it.\", \"action\": \"turn\", \"turn\": \"right\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.71,
+      "request_bytes": 70071,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3, but the current view doesn't show it. I should move to an unvisited waypoint to get a better view.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.94,
+      "request_bytes": 99845,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3 within the charging station. Waypoint 7 is inside the charging station and closer to the target area, so I should move there.\", \"action\": \"move\", \"waypoint\": 7}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.41,
+      "request_bytes": 34313,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3 within the charging station. Since I'm currently facing east and the visible waypoints are not leading me closer to the target, I should turn to look for it.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.11,
+      "request_bytes": 50714,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which is not visible in the current view. Turning left might help me locate it.\", \"action\": \"turn\", \"turn\": \"left\", \"waypoint\": null}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.23,
+      "request_bytes": 50318,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to find charging dock 3, which should be marked with a sign. Waypoint 1 is directly on the charging station line and likely leads to the target.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.0,
+      "request_bytes": 42190,
+      "action": "turn",
+      "raw": "{\"thought\": \"I need to find charging dock 3, but the current view shows charging dock 04. I should turn to look for dock 3.\", \"action\": \"turn\", \"turn\": \"left\"}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.58,
+      "request_bytes": 48262,
+      "action": "approach",
+      "raw": "{\"thought\": \"I need to find charging dock 3 and confirm if an AMR cart is parked there. The image shows 'CHARGER 3' clearly, so I should approach it.\", \"action\": \"approach\", \"bbox_2d\": [150, 120, 270, 430]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 3.1973453370001153,
+      "request_bytes": 22086,
+      "response_bytes": 581,
+      "raw": "{\"observed\": \"no cart visible on or near the charging dock\", \"target_visible\": true, \"verdict\": \"no\", \"status\": \"ok\", \"answer\": \"충전 구역의 3번 충전 도크에는 AMR 카트가 주차되어 있지 않습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 4.47,
+  "realtime_factor": 0.625,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.46,
+    "camera_publish": 1.89
+  },
+  "success": true,
+  "spl": 0.29,
+  "attempts": 1
+}

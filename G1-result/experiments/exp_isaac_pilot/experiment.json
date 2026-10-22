@@ -1,0 +1,69 @@
+{
+  "config": {
+    "tasks": [
+      "inspect_conveyor",
+      "inspect_dock_en",
+      "inspect_dock_cart_ko",
+      "inspect_servers_office",
+      "inspect_meeting_table_en",
+      "inspect_station_paraphrase",
+      "json_agent_subgoals",
+      "go_fire_cabinet_ko",
+      "check_electrical_panel_en"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "conditions": {
+      "vln_8b": {
+        "planner_mode": "vln",
+        "vlm_model": "qwen3-vl:8b-instruct"
+      },
+      "vln_4b": {
+        "planner_mode": "vln",
+        "vlm_model": "qwen3-vl:4b-instruct"
+      },
+      "oracle_8b": {
+        "planner_mode": "oracle",
+        "vlm_model": "qwen3-vl:8b-instruct"
+      }
+    },
+    "launch_args": {
+      "camera_rate_hz": 30.0,
+      "render_shadows": true,
+      "realtime_factor": 1.0,
+      "monitor": false,
+      "timeout_s": 900.0
+    },
+    "measurement": {
+      "condition": "vln_8b",
+      "task": "inspect_conveyor",
+      "seed": 0,
+      "launch_args": {
+        "camera_rate_hz": 30.0
+      }
+    },
+    "episode_wall_timeout_s": 3600
+  },
+  "launch_args": {
+    "camera_rate_hz": 30.0,
+    "render_shadows": true,
+    "realtime_factor": 1.0,
+    "monitor": false,
+    "timeout_s": 900.0,
+    "sim": false
+  },
+  "argv": [
+    "scripts/hvln_experiment.py",
+    "--simulator",
+    "isaac",
+    "--out",
+    "outputs/exp_isaac_pilot",
+    "--conditions",
+    "vln_8b",
+    "--seeds",
+    "0"
+  ]
+}

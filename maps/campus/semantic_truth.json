@@ -1,0 +1,2291 @@
+{
+ "frame": "map (robot SLAM map: origin = floor under the LiDAR at start-up, x = start heading)",
+ "units": "m",
+ "source": "simulator ground truth (= human annotation of the SLAM map)",
+ "aisle_segments": {
+  "warehouse_aisle": [
+   -12.335,
+   -17.945,
+   35.696,
+   14.101
+  ],
+  "office_corridor": [
+   39.669,
+   -13.895,
+   63.693,
+   10.129
+  ],
+  "bridge": [
+   35.679,
+   -3.899,
+   39.683,
+   0.105
+  ],
+  "pump_passage": [
+   49.692,
+   -18.085,
+   53.697,
+   -13.681
+  ]
+ },
+ "zones": [
+  {
+   "id": "material_storage",
+   "label": "Material storage",
+   "kind": "warehouse",
+   "bounds": [
+    -12.335,
+    0.055,
+    9.679,
+    14.076
+   ],
+   "entrance": [
+    -0.323,
+    1.866
+   ],
+   "rects": []
+  },
+  {
+   "id": "assembly_line",
+   "label": "Assembly line",
+   "kind": "warehouse",
+   "bounds": [
+    13.665,
+    0.08,
+    35.679,
+    14.101
+   ],
+   "entrance": [
+    23.677,
+    1.89
+   ],
+   "rects": []
+  },
+  {
+   "id": "inspection",
+   "label": "Quality inspection",
+   "kind": "warehouse",
+   "bounds": [
+    -12.317,
+    -17.945,
+    9.696,
+    -3.924
+   ],
+   "entrance": [
+    -0.315,
+    -5.734
+   ],
+   "rects": []
+  },
+  {
+   "id": "charging",
+   "label": "Charging station",
+   "kind": "warehouse",
+   "bounds": [
+    13.683,
+    -17.92,
+    35.696,
+    -3.899
+   ],
+   "entrance": [
+    23.685,
+    -5.71
+   ],
+   "rects": []
+  },
+  {
+   "id": "office_workstations",
+   "label": "Engineering workstations",
+   "kind": "office",
+   "bounds": [
+    39.669,
+    0.105,
+    49.679,
+    10.115
+   ],
+   "entrance": [
+    45.677,
+    2.111
+   ],
+   "rects": []
+  },
+  {
+   "id": "office_meeting",
+   "label": "Meeting room",
+   "kind": "office",
+   "bounds": [
+    53.669,
+    0.119,
+    63.679,
+    10.129
+   ],
+   "entrance": [
+    57.677,
+    2.123
+   ],
+   "rects": []
+  },
+  {
+   "id": "office_lounge",
+   "label": "Staff lounge",
+   "kind": "office",
+   "bounds": [
+    39.683,
+    -13.895,
+    49.693,
+    -3.885
+   ],
+   "entrance": [
+    45.685,
+    -5.889
+   ],
+   "rects": []
+  },
+  {
+   "id": "office_control",
+   "label": "Operations control",
+   "kind": "office",
+   "bounds": [
+    53.683,
+    -13.881,
+    63.693,
+    -3.871
+   ],
+   "entrance": [
+    57.685,
+    -5.877
+   ],
+   "rects": []
+  },
+  {
+   "id": "pump_room",
+   "label": "Pump room",
+   "kind": "utility",
+   "bounds": [
+    45.696,
+    -27.889,
+    57.706,
+    -17.877
+   ],
+   "entrance": [
+    51.698,
+    -19.483
+   ],
+   "rects": []
+  }
+ ],
+ "objects": [
+  {
+   "id": "amr_cart_0",
+   "class": "AMR cart",
+   "label": null,
+   "region": "charging",
+   "center": [
+    16.648,
+    -12.317,
+    0.415
+   ],
+   "aabb": [
+    15.805,
+    -12.888,
+    0.01,
+    17.492,
+    -11.746,
+    0.82
+   ]
+  },
+  {
+   "id": "amr_cart_1",
+   "class": "AMR cart",
+   "label": null,
+   "region": "charging",
+   "center": [
+    20.648,
+    -12.313,
+    0.415
+   ],
+   "aabb": [
+    19.805,
+    -12.884,
+    0.01,
+    21.492,
+    -11.742,
+    0.82
+   ]
+  },
+  {
+   "id": "amr_cart_3",
+   "class": "AMR cart",
+   "label": null,
+   "region": "charging",
+   "center": [
+    28.649,
+    -12.305,
+    0.415
+   ],
+   "aabb": [
+    27.805,
+    -12.876,
+    0.01,
+    29.492,
+    -11.735,
+    0.82
+   ]
+  },
+  {
+   "id": "amr_cart_4",
+   "class": "AMR cart",
+   "label": null,
+   "region": "charging",
+   "center": [
+    32.649,
+    -12.301,
+    0.415
+   ],
+   "aabb": [
+    31.805,
+    -12.872,
+    0.01,
+    33.492,
+    -11.731,
+    0.82
+   ]
+  },
+  {
+   "id": "cnc_machine_0",
+   "class": "CNC machine",
+   "label": "CNC MACHINE 1",
+   "region": "assembly_line",
+   "center": [
+    15.473,
+    6.135,
+    1.45
+   ],
+   "aabb": [
+    14.672,
+    4.936,
+    0.0,
+    16.274,
+    7.333,
+    2.9
+   ]
+  },
+  {
+   "id": "cnc_machine_1",
+   "class": "CNC machine",
+   "label": "CNC MACHINE 2",
+   "region": "assembly_line",
+   "center": [
+    15.469,
+    10.035,
+    1.45
+   ],
+   "aabb": [
+    14.668,
+    8.836,
+    0.0,
+    16.27,
+    11.233,
+    2.9
+   ]
+  },
+  {
+   "id": "battery_cabinet_0",
+   "class": "battery cabinet",
+   "label": "BATTERY STORAGE",
+   "region": "charging",
+   "center": [
+    18.688,
+    -9.015,
+    0.8
+   ],
+   "aabb": [
+    17.687,
+    -9.466,
+    0.0,
+    19.688,
+    -8.564,
+    1.6
+   ]
+  },
+  {
+   "id": "battery_cabinet_1",
+   "class": "battery cabinet",
+   "label": "BATTERY STORAGE",
+   "region": "charging",
+   "center": [
+    26.688,
+    -9.007,
+    0.8
+   ],
+   "aabb": [
+    25.687,
+    -9.458,
+    0.0,
+    27.688,
+    -8.556,
+    1.6
+   ]
+  },
+  {
+   "id": "bollard_0",
+   "class": "bollard",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    48.801,
+    -22.686,
+    0.5
+   ],
+   "aabb": [
+    48.721,
+    -22.766,
+    0.0,
+    48.881,
+    -22.606,
+    1.0
+   ]
+  },
+  {
+   "id": "bollard_1",
+   "class": "bollard",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    51.301,
+    -22.683,
+    0.5
+   ],
+   "aabb": [
+    51.221,
+    -22.763,
+    0.0,
+    51.381,
+    -22.603,
+    1.0
+   ]
+  },
+  {
+   "id": "bollard_2",
+   "class": "bollard",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    53.601,
+    -22.681,
+    0.5
+   ],
+   "aabb": [
+    53.521,
+    -22.761,
+    0.0,
+    53.681,
+    -22.601,
+    1.0
+   ]
+  },
+  {
+   "id": "bollard_3",
+   "class": "bollard",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    55.901,
+    -22.679,
+    0.5
+   ],
+   "aabb": [
+    55.821,
+    -22.759,
+    0.0,
+    55.981,
+    -22.599,
+    1.0
+   ]
+  },
+  {
+   "id": "bookshelf_books",
+   "class": "bookshelf",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    48.662,
+    7.214,
+    1.2
+   ],
+   "aabb": [
+    48.644,
+    6.214,
+    0.925,
+    48.681,
+    8.214,
+    1.475
+   ]
+  },
+  {
+   "id": "bookshelf_bookshelf",
+   "class": "bookshelf",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    48.972,
+    7.314,
+    0.9
+   ],
+   "aabb": [
+    48.696,
+    6.064,
+    0.0,
+    49.248,
+    8.565,
+    1.8
+   ]
+  },
+  {
+   "id": "centrifugal_pump_pump",
+   "class": "centrifugal pump",
+   "label": "PUMP P-101",
+   "region": "pump_room",
+   "center": [
+    50.667,
+    -23.884,
+    1.038
+   ],
+   "aabb": [
+    49.682,
+    -24.335,
+    0.325,
+    51.653,
+    -23.433,
+    1.75
+   ]
+  },
+  {
+   "id": "charging_dock_0",
+   "class": "charging dock",
+   "label": "CHARGER 1",
+   "region": "charging",
+   "center": [
+    16.694,
+    -15.292,
+    1.05
+   ],
+   "aabb": [
+    16.214,
+    -15.617,
+    0.0,
+    17.174,
+    -14.967,
+    2.1
+   ]
+  },
+  {
+   "id": "charging_dock_1",
+   "class": "charging dock",
+   "label": "CHARGER 2",
+   "region": "charging",
+   "center": [
+    20.694,
+    -15.288,
+    1.05
+   ],
+   "aabb": [
+    20.214,
+    -15.614,
+    0.0,
+    21.174,
+    -14.963,
+    2.1
+   ]
+  },
+  {
+   "id": "charging_dock_2",
+   "class": "charging dock",
+   "label": "CHARGER 3",
+   "region": "charging",
+   "center": [
+    24.694,
+    -15.284,
+    1.05
+   ],
+   "aabb": [
+    24.214,
+    -15.61,
+    0.0,
+    25.174,
+    -14.959,
+    2.1
+   ]
+  },
+  {
+   "id": "charging_dock_3",
+   "class": "charging dock",
+   "label": "CHARGER 4",
+   "region": "charging",
+   "center": [
+    28.694,
+    -15.28,
+    1.05
+   ],
+   "aabb": [
+    28.214,
+    -15.606,
+    0.0,
+    29.174,
+    -14.955,
+    2.1
+   ]
+  },
+  {
+   "id": "charging_dock_4",
+   "class": "charging dock",
+   "label": "CHARGER 5",
+   "region": "charging",
+   "center": [
+    32.694,
+    -15.276,
+    1.05
+   ],
+   "aabb": [
+    32.214,
+    -15.602,
+    0.0,
+    33.174,
+    -14.951,
+    2.1
+   ]
+  },
+  {
+   "id": "coffee_table_coffee_table",
+   "class": "coffee table",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    44.589,
+    -10.19,
+    0.4
+   ],
+   "aabb": [
+    43.438,
+    -10.841,
+    0.35,
+    45.74,
+    -9.539,
+    0.45
+   ]
+  },
+  {
+   "id": "coffee_table_table_leg",
+   "class": "coffee table",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    44.589,
+    -10.19,
+    0.2
+   ],
+   "aabb": [
+    43.603,
+    -10.676,
+    0.0,
+    45.574,
+    -9.704,
+    0.4
+   ]
+  },
+  {
+   "id": "control_console_0",
+   "class": "control console",
+   "label": null,
+   "region": "office_control",
+   "center": [
+    55.989,
+    -10.279,
+    0.693
+   ],
+   "aabb": [
+    54.739,
+    -10.83,
+    0.0,
+    57.24,
+    -9.728,
+    1.385
+   ]
+  },
+  {
+   "id": "control_console_1",
+   "class": "control console",
+   "label": null,
+   "region": "office_control",
+   "center": [
+    58.939,
+    -10.276,
+    0.693
+   ],
+   "aabb": [
+    57.689,
+    -10.827,
+    0.0,
+    60.19,
+    -9.725,
+    1.385
+   ]
+  },
+  {
+   "id": "conveyor_0",
+   "class": "conveyor",
+   "label": "CONVEYOR A",
+   "region": "assembly_line",
+   "center": [
+    21.673,
+    6.288,
+    0.67
+   ],
+   "aabb": [
+    16.672,
+    5.453,
+    0.0,
+    26.674,
+    7.123,
+    1.34
+   ]
+  },
+  {
+   "id": "conveyor_1",
+   "class": "conveyor",
+   "label": "CONVEYOR B",
+   "region": "assembly_line",
+   "center": [
+    21.669,
+    10.188,
+    0.67
+   ],
+   "aabb": [
+    16.668,
+    9.353,
+    0.0,
+    26.67,
+    11.023,
+    1.34
+   ]
+  },
+  {
+   "id": "coupling_guard_coupling_guard",
+   "class": "coupling guard",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    52.102,
+    -23.883,
+    0.95
+   ],
+   "aabb": [
+    51.652,
+    -24.173,
+    0.66,
+    52.553,
+    -23.592,
+    1.24
+   ]
+  },
+  {
+   "id": "desk_0_0",
+   "class": "desk",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    42.273,
+    6.108,
+    0.693
+   ],
+   "aabb": [
+    41.198,
+    5.607,
+    0.0,
+    43.349,
+    6.609,
+    1.385
+   ]
+  },
+  {
+   "id": "desk_0_1",
+   "class": "desk",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    46.923,
+    6.112,
+    0.693
+   ],
+   "aabb": [
+    45.848,
+    5.611,
+    0.0,
+    47.999,
+    6.613,
+    1.385
+   ]
+  },
+  {
+   "id": "desk_1_0",
+   "class": "desk",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    42.271,
+    8.708,
+    0.693
+   ],
+   "aabb": [
+    41.195,
+    8.207,
+    0.0,
+    43.346,
+    9.209,
+    1.385
+   ]
+  },
+  {
+   "id": "desk_1_1",
+   "class": "desk",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    46.921,
+    8.712,
+    0.693
+   ],
+   "aabb": [
+    45.845,
+    8.211,
+    0.0,
+    47.996,
+    9.213,
+    1.385
+   ]
+  },
+  {
+   "id": "electric_motor_motor",
+   "class": "electric motor",
+   "label": "MOTOR M-101",
+   "region": "pump_room",
+   "center": [
+    53.727,
+    -23.881,
+    1.11
+   ],
+   "aabb": [
+    52.552,
+    -24.512,
+    0.34,
+    54.903,
+    -23.25,
+    1.88
+   ]
+  },
+  {
+   "id": "electrical_cabinet_mcc",
+   "class": "electrical cabinet",
+   "label": "MCC-1",
+   "region": "pump_room",
+   "center": [
+    46.124,
+    -20.488,
+    1.0
+   ],
+   "aabb": [
+    45.818,
+    -21.289,
+    0.0,
+    46.431,
+    -19.688,
+    2.0
+   ]
+  },
+  {
+   "id": "electrical_panel_electrical_panel",
+   "class": "electrical panel",
+   "label": "ELECTRICAL PANEL",
+   "region": "assembly_line",
+   "center": [
+    35.426,
+    3.101,
+    1.2
+   ],
+   "aabb": [
+    35.306,
+    2.651,
+    0.55,
+    35.546,
+    3.551,
+    1.85
+   ]
+  },
+  {
+   "id": "fire_extinguisher_cabinet_fire_cabinet",
+   "class": "fire extinguisher cabinet",
+   "label": "FIRE EXTINGUISHER",
+   "region": "aisle",
+   "center": [
+    63.375,
+    -0.872,
+    1.1
+   ],
+   "aabb": [
+    63.17,
+    -1.192,
+    0.65,
+    63.58,
+    -0.551,
+    1.55
+   ]
+  },
+  {
+   "id": "fire_extinguisher_cabinet_fire_cabinet_west",
+   "class": "fire extinguisher cabinet",
+   "label": "FIRE EXTINGUISHER",
+   "region": "aisle",
+   "center": [
+    -12.015,
+    -0.945,
+    1.1
+   ],
+   "aabb": [
+    -12.22,
+    -1.265,
+    0.65,
+    -11.81,
+    -0.625,
+    1.55
+   ]
+  },
+  {
+   "id": "inspection_station_0",
+   "class": "inspection station",
+   "label": "STATION 1",
+   "region": "inspection",
+   "center": [
+    -6.311,
+    -10.139,
+    1.018
+   ],
+   "aabb": [
+    -8.312,
+    -11.041,
+    0.0,
+    -4.31,
+    -9.237,
+    2.035
+   ]
+  },
+  {
+   "id": "inspection_station_1",
+   "class": "inspection station",
+   "label": "STATION 2",
+   "region": "inspection",
+   "center": [
+    1.689,
+    -10.132,
+    1.018
+   ],
+   "aabb": [
+    -0.312,
+    -11.034,
+    0.0,
+    3.69,
+    -9.23,
+    2.035
+   ]
+  },
+  {
+   "id": "inspection_station_2",
+   "class": "inspection station",
+   "label": "STATION 3",
+   "region": "inspection",
+   "center": [
+    -6.307,
+    -14.339,
+    1.018
+   ],
+   "aabb": [
+    -8.308,
+    -15.241,
+    0.0,
+    -4.306,
+    -13.437,
+    2.035
+   ]
+  },
+  {
+   "id": "inspection_station_3",
+   "class": "inspection station",
+   "label": "STATION 4",
+   "region": "inspection",
+   "center": [
+    1.693,
+    -14.332,
+    1.018
+   ],
+   "aabb": [
+    -0.308,
+    -15.233,
+    0.0,
+    3.694,
+    -13.43,
+    2.035
+   ]
+  },
+  {
+   "id": "meeting_table_table",
+   "class": "meeting table",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    57.673,
+    6.373,
+    0.415
+   ],
+   "aabb": [
+    55.472,
+    5.271,
+    0.0,
+    59.874,
+    7.475,
+    0.83
+   ]
+  },
+  {
+   "id": "metrology_cabinet_0",
+   "class": "metrology cabinet",
+   "label": "METROLOGY",
+   "region": "inspection",
+   "center": [
+    7.689,
+    -9.926,
+    1.05
+   ],
+   "aabb": [
+    7.038,
+    -11.026,
+    0.0,
+    8.34,
+    -8.825,
+    2.1
+   ]
+  },
+  {
+   "id": "metrology_cabinet_1",
+   "class": "metrology cabinet",
+   "label": "METROLOGY",
+   "region": "inspection",
+   "center": [
+    7.693,
+    -13.926,
+    1.05
+   ],
+   "aabb": [
+    7.041,
+    -15.026,
+    0.0,
+    8.344,
+    -12.825,
+    2.1
+   ]
+  },
+  {
+   "id": "office_chair_0",
+   "class": "office chair",
+   "label": null,
+   "region": "office_control",
+   "center": [
+    55.99,
+    -11.439,
+    0.547
+   ],
+   "aabb": [
+    55.68,
+    -11.739,
+    0.05,
+    56.3,
+    -11.138,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_0_0",
+   "class": "office chair",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    42.274,
+    5.058,
+    0.547
+   ],
+   "aabb": [
+    41.964,
+    4.758,
+    0.05,
+    42.584,
+    5.358,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_0_1",
+   "class": "office chair",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    46.924,
+    5.062,
+    0.547
+   ],
+   "aabb": [
+    46.614,
+    4.762,
+    0.05,
+    47.234,
+    5.363,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_1",
+   "class": "office chair",
+   "label": null,
+   "region": "office_control",
+   "center": [
+    58.94,
+    -11.436,
+    0.547
+   ],
+   "aabb": [
+    58.63,
+    -11.736,
+    0.05,
+    59.25,
+    -11.136,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_1_0",
+   "class": "office chair",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    42.272,
+    7.658,
+    0.547
+   ],
+   "aabb": [
+    41.961,
+    7.358,
+    0.05,
+    42.582,
+    7.958,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_1_1",
+   "class": "office chair",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    46.922,
+    7.662,
+    0.547
+   ],
+   "aabb": [
+    46.611,
+    7.362,
+    0.05,
+    47.232,
+    7.963,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_east",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    60.583,
+    6.376,
+    0.548
+   ],
+   "aabb": [
+    60.283,
+    6.065,
+    0.05,
+    60.883,
+    6.686,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_north_0",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    56.121,
+    8.011,
+    0.547
+   ],
+   "aabb": [
+    55.811,
+    7.711,
+    0.05,
+    56.432,
+    8.312,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_north_1",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    57.671,
+    8.013,
+    0.547
+   ],
+   "aabb": [
+    57.361,
+    7.713,
+    0.05,
+    57.982,
+    8.313,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_north_2",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    59.221,
+    8.014,
+    0.547
+   ],
+   "aabb": [
+    58.911,
+    7.714,
+    0.05,
+    59.532,
+    8.315,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_south_0",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    56.124,
+    4.741,
+    0.547
+   ],
+   "aabb": [
+    55.814,
+    4.441,
+    0.05,
+    56.435,
+    5.042,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_south_1",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    57.674,
+    4.743,
+    0.547
+   ],
+   "aabb": [
+    57.364,
+    4.443,
+    0.05,
+    57.985,
+    5.043,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_south_2",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    59.224,
+    4.744,
+    0.547
+   ],
+   "aabb": [
+    58.914,
+    4.444,
+    0.05,
+    59.535,
+    5.045,
+    1.045
+   ]
+  },
+  {
+   "id": "office_chair_west",
+   "class": "office chair",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    54.763,
+    6.37,
+    0.548
+   ],
+   "aabb": [
+    54.463,
+    6.06,
+    0.05,
+    55.063,
+    6.68,
+    1.045
+   ]
+  },
+  {
+   "id": "pallet_0",
+   "class": "pallet",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -9.323,
+    2.208,
+    0.41
+   ],
+   "aabb": [
+    -10.174,
+    1.557,
+    0.0,
+    -8.472,
+    2.859,
+    0.82
+   ]
+  },
+  {
+   "id": "pallet_1",
+   "class": "pallet",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -4.323,
+    2.213,
+    0.41
+   ],
+   "aabb": [
+    -5.174,
+    1.562,
+    0.0,
+    -3.472,
+    2.863,
+    0.82
+   ]
+  },
+  {
+   "id": "pallet_2",
+   "class": "pallet",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    5.677,
+    2.222,
+    0.41
+   ],
+   "aabb": [
+    4.826,
+    1.571,
+    0.0,
+    6.527,
+    2.873,
+    0.82
+   ]
+  },
+  {
+   "id": "parts_bin_0",
+   "class": "parts bin",
+   "label": null,
+   "region": "inspection",
+   "center": [
+    -3.711,
+    -10.137,
+    0.55
+   ],
+   "aabb": [
+    -4.192,
+    -10.687,
+    0.0,
+    -3.231,
+    -9.586,
+    1.1
+   ]
+  },
+  {
+   "id": "parts_bin_1",
+   "class": "parts bin",
+   "label": null,
+   "region": "inspection",
+   "center": [
+    4.289,
+    -10.129,
+    0.55
+   ],
+   "aabb": [
+    3.808,
+    -10.679,
+    0.0,
+    4.769,
+    -9.579,
+    1.1
+   ]
+  },
+  {
+   "id": "parts_bin_2",
+   "class": "parts bin",
+   "label": null,
+   "region": "inspection",
+   "center": [
+    -3.707,
+    -14.337,
+    0.55
+   ],
+   "aabb": [
+    -4.188,
+    -14.887,
+    0.0,
+    -3.227,
+    -13.786,
+    1.1
+   ]
+  },
+  {
+   "id": "parts_bin_3",
+   "class": "parts bin",
+   "label": null,
+   "region": "inspection",
+   "center": [
+    4.293,
+    -14.329,
+    0.55
+   ],
+   "aabb": [
+    3.812,
+    -14.879,
+    0.0,
+    4.773,
+    -13.779,
+    1.1
+   ]
+  },
+  {
+   "id": "parts_rack_rack",
+   "class": "parts rack",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    47.106,
+    -27.387,
+    0.9
+   ],
+   "aabb": [
+    46.205,
+    -27.688,
+    0.0,
+    48.006,
+    -27.087,
+    1.8
+   ]
+  },
+  {
+   "id": "plant_lounge",
+   "class": "plant",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    41.091,
+    -12.673,
+    1.025
+   ],
+   "aabb": [
+    40.671,
+    -12.994,
+    0.0,
+    41.512,
+    -12.353,
+    2.05
+   ]
+  },
+  {
+   "id": "plant_meeting",
+   "class": "plant",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    62.37,
+    8.847,
+    0.975
+   ],
+   "aabb": [
+    61.95,
+    8.527,
+    0.0,
+    62.791,
+    9.168,
+    1.95
+   ]
+  },
+  {
+   "id": "plant_workstation",
+   "class": "plant",
+   "label": null,
+   "region": "office_workstations",
+   "center": [
+    40.775,
+    3.826,
+    0.875
+   ],
+   "aabb": [
+    40.355,
+    3.506,
+    0.0,
+    41.196,
+    4.147,
+    1.75
+   ]
+  },
+  {
+   "id": "pressure_gauge_discharge_gauge",
+   "class": "pressure gauge",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    50.302,
+    -23.57,
+    2.35
+   ],
+   "aabb": [
+    50.182,
+    -23.714,
+    2.23,
+    50.422,
+    -23.427,
+    2.47
+   ]
+  },
+  {
+   "id": "pressure_gauge_tank_gauge",
+   "class": "pressure gauge",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    56.354,
+    -25.645,
+    1.5
+   ],
+   "aabb": [
+    56.234,
+    -25.749,
+    1.38,
+    56.474,
+    -25.541,
+    1.62
+   ]
+  },
+  {
+   "id": "pressure_tank_tank",
+   "class": "pressure tank",
+   "label": "TK-101",
+   "region": "pump_room",
+   "center": [
+    56.105,
+    -26.279,
+    1.315
+   ],
+   "aabb": [
+    55.524,
+    -26.859,
+    0.0,
+    56.685,
+    -25.698,
+    2.63
+   ]
+  },
+  {
+   "id": "server_rack_0",
+   "class": "server rack",
+   "label": "SERVER RACK 1",
+   "region": "office_control",
+   "center": [
+    62.462,
+    -8.272,
+    1.15
+   ],
+   "aabb": [
+    61.936,
+    -8.898,
+    0.0,
+    62.988,
+    -7.647,
+    2.3
+   ]
+  },
+  {
+   "id": "server_rack_1",
+   "class": "server rack",
+   "label": "SERVER RACK 2",
+   "region": "office_control",
+   "center": [
+    62.464,
+    -10.272,
+    1.15
+   ],
+   "aabb": [
+    61.938,
+    -10.898,
+    0.0,
+    62.99,
+    -9.647,
+    2.3
+   ]
+  },
+  {
+   "id": "server_rack_2",
+   "class": "server rack",
+   "label": "SERVER RACK 3",
+   "region": "office_control",
+   "center": [
+    62.466,
+    -12.272,
+    1.15
+   ],
+   "aabb": [
+    61.94,
+    -12.898,
+    0.0,
+    62.992,
+    -11.647,
+    2.3
+   ]
+  },
+  {
+   "id": "sofa_armchair",
+   "class": "sofa",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    47.889,
+    -10.297,
+    0.578
+   ],
+   "aabb": [
+    47.264,
+    -10.767,
+    0.07,
+    48.515,
+    -9.826,
+    1.085
+   ]
+  },
+  {
+   "id": "sofa_sofa",
+   "class": "sofa",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    44.591,
+    -12.2,
+    0.578
+   ],
+   "aabb": [
+    42.94,
+    -12.671,
+    0.07,
+    46.241,
+    -11.728,
+    1.085
+   ]
+  },
+  {
+   "id": "storage_rack_r01",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -9.327,
+    6.058,
+    2.397
+   ],
+   "aabb": [
+    -11.078,
+    5.251,
+    -0.005,
+    -7.576,
+    6.864,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r02",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -4.327,
+    6.063,
+    2.397
+   ],
+   "aabb": [
+    -6.078,
+    5.256,
+    -0.005,
+    -2.576,
+    6.869,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r03",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    0.673,
+    6.067,
+    2.397
+   ],
+   "aabb": [
+    -1.078,
+    5.261,
+    -0.005,
+    2.424,
+    6.874,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r04",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    5.673,
+    6.072,
+    2.397
+   ],
+   "aabb": [
+    3.922,
+    5.266,
+    -0.005,
+    7.424,
+    6.879,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r05",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -9.331,
+    10.658,
+    2.397
+   ],
+   "aabb": [
+    -11.082,
+    9.851,
+    -0.005,
+    -7.581,
+    11.464,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r06",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    -4.331,
+    10.663,
+    2.397
+   ],
+   "aabb": [
+    -6.082,
+    9.856,
+    -0.005,
+    -2.581,
+    11.469,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r07",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    0.669,
+    10.667,
+    2.397
+   ],
+   "aabb": [
+    -1.082,
+    9.861,
+    -0.005,
+    2.419,
+    11.474,
+    4.8
+   ]
+  },
+  {
+   "id": "storage_rack_r08",
+   "class": "storage rack",
+   "label": null,
+   "region": "material_storage",
+   "center": [
+    5.669,
+    10.672,
+    2.397
+   ],
+   "aabb": [
+    3.918,
+    9.866,
+    -0.005,
+    7.419,
+    11.479,
+    4.8
+   ]
+  },
+  {
+   "id": "valve_discharge_valve",
+   "class": "valve",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    50.302,
+    -23.791,
+    2.75
+   ],
+   "aabb": [
+    50.047,
+    -24.14,
+    2.51,
+    50.558,
+    -23.444,
+    2.99
+   ]
+  },
+  {
+   "id": "valve_suction_valve",
+   "class": "valve",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    47.902,
+    -23.887,
+    1.107
+   ],
+   "aabb": [
+    47.672,
+    -24.142,
+    0.695,
+    48.133,
+    -23.631,
+    1.52
+   ]
+  },
+  {
+   "id": "valve_tank_valve",
+   "class": "valve",
+   "label": null,
+   "region": "pump_room",
+   "center": [
+    55.155,
+    -26.28,
+    1.145
+   ],
+   "aabb": [
+    54.974,
+    -26.46,
+    0.87,
+    55.335,
+    -26.099,
+    1.42
+   ]
+  },
+  {
+   "id": "vending_machine_vending",
+   "class": "vending machine",
+   "label": null,
+   "region": "office_lounge",
+   "center": [
+    40.887,
+    -8.073,
+    1.0
+   ],
+   "aabb": [
+    40.286,
+    -8.544,
+    0.0,
+    41.487,
+    -7.603,
+    2.0
+   ]
+  },
+  {
+   "id": "wall_display_display",
+   "class": "wall display",
+   "label": null,
+   "region": "office_meeting",
+   "center": [
+    57.669,
+    9.922,
+    1.95
+   ],
+   "aabb": [
+    55.969,
+    9.824,
+    1.175,
+    59.369,
+    10.02,
+    2.725
+   ]
+  },
+  {
+   "id": "workbench_0",
+   "class": "workbench",
+   "label": "WORKBENCH 1",
+   "region": "assembly_line",
+   "center": [
+    31.673,
+    6.208,
+    0.89
+   ],
+   "aabb": [
+    30.072,
+    5.496,
+    0.0,
+    33.274,
+    6.919,
+    1.78
+   ]
+  },
+  {
+   "id": "workbench_1",
+   "class": "workbench",
+   "label": "WORKBENCH 2",
+   "region": "assembly_line",
+   "center": [
+    31.669,
+    10.108,
+    0.89
+   ],
+   "aabb": [
+    30.069,
+    9.396,
+    0.0,
+    33.27,
+    10.819,
+    1.78
+   ]
+  }
+ ],
+ "places": [
+  {
+   "id": "assembly_line",
+   "label": "Assembly line",
+   "kind": "zone",
+   "center": [
+    24.672,
+    7.091
+   ],
+   "bounds": [
+    13.665,
+    0.08,
+    35.679,
+    14.101
+   ],
+   "lattice_nodes": 89,
+   "rects": []
+  },
+  {
+   "id": "bridge",
+   "label": "Warehouse-office bridge",
+   "kind": "aisle",
+   "center": [
+    37.681,
+    -1.897
+   ],
+   "bounds": null,
+   "lattice_nodes": 4,
+   "rects": []
+  },
+  {
+   "id": "charging",
+   "label": "Charging station",
+   "kind": "zone",
+   "center": [
+    24.69,
+    -10.909
+   ],
+   "bounds": [
+    13.683,
+    -17.92,
+    35.696,
+    -3.899
+   ],
+   "lattice_nodes": 92,
+   "rects": []
+  },
+  {
+   "id": "inspection",
+   "label": "Quality inspection",
+   "kind": "zone",
+   "center": [
+    -1.31,
+    -10.934
+   ],
+   "bounds": [
+    -12.317,
+    -17.945,
+    9.696,
+    -3.924
+   ],
+   "lattice_nodes": 95,
+   "rects": []
+  },
+  {
+   "id": "material_storage",
+   "label": "Material storage",
+   "kind": "zone",
+   "center": [
+    -1.328,
+    7.066
+   ],
+   "bounds": [
+    -12.335,
+    0.055,
+    9.679,
+    14.076
+   ],
+   "lattice_nodes": 68,
+   "rects": []
+  },
+  {
+   "id": "office_control",
+   "label": "Operations control",
+   "kind": "zone",
+   "center": [
+    58.688,
+    -8.876
+   ],
+   "bounds": [
+    53.683,
+    -13.881,
+    63.693,
+    -3.871
+   ],
+   "lattice_nodes": 26,
+   "rects": []
+  },
+  {
+   "id": "office_corridor",
+   "label": "Office corridor",
+   "kind": "aisle",
+   "center": [
+    51.181,
+    -1.883
+   ],
+   "bounds": null,
+   "lattice_nodes": 60,
+   "rects": []
+  },
+  {
+   "id": "office_lounge",
+   "label": "Staff lounge",
+   "kind": "zone",
+   "center": [
+    44.688,
+    -8.89
+   ],
+   "bounds": [
+    39.683,
+    -13.895,
+    49.693,
+    -3.885
+   ],
+   "lattice_nodes": 22,
+   "rects": []
+  },
+  {
+   "id": "office_meeting",
+   "label": "Meeting room",
+   "kind": "zone",
+   "center": [
+    58.674,
+    5.124
+   ],
+   "bounds": [
+    53.669,
+    0.119,
+    63.679,
+    10.129
+   ],
+   "lattice_nodes": 25,
+   "rects": []
+  },
+  {
+   "id": "office_workstations",
+   "label": "Engineering workstations",
+   "kind": "zone",
+   "center": [
+    44.674,
+    5.11
+   ],
+   "bounds": [
+    39.669,
+    0.105,
+    49.679,
+    10.115
+   ],
+   "lattice_nodes": 19,
+   "rects": []
+  },
+  {
+   "id": "pump_passage",
+   "label": "Pump room passage",
+   "kind": "aisle",
+   "center": [
+    51.195,
+    -16.133
+   ],
+   "bounds": null,
+   "lattice_nodes": 6,
+   "rects": []
+  },
+  {
+   "id": "pump_room",
+   "label": "Pump room",
+   "kind": "zone",
+   "center": [
+    51.701,
+    -22.883
+   ],
+   "bounds": [
+    45.696,
+    -27.889,
+    57.706,
+    -17.877
+   ],
+   "lattice_nodes": 25,
+   "rects": []
+  },
+  {
+   "id": "warehouse_aisle",
+   "label": "Warehouse main aisle",
+   "kind": "aisle",
+   "center": [
+    11.841,
+    -1.922
+   ],
+   "bounds": null,
+   "lattice_nodes": 118,
+   "rects": []
+  }
+ ],
+ "edges": [
+  {
+   "a": "assembly_line",
+   "b": "warehouse_aisle",
+   "door": [
+    22.159,
+    0.458
+   ],
+   "length_m": 17.69,
+   "crossings": 52
+  },
+  {
+   "a": "bridge",
+   "b": "office_corridor",
+   "door": [
+    39.181,
+    -1.895
+   ],
+   "length_m": 13.5,
+   "crossings": 4
+  },
+  {
+   "a": "bridge",
+   "b": "warehouse_aisle",
+   "door": [
+    36.181,
+    -1.898
+   ],
+   "length_m": 25.84,
+   "crossings": 4
+  },
+  {
+   "a": "charging",
+   "b": "warehouse_aisle",
+   "door": [
+    20.265,
+    -5.934
+   ],
+   "length_m": 15.99,
+   "crossings": 67
+  },
+  {
+   "a": "inspection",
+   "b": "warehouse_aisle",
+   "door": [
+    1.404,
+    -4.722
+   ],
+   "length_m": 17.58,
+   "crossings": 54
+  },
+  {
+   "a": "material_storage",
+   "b": "warehouse_aisle",
+   "door": [
+    2.817,
+    2.13
+   ],
+   "length_m": 16.34,
+   "crossings": 66
+  },
+  {
+   "a": "office_control",
+   "b": "office_corridor",
+   "door": [
+    57.932,
+    -3.377
+   ],
+   "length_m": 12.47,
+   "crossings": 3
+  },
+  {
+   "a": "office_corridor",
+   "b": "office_lounge",
+   "door": [
+    45.932,
+    -3.389
+   ],
+   "length_m": 11.1,
+   "crossings": 3
+  },
+  {
+   "a": "office_corridor",
+   "b": "office_meeting",
+   "door": [
+    57.929,
+    -0.377
+   ],
+   "length_m": 12.47,
+   "crossings": 3
+  },
+  {
+   "a": "office_corridor",
+   "b": "office_workstations",
+   "door": [
+    45.929,
+    -0.389
+   ],
+   "length_m": 11.1,
+   "crossings": 3
+  },
+  {
+   "a": "office_corridor",
+   "b": "pump_passage",
+   "door": [
+    51.193,
+    -13.883
+   ],
+   "length_m": 14.25,
+   "crossings": 4
+  },
+  {
+   "a": "pump_passage",
+   "b": "pump_room",
+   "door": [
+    51.497,
+    -18.383
+   ],
+   "length_m": 6.77,
+   "crossings": 5
+  }
+ ],
+ "anchors": [
+  {
+   "label": "Main aisle crossing",
+   "xy": [
+    11.681,
+    -1.922
+   ],
+   "place": "warehouse_aisle"
+  },
+  {
+   "label": "Loading dock 01",
+   "xy": [
+    -7.333,
+    12.66
+   ],
+   "place": "material_storage"
+  },
+  {
+   "label": "Loading dock 02",
+   "xy": [
+    0.667,
+    12.667
+   ],
+   "place": "material_storage"
+  },
+  {
+   "label": "Loading dock 03",
+   "xy": [
+    18.667,
+    12.685
+   ],
+   "place": "assembly_line"
+  },
+  {
+   "label": "Loading dock 04",
+   "xy": [
+    28.667,
+    12.695
+   ],
+   "place": "assembly_line"
+  },
+  {
+   "label": "Warehouse-office bridge",
+   "xy": [
+    37.681,
+    -1.897
+   ],
+   "place": "bridge"
+  },
+  {
+   "label": "Office entrance",
+   "xy": [
+    41.881,
+    -1.892
+   ],
+   "place": "office_corridor"
+  }
+ ]
+}

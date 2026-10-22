@@ -1,0 +1,130 @@
+{
+  "task": "inspect_conveyor",
+  "condition": "vln",
+  "seed": 0,
+  "instruction": "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해.",
+  "state": "done",
+  "expected_place": "assembly_conveyor",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the assembly line",
+      "region": "assembly_line"
+    },
+    {
+      "goal": "find the conveyor and check if a box is on it",
+      "region": "assembly_line"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 1.341,
+  "target_localization_error_m": 0.28,
+  "vln_decisions": 5,
+  "vln_actions": [
+    "move",
+    "move",
+    "move",
+    "turn",
+    "approach"
+  ],
+  "start_pose": [
+    -11.767354011535645,
+    3.0321712493896484,
+    -0.08503595805474028
+  ],
+  "final_pose": [
+    9.040205955505371,
+    6.078821182250977,
+    1.9631234172055914
+  ],
+  "final_distance_to_expected_place_m": 1.073,
+  "target_xy": [
+    7.029,
+    11.04
+  ],
+  "inspection": {
+    "observed": "두 개의 상자",
+    "target_visible": true,
+    "verdict": "yes",
+    "status": "ok",
+    "answer": "컨베이어 위에는 상자가 두 개 있습니다."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 30.242,
+  "shortest_path_m": 22.411572410791294,
+  "task_sim_time_s": 105.4,
+  "plans": 9,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.013,
+    0.024,
+    0.012,
+    0.021
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.5236003729987715,
+      "request_bytes": 1980,
+      "response_bytes": 716,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the assembly line\",\n      \"region\": \"assembly_line\"\n    },\n    {\n      \"goal\": \"find the conveyor and check if a box is on it\",\n      \"region\": \"assembly_line\"\n    }\n  ],\n  \"target\": \"the conveyor\",\n  \"target_label\": \"\",\n  \"question\": \"is a box on the conveyor?\",\n  \"language\": \"ko\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.88,
+      "request_bytes": 40550,
+      "action": "move",
+      "raw": "{\"thought\": \"Move toward waypoint 1 to get closer to the assembly line region.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.01,
+      "request_bytes": 39330,
+      "action": "move",
+      "raw": "{\"thought\": \"Waypoint 4 is directly ahead and closest to the assembly line entrance, making it the best choice to progress toward the target region.\", \"action\": \"move\", \"waypoint\": 4}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.25,
+      "request_bytes": 44514,
+      "action": "move",
+      "raw": "{\"thought\": \"I am in the corridor and can see waypoint 1, which is directly ahead and leads closer to the assembly line. Moving to waypoint 1 will bring me closer to the target region.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.6,
+      "request_bytes": 170771,
+      "action": "turn",
+      "raw": "{\"seen\": \"view 1: assembly line sign, view 2: conveyor with boxes, view 3: warehouse area, view 4: charging station\", \"view\": 2, \"target_visible\": true}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.35,
+      "request_bytes": 110158,
+      "action": "approach",
+      "raw": "{\"thought\": \"The conveyor is visible in the image, and I need to approach it to check if a box is on it.\", \"action\": \"approach\", \"bbox_2d\": [242, 168, 625, 375]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.6299954799997067,
+      "request_bytes": 37378,
+      "response_bytes": 520,
+      "raw": "{\"observed\": \"두 개의 상자\", \"target_visible\": true, \"verdict\": \"yes\", \"status\": \"ok\", \"answer\": \"컨베이어 위에는 상자가 두 개 있습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 3.749,
+  "realtime_factor": 0.518,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.55,
+    "camera_publish": 2.53
+  },
+  "success": true,
+  "spl": 0.741
+}

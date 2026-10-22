@@ -1,0 +1,131 @@
+{
+  "task": "inspect_conveyor",
+  "condition": "measurement",
+  "seed": 0,
+  "instruction": "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해.",
+  "state": "done",
+  "expected_place": "assembly_conveyor",
+  "planned_subgoals": [],
+  "parser": "vlm",
+  "steps": [
+    {
+      "goal": "go to the assembly line",
+      "region": "assembly_line"
+    },
+    {
+      "goal": "find the conveyor and check if a box is on it",
+      "region": "assembly_line"
+    }
+  ],
+  "grounding_correct": true,
+  "subgoals_reached": 0,
+  "navigation_complete": true,
+  "final_distance_to_target_m": 0.838,
+  "target_localization_error_m": 0.012,
+  "vln_decisions": 5,
+  "vln_actions": [
+    "move",
+    "move",
+    "turn",
+    "move",
+    "approach"
+  ],
+  "start_pose": [
+    -11.855971336364746,
+    3.4734442234039307,
+    0.00024609007234075814
+  ],
+  "final_pose": [
+    11.075150489807129,
+    6.582469940185547,
+    0.5416542011821445
+  ],
+  "final_distance_to_expected_place_m": 1.456,
+  "target_xy": [
+    12.394,
+    7.408
+  ],
+  "inspection": {
+    "observed": "a beige box on the conveyor",
+    "target_visible": true,
+    "verdict": "yes",
+    "status": "ok",
+    "answer": "컨베이어 위에 상자가 있습니다."
+  },
+  "expected_verdict": "yes",
+  "verdict_correct": true,
+  "collision_events": 0,
+  "collision_geoms": [],
+  "fallen": false,
+  "travelled_m": 26.858,
+  "shortest_path_m": 22.287046860830856,
+  "task_sim_time_s": 98.19,
+  "plans": 9,
+  "replans": 0,
+  "cross_track_rmse_m_per_goal": [
+    0.019,
+    0.012,
+    0.013,
+    0.039
+  ],
+  "vlm_calls": [
+    {
+      "source": "decompose",
+      "latency_s": 2.5227786180003022,
+      "request_bytes": 1980,
+      "response_bytes": 716,
+      "raw": "{\n  \"steps\": [\n    {\n      \"goal\": \"go to the assembly line\",\n      \"region\": \"assembly_line\"\n    },\n    {\n      \"goal\": \"find the conveyor and check if a box is on it\",\n      \"region\": \"assembly_line\"\n    }\n  ],\n  \"target\": \"the conveyor\",\n  \"target_label\": \"\",\n  \"question\": \"is a box on the conveyor?\",\n  \"language\": \"ko\"\n}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.43,
+      "request_bytes": 47891,
+      "action": "move",
+      "raw": "{\"thought\": \"I need to move towards the assembly line region to check the conveyor. Waypoint 1 is closer to the assembly line and is in view, making it the best choice for progressing toward the target.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 2.66,
+      "request_bytes": 35537,
+      "action": "move",
+      "raw": "{\"thought\": \"Waypoint 2 is directly on the assembly line entrance and saves the most distance to the target region.\", \"action\": \"move\", \"waypoint\": 2}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 6.7,
+      "request_bytes": 124547,
+      "action": "turn",
+      "raw": "{\"seen\": \"view 1: assembly line sign visible, view 2: empty corridor, view 3: material storage area, view 4: battery storage area\", \"view\": 1, \"target_visible\": true}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 3.19,
+      "request_bytes": 41201,
+      "action": "move",
+      "raw": "{\"thought\": \"The conveyor is likely ahead in the assembly line area, and waypoint 1 is directly in front, aligned with the assembly line signage.\", \"action\": \"move\", \"waypoint\": 1}"
+    },
+    {
+      "source": "navigate",
+      "latency_s": 5.2,
+      "request_bytes": 80133,
+      "action": "approach",
+      "raw": "{\"thought\": \"The conveyor is visible in the image, with a box on it, so I should approach it to confirm.\", \"action\": \"approach\", \"bbox_2d\": [0, 333, 397, 600]}"
+    },
+    {
+      "source": "inspect",
+      "latency_s": 2.6989388850006435,
+      "request_bytes": 32242,
+      "response_bytes": 519,
+      "raw": "{\"observed\": \"a beige box on the conveyor\", \"target_visible\": true, \"verdict\": \"yes\", \"status\": \"ok\", \"answer\": \"컨베이어 위에 상자가 있습니다.\"}"
+    }
+  ],
+  "vlm_latency_mean_s": 3.772,
+  "realtime_factor": 0.647,
+  "sim_timing_ms_mean": {
+    "lidar_publish": 0.53,
+    "camera_publish": 2.25
+  },
+  "success": true,
+  "spl": 0.83,
+  "attempts": 1
+}
