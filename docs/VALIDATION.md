@@ -23,7 +23,7 @@ macOS(M1 Pro) Docker arm64, MuJoCo 개발 그래프, 지도 묶음 `outputs/maps
   - 434초, 125 m 걷는 동안 odom만으로는 끝에서 35.8 m 틀렸지만, 위치 오차는 평균 0.10 m, p95 0.18 m, 최대 0.20 m, 방향 최대 0.42도, lost 0회(1,926번 비교). 창고 평균 0.02 m, 사무동과 펌프실 평균 0.13 m로 실행 1과 같은 모양이라, 오차는 odom 흔들림이 아니라 지도의 오차에서 옴.
   - 과제는 실패: 펌프실까지 가서(결정 21회, 충돌 0) 대상에 접근했지만, 4B가 펌프 P-101(명판 "PUMP P-101"을 읽고도)을 압력 탱크로 보고 "압력계 없음"이라고 답함. 접근한 위치는 시뮬레이터 좌표로 펌프 받침 위(38.5, -21.9)라 지도 좌표의 대상 위치 계산은 맞음. 인식 오류.
 
-![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](RILS/과제/롯데/G1-sim-test/docs/images/slam/localization.png)
+![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](images/slam/localization.png)
 
 - 실행하며 찾아 고친 것:
   - 평가기가 로봇이 보고한 대상 위치(지도 묶음 좌표)를 시뮬레이터 좌표의 대상과 바로 비교함 → `package_frame:=map`이면 `world_from_map`으로 옮겨 비교(`target_xy_robot_frame`에 원래 값).
@@ -81,7 +81,7 @@ macOS(M1 Pro) Docker arm64, MuJoCo 개발 그래프, FAST-LIO2(ROS 2 브랜치 a
 - 토폴로지 경로를 VLN 프롬프트에 추가: `vln_navigator`가 `/semantic_map`을 구독해 목표 구역까지 장소 순서와 다음 출입구(방향·거리)를 한 줄로 넣음. 단위 테스트로 경로·출입구 방향을 확인.
 - 대화형 콘솔(`scripts/vln_console.sh`): Mac 개발 그래프(MuJoCo + Qwen3-VL 4B)에서 컨베이어 지시 1회 → 단계 계획, 결정 7회(이동 4, 둘러보기 1, 접근 1, 정지 1), 판정 yes(정답), 133.8 s. `feedback.jsonl`·`decisions/`·`inspection.jpg`·`summary.json`·`route.png` 저장과 이어지는 `:where` 확인. 이 실행은 토폴로지 힌트 추가 전 코드.
 - 단위 테스트 134개 통과(시멘틱 층·토폴로지 경로·토폴로지 힌트·촬영 자세·가림 정답·검출 매칭).
-- 미검증: Isaac의 `--capture` 모드와 펌프실 장면의 Isaac 렌더링, 펌프실 VLN 과제 2개, 8B 인식 정확도, 토폴로지 힌트가 Isaac 8B 성공률에 주는 영향, Isaac에서의 콘솔 → [UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) 2.3·9절.
+- 미검증: Isaac의 `--capture` 모드와 펌프실 장면의 Isaac 렌더링, 펌프실 VLN 과제 2개, 8B 인식 정확도, 토폴로지 힌트가 Isaac 8B 성공률에 주는 영향, Isaac에서의 콘솔 → [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 2.3·9절.
 
 ## 지도 기반 계층형 VLN
 
@@ -191,7 +191,7 @@ macOS(M1 Pro) Docker arm64, MuJoCo 개발 그래프, FAST-LIO2(ROS 2 브랜치 a
 
 ### 미검증
 
-- Isaac Sim 5.1 + 8B 전체 실험 행렬(81회), 위 수정 후 파일럿 재실행, 실시간 비율 0.95 이상 운용: [UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) 8절.
+- Isaac Sim 5.1 + 8B 전체 실험 행렬(81회), 위 수정 후 파일럿 재실행, 실시간 비율 0.95 이상 운용: [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 8절.
 - 프롬프트는 이 9개 과제로 개발함 → 일반화 성능은 새 지시문(보류 세트)으로 따로 측정해야 함.
 - 과제당 seed 1회. 성공률은 동작 확인용 소규모 결과이며 통계적 성능 주장이 아님.
 
@@ -225,7 +225,7 @@ macOS(M1 Pro) Docker arm64, MuJoCo 개발 그래프, FAST-LIO2(ROS 2 브랜치 a
 
 ### 토픽 측정 회차 (`inspect_conveyor`, 카메라 30 Hz, `topic_monitor` 켬)
 
-- 21개 토픽 전부 발행·구독 노드·QoS를 ROS 그래프에서 확인. 크기·주기: [ROS2_INTERFACE.md](RILS/과제/롯데/G1-sim-test/docs/ROS2_INTERFACE.md).
+- 21개 토픽 전부 발행·구독 노드·QoS를 ROS 그래프에서 확인. 크기·주기: [ROS2_INTERFACE.md](ROS2_INTERFACE.md).
 - 실시간 대비 0.149배. 처리시간: RGB-D 렌더 183 ms/프레임(CPU), LiDAR 20,000 ray 51 ms(8스레드), 물리+정책 0.27 ms/스텝. → 30 Hz 실시간에는 GPU EGL 필요(`scripts/check_hvln_env.py`가 15 ms 기준으로 판정).
 - VLM HTTP 실측(8회): 계획 요청 5.6 KB·2.9 s, 대상 찾기 17.5–27.0 KB·5.1 s, 확인 18.0–37.9 KB·6.2 s.
 
@@ -280,7 +280,7 @@ macOS(M1 Pro) Docker arm64, MuJoCo 개발 그래프, FAST-LIO2(ROS 2 브랜치 a
 - 충돌·넘어짐 확인: 물리 주기 500Hz. 최저 몸체 높이 약 0.764m.
 - seed=0, 고정 배치에서 각 시나리오 1회. 다양한 배치·외란에 대한 성능 보장은 아님.
 - 긴 직선에서 경로 오차가 증가함. 이전 작은 방의 4.8cm RMSE를 새 환경 성능으로 사용하지 않음.
-- [원본 summary 모음](RILS/과제/롯데/G1-sim-test/docs/validation/results.json). 실행별 `zone_events.json`에 실제 구역 진입 시점 기록.
+- [원본 summary 모음](validation/results.json). 실행별 `zone_events.json`에 실제 구역 진입 시점 기록.
 
 ## 코드·장면
 

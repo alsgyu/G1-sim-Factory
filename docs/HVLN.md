@@ -11,8 +11,8 @@
 | 로봇이 모르는 것 | 확인 대상의 위치 ("2번 검사대", "3번 충전 도크", "빨간 소화기함" …). 카메라로 찾아야 함 |
 | 센서 | G1 EDU 머리 센서 모사: RealSense D435i(RGB-D 640×480@30Hz) + Livox MID-360(LiDAR 10Hz, IMU 200Hz) |
 | 인터페이스 | `/vln/instruction`(지시) → `/vln/feedback`(진행·결과) + `/vln/inspection_image`(확인 근거 영상) |
-| 토픽·QoS·데이터 크기 | [ROS2_INTERFACE.md](RILS/과제/롯데/G1-sim-test/docs/ROS2_INTERFACE.md) |
-| Ubuntu 실행 명령 전체 | [UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) |
+| 토픽·QoS·데이터 크기 | [ROS2_INTERFACE.md](ROS2_INTERFACE.md) |
+| Ubuntu 실행 명령 전체 | [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) |
 
 ## 1. 모델 선정
 
@@ -20,7 +20,7 @@
 
 | 계열 | 대표 | 지도 사용 | 이 과제에서의 판단 |
 |---|---|---|---|
-| e2e 생성형 VLN | NaVILA, Uni-NaVid | 안 함 | 집 실내(R2R)로 학습. 공장 도메인·긴 경로에서 누적 오차, 장애물 재계획·확인 보고 없음 → 비교용으로만 유지([VLN.md](RILS/과제/롯데/G1-sim-test/docs/VLN.md)) |
+| e2e 생성형 VLN | NaVILA, Uni-NaVid | 안 함 | 집 실내(R2R)로 학습. 공장 도메인·긴 경로에서 누적 오차, 장애물 재계획·확인 보고 없음 → 비교용으로만 유지([VLN.md](VLN.md)) |
 | 지도 조회 + A* | (이 저장소 `oracle`) | 목표 좌표 조회 | **VLN 아님**: 목표 위치를 미리 알고 감. 상한 기준선으로만 사용 |
 | 3D 의미 지도 질의 | VLMaps | 지도 질의 → 좌표 | 세부 대상이 지도에 없으면 결국 좌표 조회와 같음. 지도 구축 자체가 별도 과제 |
 | 프런티어 + 가치 지도 | VLFM | 지도 없이 탐사 | 지도가 이미 있는 환경에 불필요. 다단계 지시 처리 약함 |
@@ -117,9 +117,9 @@ flowchart TD
 - `/vln/feedback` (`std_msgs/String` JSON) 상태: `accepted → planned → decision … step_done … target_located → arrived → inspecting → done | failed`. 그 외 `detour`, `blocked`, `preempted`, `canceled`.
 - `done.result`: `{"observed", "target_visible", "verdict": "yes|no|unknown", "status", "answer"}` + `final_pose`, `target_xy`(VLN이 영상으로 찾은 대상 위치), `vlm_calls`.
 - `/vln/inspection_image` (`sensor_msgs/CompressedImage` JPEG): 판정에 쓴 바로 그 프레임.
-- 지도 묶음으로 실행: launch 인자 `map_package:=maps/<이름>`(콘솔은 `VLN_MAP_PACKAGE=...`). 로봇이 SLAM으로 만든 점유 지도, 사람이 그 지도에 그린 구역·기준점, 자동으로 만든 장소 그래프를 모두 지도 묶음에서 읽고 시뮬레이터 정답은 평가에만 씀. 점유 지도만 바꾸려면 `map_file:=maps/<이름>/map_world.yaml`. 지도 만들기와 주석은 [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md).
-- 지도 안에서 위치 찾기: `package_frame:=map`이면 시뮬레이터 시작 자세 대신 `localizer`가 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 map→odom을 발행(초기 자세 `initial_pose:=x,y,yaw`나 RViz `/initialpose`, 시뮬레이션은 `spawn`). `vln_navigator`·`vln_agent`·`path_follower`는 `/odom`에 map→odom을 곱한 map 좌표 자세를 쓰고(`g1_factory/ros2/frames.py`), 위치를 찾기 전에는 움직이지 않음. 설계와 결과는 [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md) "지도 안에서 위치 찾기".
-- 대화형 콘솔: `bash scripts/vln_console.sh` → `지시>`에 직접 입력, 결정과 판정을 실시간 표시, 지시마다 `outputs/console/…`에 기록([UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) 7.1절).
+- 지도 묶음으로 실행: launch 인자 `map_package:=maps/<이름>`(콘솔은 `VLN_MAP_PACKAGE=...`). 로봇이 SLAM으로 만든 점유 지도, 사람이 그 지도에 그린 구역·기준점, 자동으로 만든 장소 그래프를 모두 지도 묶음에서 읽고 시뮬레이터 정답은 평가에만 씀. 점유 지도만 바꾸려면 `map_file:=maps/<이름>/map_world.yaml`. 지도 만들기와 주석은 [SLAM_MAPPING.md](SLAM_MAPPING.md).
+- 지도 안에서 위치 찾기: `package_frame:=map`이면 시뮬레이터 시작 자세 대신 `localizer`가 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 map→odom을 발행(초기 자세 `initial_pose:=x,y,yaw`나 RViz `/initialpose`, 시뮬레이션은 `spawn`). `vln_navigator`·`vln_agent`·`path_follower`는 `/odom`에 map→odom을 곱한 map 좌표 자세를 쓰고(`g1_factory/ros2/frames.py`), 위치를 찾기 전에는 움직이지 않음. 설계와 결과는 [SLAM_MAPPING.md](SLAM_MAPPING.md) "지도 안에서 위치 찾기".
+- 대화형 콘솔: `bash scripts/vln_console.sh` → `지시>`에 직접 입력, 결정과 판정을 실시간 표시, 지시마다 `outputs/console/…`에 기록([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 7.1절).
 - 명령행 클라이언트: `python3 scripts/send_instruction.py "검사 구역 2번 검사대에 부품이 있는지 확인해"`.
 
 ## 5. VLN 결과를 위한 환경 설정
@@ -176,17 +176,17 @@ flowchart TD
 
 - 경로 계획에 쓰는 방식: 현재 단계의 목표 구역까지 장소 그래프에서 최단 경로(Dijkstra, 출입구 경유 거리)를 구해 매 결정 프롬프트에 한 줄로 넣음. 예: (창고 교차로에서 동쪽을 볼 때) `Topological route to Pump room: Warehouse main aisle -> Warehouse-office bridge -> Office corridor -> Pump room passage -> Pump room; next opening (into Warehouse-office bridge): ahead (+0 deg, east), 24.5 m`. VLM은 이 순서와 다음 출입구 방향을 보고 웨이포인트를 고름(웨이포인트 자체는 여전히 영상 위 후보, 실제 경로는 점유 지도 위 직선 구간 + LiDAR 우회).
 
-![계층형 3D 장면 그래프: 기하(장면) → 객체 → 장소·출입구 → 건물 → 캠퍼스](RILS/과제/롯데/G1-sim-test/docs/images/semantic/scene_graph_3d.png)
+![계층형 3D 장면 그래프: 기하(장면) → 객체 → 장소·출입구 → 건물 → 캠퍼스](images/semantic/scene_graph_3d.png)
 
 - 생성: `g1_factory/semantic_world.py`(시뮬레이터 정답 = 사람이 SLAM 지도에 단 주석). `scripts/export_campus_usd.py`가 `outputs/isaac/semantic_map.json`·`.png`를 함께 만들고, Isaac 노드가 `/semantic_map`(JSON, TransientLocal)으로 발행.
 - 실로봇: SLAM(LiDAR SLAM, MASt3R-SLAM 같은 파운데이션 모델)이 기하 층과 자세를 만들고, 시멘틱·토폴로지 층은 사람 주석이나 개방어휘 인식(ConceptGraphs, HOV-SG)으로 그 지도 좌표계에 얹음.
-- 인식 정확도(`g1_factory/recognition.py`, `scripts/recognition_eval.py`): Isaac에서 장소마다 무작위 방향으로 촬영 → VLM이 영상만으로 구역·객체(명판·bbox)를 답함 → 정답(자세의 구역, 깊이로 가림을 확인한 객체 투영)과 비교. 구역 정확도·혼동표, 객체 precision·recall·F1, 명판 판독, 3D 위치 오차. 실행: [UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) 9절.
+- 인식 정확도(`g1_factory/recognition.py`, `scripts/recognition_eval.py`): Isaac에서 장소마다 무작위 방향으로 촬영 → VLM이 영상만으로 구역·객체(명판·bbox)를 답함 → 정답(자세의 구역, 깊이로 가림을 확인한 객체 투영)과 비교. 구역 정확도·혼동표, 객체 precision·recall·F1, 명판 판독, 3D 위치 오차. 실행: [UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 9절.
 
 ## 8. 검증 상태·한계
 
 - 단위 테스트 161개: 후보 생성·투영·보행거리 힌트, 구역 이탈 거절·재질의, 명판 재판독, 2차 확인, 회전 제한(제자리 회전 중 밀림 포함), 둘러보기 1회·방향 선택·무효 응답·서버 오류 대체, 단계 자동 완료, 접근 자세(지도 외곽 기준 거리), 명판 라벨 grounding·식별자 비교, 단계 분해 검증(찾기 단계·지어낸 번호 제거), 평가용 대상 외곽이 실제 장면 형상과 일치, 시멘틱 객체·토폴로지 경로·촬영 자세·가림을 고려한 보이는 객체 정답·검출 매칭, LiDAR 패턴·시작 섭동 결정성, 지도 안 위치 찾기(초기 자세 보정·odom 흔들림 추적·odom 급변 뒤 재탐색·먼 초기 자세 거절·통로 방향 사전 분포), 기존 계획기·추종기·grounding.
-- macOS(M1, Docker CPU 렌더링, Qwen3-VL 4B/Ollama)에서 MuJoCo + 전체 ROS 2 그래프 VLN 실행 검증: [VALIDATION.md](RILS/과제/롯데/G1-sim-test/docs/VALIDATION.md#지도-기반-계층형-vln).
-- **Isaac Sim 5.1 경로는 Mac에서 실행 불가**: USD 장면(MuJoCo와 같은 배치) 내보내기, 쿼터니언·LiDAR 에뮬레이션 수학, Fast DDS 프로파일까지만 오프라인 검증. Ubuntu에서 `--smoke-test`부터 실행해 확인 필요([UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md)).
+- macOS(M1, Docker CPU 렌더링, Qwen3-VL 4B/Ollama)에서 MuJoCo + 전체 ROS 2 그래프 VLN 실행 검증: [VALIDATION.md](VALIDATION.md#지도-기반-계층형-vln).
+- **Isaac Sim 5.1 경로는 Mac에서 실행 불가**: USD 장면(MuJoCo와 같은 배치) 내보내기, 쿼터니언·LiDAR 에뮬레이션 수학, Fast DDS 프로파일까지만 오프라인 검증. Ubuntu에서 `--smoke-test`부터 실행해 확인 필요([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md)).
 - 8B 결과·실시간 실행은 Ubuntu GPU에서 측정.
 - 위치: 기본은 시뮬레이터 정답 odom. `package_frame:=map`이면 로봇이 만든 지도 안에서 LiDAR로 위치를 찾음(`localizer`). 실로봇의 odom(G1 자체 추정이나 수평을 맞춘 FAST-LIO2)을 `/odom`으로 내보내는 노드는 아직 없음. 의미 주석은 사람이 지도에 단 것으로 가정.
 - 보행 정책: 다리 12관절, 상체 고정. 계단·문 열기·조작 없음.

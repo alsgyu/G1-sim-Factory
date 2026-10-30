@@ -189,8 +189,8 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_
 - 컨베이어 과제(odom이 1도/m, 5% 어긋남): 위치 오차 최대 0.03 m(odom만으로는 6.0 m), 과제 성공.
 - 탱크 압력계 과제(같은 odom 어긋남, 125 m): 위치 오차 평균 0.10 m, 최대 0.20 m(odom만으로는 35.8 m). 오차는 odom이 정답일 때와 같은 모양이라 지도의 오차에서 옵니다.
 
-![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](RILS/과제/롯데/G1-sim-test/docs/images/slam/localization.png)
-- 자세한 내용은 [VALIDATION.md](RILS/과제/롯데/G1-sim-test/docs/VALIDATION.md).
+![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](images/slam/localization.png)
+- 자세한 내용은 [VALIDATION.md](VALIDATION.md).
 
 Isaac Sim에서는 시뮬레이터가 map에서 odom으로의 고정 변환을 내지 않게 `--no-map-tf`로 띄웁니다(`hvln_experiment.py`는 `package_frame=map`이면 알아서 붙입니다).
 

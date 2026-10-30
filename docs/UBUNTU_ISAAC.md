@@ -1,7 +1,7 @@
 # Ubuntu 스테이션 실행 순서: Isaac Sim 5.1 + G1 + 계층형 VLN
 
 **`git pull` 이후 위에서부터 한 단계씩 실행. 각 단계 끝의 "확인"이 통과해야 다음 단계로.** 시뮬레이터는 Isaac Sim 5.1만 사용(MuJoCo는 장면 생성기와 개발용 단위 테스트로만 남음). 모든 명령은 저장소 루트에서 실행(`cd ~/Workspace/G1-sim-test`).
-구조·모델 선정 이유: [HVLN.md](RILS/과제/롯데/G1-sim-test/docs/HVLN.md) · 토픽·QoS: [ROS2_INTERFACE.md](RILS/과제/롯데/G1-sim-test/docs/ROS2_INTERFACE.md)
+구조·모델 선정 이유: [HVLN.md](HVLN.md) · 토픽·QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md)
 
 | 구성 | 실행 위치 |
 |---|---|
@@ -283,7 +283,7 @@ bash scripts/vln_console.sh
 - 지시마다 `outputs/console/<시각>_<지시>/`에 `feedback.jsonl`, `decisions/*.jpg`(VLM이 본 영상), `inspection.jpg`(판정 근거), `summary.json`, `route.png`(결정 지점을 지도에 표시)가 저장됩니다.
 - 모델 변경: `VLM_MODEL=qwen3-vl:4b-instruct bash scripts/vln_console.sh`. 스택이 이미 떠 있으면 콘솔만: `bash scripts/g1_docker.sh python3 scripts/vln_console.py`.
 
-외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독합니다(QoS: [ROS2_INTERFACE.md](RILS/과제/롯데/G1-sim-test/docs/ROS2_INTERFACE.md) 3·4절). 한 줄짜리 예: `bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"`.
+외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독합니다(QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md) 3·4절). 한 줄짜리 예: `bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"`.
 
 ## 8. 실험 행렬
 
@@ -340,7 +340,7 @@ bash scripts/g1_docker.sh python3 scripts/recognition_eval.py outputs/recognitio
 
 ### 9.1 로봇이 직접 만드는 SLAM 지도
 
-G1이 캠퍼스를 한 바퀴 걸으며 LiDAR와 IMU(FAST-LIO2)로 지도를 만들고 `maps/<이름>/`에 저장합니다. 설계, 지도 묶음 형식, 실제 로봇에서 할 일은 [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md)에 있습니다.
+G1이 캠퍼스를 한 바퀴 걸으며 LiDAR와 IMU(FAST-LIO2)로 지도를 만들고 `maps/<이름>/`에 저장합니다. 설계, 지도 묶음 형식, 실제 로봇에서 할 일은 [SLAM_MAPPING.md](SLAM_MAPPING.md)에 있습니다.
 
 터미널 1 (매핑 시작 자세):
 
@@ -375,7 +375,7 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=inspect_con
 
 점유 지도만 바꿔 보려면 `map_file:=maps/campus/map_world.yaml`.
 
-위 실행은 시뮬레이터가 아는 시작 자세로 지도 묶음을 옮깁니다. 실제 로봇처럼 로봇이 지도 안에서 스스로 위치를 찾게 하려면, Isaac Sim을 `--no-map-tf`로 띄우고(시뮬레이터가 map에서 odom으로의 변환을 내지 않음) `package_frame:=map`으로 실행합니다. `initial_pose:=spawn`은 과제의 시작 자세를 지도 좌표로 옮긴 대략의 초기 자세이고, 직접 줄 때는 `initial_pose:=x,y,yaw`(지도 묶음 좌표)나 RViz "2D Pose Estimate"를 씁니다([SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md) "지도 안에서 위치 찾기").
+위 실행은 시뮬레이터가 아는 시작 자세로 지도 묶음을 옮깁니다. 실제 로봇처럼 로봇이 지도 안에서 스스로 위치를 찾게 하려면, Isaac Sim을 `--no-map-tf`로 띄우고(시뮬레이터가 map에서 odom으로의 변환을 내지 않음) `package_frame:=map`으로 실행합니다. `initial_pose:=spawn`은 과제의 시작 자세를 지도 좌표로 옮긴 대략의 초기 자세이고, 직접 줄 때는 `initial_pose:=x,y,yaw`(지도 묶음 좌표)나 RViz "2D Pose Estimate"를 씁니다([SLAM_MAPPING.md](SLAM_MAPPING.md) "지도 안에서 위치 찾기").
 
 ```bash
 bash scripts/run_isaac_sim.sh --gui --spawn 12 -3.8 0 --no-map-tf                     # 터미널 1
