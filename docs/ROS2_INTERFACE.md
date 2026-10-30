@@ -57,7 +57,7 @@
 | `/cmd_vel` | `geometry_msgs/msg/Twist` | `path_follower` → `g1_sim` (실로봇: 보행 API 브리지) |
 | `/goal_pose`, `/vln/subgoals` | `geometry_msgs/msg/PoseStamped`, `PoseArray` | `vln_agent` → `global_planner` (**`oracle` 기준선 전용**. VLN 모드에서는 발행 안 함) |
 
-SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](SLAM_MAPPING.md))과 저장한 지도로 VLN을 돌릴 때만 쓰는 토픽:
+SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md))과 저장한 지도로 VLN을 돌릴 때만 쓰는 토픽:
 
 | 토픽 | 메시지 타입 | 발행 노드 → 구독 노드 |
 |---|---|---|
@@ -69,7 +69,7 @@ SLAM 매핑(`launch/g1_slam_mapping.launch.py`, [SLAM_MAPPING.md](SLAM_MAPPING.m
 | `/slam_map` | `nav_msgs/msg/OccupancyGrid` (TransientLocal) | `map_file` → `vln_navigator` (`map_file:=`, `map_package:=`로 실행할 때 `/map` 대신), 외부 에이전트 |
 | `/slam/semantic_map` | `std_msgs/msg/String` (JSON, TransientLocal) | `map_file` (`map_package:=`) → 외부 에이전트, 시각화 (사람이 그린 방·기준점과 자동 토폴로지) |
 
-지도 묶음 좌표계로 VLN을 돌릴 때(`package_frame:=map`, 실제 로봇 방식)만 쓰는 토픽. 이때 map→odom은 시뮬레이터가 아니라 `localizer`가 발행하고, VLN 노드는 `/odom`에 이 변환을 곱해 map 좌표의 자세를 씁니다([SLAM_MAPPING.md](SLAM_MAPPING.md) "실제 로봇에서"):
+지도 묶음 좌표계로 VLN을 돌릴 때(`package_frame:=map`, 실제 로봇 방식)만 쓰는 토픽. 이때 map→odom은 시뮬레이터가 아니라 `localizer`가 발행하고, VLN 노드는 `/odom`에 이 변환을 곱해 map 좌표의 자세를 씁니다([SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md) "실제 로봇에서"):
 
 | 토픽 | 메시지 타입 | 발행 노드 → 구독 노드 |
 |---|---|---|
@@ -258,7 +258,7 @@ flowchart LR
 - Isaac Sim 파일럿(Qwen3-VL-8B, RTX 5080 Laptop): 결정당 VLM 지연 평균 **4.28 s**(9개 과제). 아래 표의 지연은 Mac(M1, 4B) 값.
 - 측정: `inspect_station_paraphrase` VLN 회차(결정 4회), 둘러보기는 `inspect_conveyor` 회차. 요청 크기는 HTTP 본문(JSON, 이미지 base64) 바이트.
 - 둘러보기 요청은 영상 4장(Ollama 기준 장당 약 1,050 토큰) → VLM 서버 문맥 길이 8192 이상 필요(`OLLAMA_CONTEXT_LENGTH=8192`, vLLM `--max-model-len`).
-- 작업 1회당 VLM 트래픽 약 0.5 MB(결정 4회 + 둘러보기 1회) – 2.7 MB(결정 40회). 원시 센서 스트림(약 50 MB/s) 대비 무시할 수준 → VLM 서버는 원격에 두어도 됨. 위 지연은 Mac(M1, Metal) 값이며, Ubuntu GPU 지연은 실험 행렬의 `results.md`로 측정([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 6절).
+- 작업 1회당 VLM 트래픽 약 0.5 MB(결정 4회 + 둘러보기 1회) – 2.7 MB(결정 40회). 원시 센서 스트림(약 50 MB/s) 대비 무시할 수준 → VLM 서버는 원격에 두어도 됨. 위 지연은 Mac(M1, Metal) 값이며, Ubuntu GPU 지연은 실험 행렬의 `results.md`로 측정([UBUNTU_ISAAC.md](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md) 6절).
 - 이전 `oracle` 경로의 호출(작업 계획 5.6 KB·2.9 s, 대상 bbox 17.5–27.0 KB·5.1 s, 확인 18.0–37.9 KB·6.2 s)은 기준선 조건에서만 발생.
 
 ## 6. Publisher / Subscriber 코드

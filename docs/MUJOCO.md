@@ -1,6 +1,6 @@
 # MuJoCo 캠퍼스: 설치·고정 경로 데모·평가
 
-**VLN 없이 G1이 정해진 구역 순서로 걸어가는 MuJoCo 데모와 평가 도구.** 지시문 기반 VLN은 [README](../README.md)와 [HVLN.md](HVLN.md).
+**VLN 없이 G1이 정해진 구역 순서로 걸어가는 MuJoCo 데모와 평가 도구.** 지시문 기반 VLN은 [README](../README.md)와 [HVLN.md](RILS/과제/롯데/G1-sim-test/docs/HVLN.md).
 
 ## 설치·업데이트
 
@@ -16,7 +16,7 @@ source .venv/bin/activate
 - 첫 설치: 고정 버전의 공식 로봇 모델·메시·정책 다운로드.
 - 기본 실행: Isaac Gym / ROS 2 / CUDA 불필요.
 - 기존 설치: 저장소에서 `git pull` → `bash scripts/setup.sh` → `source .venv/bin/activate`.
-- 이전 `bays` 설정은 새 `zones` 설정으로 변경. 직접 수정한 YAML은 [FACTORY.md](FACTORY.md) 기준으로 이전.
+- 이전 `bays` 설정은 새 `zones` 설정으로 변경. 직접 수정한 YAML은 [FACTORY.md](RILS/과제/롯데/G1-sim-test/docs/FACTORY.md) 기준으로 이전.
 
 ## 바로 실행
 
@@ -39,7 +39,7 @@ python -m g1_factory.run --zone-route material_storage assembly_line inspection 
 
 **명령 한 번으로 MuJoCo 창이 열리고 G1이 걸어갑니다.** 사전학습 정책의 관절 제어와 물리 시뮬레이션으로 이동합니다.
 
-![적재 선반 앞의 실제 MuJoCo G1 모델](images/g1.png)
+![적재 선반 앞의 실제 MuJoCo G1 모델](RILS/과제/롯데/G1-sim-test/docs/images/g1.png)
 
 | 창 조작·표시 | 기능 |
 |---|---|
@@ -51,7 +51,7 @@ python -m g1_factory.run --zone-route material_storage assembly_line inspection 
 | 화면 없는 실행 | `--headless` |
 
 - 기본 GUI: MuJoCo 뷰어 + 상태 표시. 별도 웹 대시보드·채팅 입력창은 없음.
-- 언어 지시: 실행할 때 `--instruction`으로 전달. NaVILA 서버 설정은 [VLN.md](VLN.md).
+- 언어 지시: 실행할 때 `--instruction`으로 전달. NaVILA 서버 설정은 [VLN.md](RILS/과제/롯데/G1-sim-test/docs/VLN.md).
 - 창 실행: Ubuntu 데스크톱 필요. 일반 SSH 서버: `--headless`로 평가·이미지 저장.
 - 기본 최대 시간: 경로 길이에 따라 자동 설정. `--duration 120`으로 120초 상한 지정 가능.
 
@@ -70,9 +70,9 @@ python -m g1_factory.run --zone-route material_storage assembly_line inspection 
 | Office | `office_lounge` | 휴게실 · 소파·커피 테이블·자판기 |
 | Office | `office_control` | 관제실 · 다중 모니터·서버 랙 |
 
-![Warehouse의 네 가지 기능 구역](images/warehouse.png)
+![Warehouse의 네 가지 기능 구역](RILS/과제/롯데/G1-sim-test/docs/images/warehouse.png)
 
-![Office의 네 개 방](images/office.png)
+![Office의 네 개 방](RILS/과제/롯데/G1-sim-test/docs/images/office.png)
 
 | 연구실 프리셋 | 기본 시나리오 | 실행 범위 |
 |---|---|---|
@@ -86,7 +86,7 @@ python -m g1_factory.run --zone-route material_storage assembly_line inspection 
 - 각 연구실이 별도 프로세스로 실행하면 동일 환경에서 독립 실험 가능. 프로세스당 G1 한 대.
 - `--lab`, `--scenario`, `--zone-route` 중 하나 선택.
 - `--zone-route`는 첫 구역에서 시작하여 뒤의 구역들을 순서대로 방문. 최소 2구역.
-- 선반 이동·온도계 설치·시나리오 변경: [FACTORY.md](FACTORY.md).
+- 선반 이동·온도계 설치·시나리오 변경: [FACTORY.md](RILS/과제/롯데/G1-sim-test/docs/FACTORY.md).
 
 ## 평가·이미지 저장
 

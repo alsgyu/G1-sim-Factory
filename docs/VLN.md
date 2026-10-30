@@ -1,6 +1,6 @@
 # VLN 실행과 연구 확장
 
-> 외부 에이전트 지시로 "어디 가서 확인"하는 주 경로는 **계층형 VLM 스택**: [HVLN.md](HVLN.md). 이 문서의 NaVILA 연결은 e2e 생성형 비교 기준선.
+> 외부 에이전트 지시로 "어디 가서 확인"하는 주 경로는 **계층형 VLM 스택**: [HVLN.md](RILS/과제/롯데/G1-sim-test/docs/HVLN.md). 이 문서의 NaVILA 연결은 e2e 생성형 비교 기준선.
 
 | 모드 | 입력 | 실행 조건 |
 |---|---|---|
@@ -122,4 +122,4 @@ POST /infer
 - Transformers 4.37.2 + upstream 패치 사용. 전이 의존성 전체를 잠그는 lockfile은 없음.
 - 코드·모델의 이용 조건은 각 배포처 기준. 코드 라이선스를 체크포인트 전체에 적용하지 않음.
 
-[NaVILA 공식 코드](https://github.com/AnjieCheng/NaVILA) · [체크포인트](https://huggingface.co/a8cheng/navila-llama3-8b-8f) · [NaVILA-Bench·GPU 안내](https://github.com/yang-zj1026/NaVILA-Bench) · [참고 추론 서버](https://github.com/yang-zj1026/NaVILA-Bench/blob/e9d2db12ce5788c0f987d734c0094100b6bc0d3a/scripts/vlm_server.py) · [추론 코드 MIT 고지](licenses/NaVILA-Bench-MIT.txt)
+[NaVILA 공식 코드](https://github.com/AnjieCheng/NaVILA) · [체크포인트](https://huggingface.co/a8cheng/navila-llama3-8b-8f) · [NaVILA-Bench·GPU 안내](https://github.com/yang-zj1026/NaVILA-Bench) · [참고 추론 서버](https://github.com/yang-zj1026/NaVILA-Bench/blob/e9d2db12ce5788c0f987d734c0094100b6bc0d3a/scripts/vlm_server.py) · [추론 코드 MIT 고지](RILS/과제/롯데/G1-sim-test/docs/licenses/NaVILA-Bench-MIT.txt)

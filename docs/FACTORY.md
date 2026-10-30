@@ -4,7 +4,7 @@
 
 **Warehouse 1개 + Office 1개를 같은 MuJoCo 세계에 배치합니다.**
 
-![Warehouse와 Office 전체 장면](images/campus.png)
+![Warehouse와 Office 전체 장면](RILS/과제/롯데/G1-sim-test/docs/images/campus.png)
 
 | 공간 | 크기·위치 | 구성 |
 |---|---|---|
@@ -17,7 +17,7 @@
 - Office: 벽·출입구로 4개 방 구분. 책상·회의 테이블·소파·관제 콘솔 배치.
 - 전체 보기: 내부가 보이도록 지붕 생략. Warehouse 외벽 일부는 낮춘 단면 표현.
 - 설비는 시각적 표식과 충돌 형상. 실제 조립·컨베이어 이송·충전 공정은 구현하지 않음.
-- 작업대·검사대 상판 0.95m, 컨베이어 벨트 0.85m: G1 머리 카메라(약 1.24m)에서 위에 놓인 물체가 보이는 높이. VLN 설정은 [HVLN.md](HVLN.md).
+- 작업대·검사대 상판 0.95m, 컨베이어 벨트 0.85m: G1 머리 카메라(약 1.24m)에서 위에 놓인 물체가 보이는 높이. VLN 설정은 [HVLN.md](RILS/과제/롯데/G1-sim-test/docs/HVLN.md).
 - G1 머리 센서 모사: `head_rgbd` 카메라(D435i), `livox_frame` site(MID-360 LiDAR·IMU). 의미 장소 목록은 `configs/semantic_map.yaml`.
 - 형상·표지판은 코드로 직접 생성. 별도 Warehouse/Office 에셋 다운로드 불필요.
 - VLN용 시각 단서: 구역 정면 표지판(높이 2.1m)·통로 쪽 돌출 표지판, 사무실 방 문패, 설비 명판(STATION 1–4, CHARGER 1–5, CONVEYOR A/B, WORKBENCH 1/2, CNC MACHINE 1/2, METROLOGY, BATTERY STORAGE, SERVER RACK 1–3), 비상구 표지.

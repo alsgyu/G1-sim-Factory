@@ -46,9 +46,9 @@ Isaac Sim 5.1과 Qwen3-VL-8B로 실행한 결과입니다. 지도의 숫자는 V
 
 #### 1. "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해."
 
-![컨베이어 과제의 결정 지점과 경로](docs/images/vln/conveyor_route.png)
+![컨베이어 과제의 결정 지점과 경로](RILS/과제/롯데/G1-sim-test/docs/images/vln/conveyor_route.png)
 
-![컨베이어 과제에서 VLM이 본 영상](docs/images/vln/conveyor_frames.jpg)
+![컨베이어 과제에서 VLM이 본 영상](RILS/과제/롯데/G1-sim-test/docs/images/vln/conveyor_frames.jpg)
 
 | 시뮬레이션 시간 | VLN 결정 | VLM이 남긴 이유 (요약) |
 |---:|---|---|
@@ -63,9 +63,9 @@ Isaac Sim 5.1과 Qwen3-VL-8B로 실행한 결과입니다. 지도의 숫자는 V
 
 지시에 장소 이름이 없습니다. VLN은 "부품 품질을 확인하는 곳"을 품질 검사 구역으로, "두 번째"를 명판 STATION 2로 해석했습니다. 다른 검사대(STATION 1, 3, 4)의 명판을 읽어 걸러낸 뒤 STATION 2를 찾아 다가갔습니다.
 
-![검사대 과제의 결정 지점과 경로](docs/images/vln/station_route.png)
+![검사대 과제의 결정 지점과 경로](RILS/과제/롯데/G1-sim-test/docs/images/vln/station_route.png)
 
-![검사대 과제에서 VLM이 본 영상](docs/images/vln/station_frames.jpg)
+![검사대 과제에서 VLM이 본 영상](RILS/과제/롯데/G1-sim-test/docs/images/vln/station_frames.jpg)
 
 | 시뮬레이션 시간 | VLN 결정 | VLM이 남긴 이유 (요약) |
 |---:|---|---|
@@ -80,9 +80,9 @@ Isaac Sim 5.1과 Qwen3-VL-8B로 실행한 결과입니다. 지도의 숫자는 V
 
 창고 충전 구역에서 출발해 연결 통로와 사무동 복도를 지나 관제실에 들어간 뒤, 서버 랙을 찾아 확인했습니다.
 
-![관제실 과제의 결정 지점과 경로](docs/images/vln/servers_route.png)
+![관제실 과제의 결정 지점과 경로](RILS/과제/롯데/G1-sim-test/docs/images/vln/servers_route.png)
 
-![관제실 과제에서 VLM이 본 영상](docs/images/vln/servers_frames.jpg)
+![관제실 과제에서 VLM이 본 영상](RILS/과제/롯데/G1-sim-test/docs/images/vln/servers_frames.jpg)
 
 | 시뮬레이션 시간 | VLN 결정 | VLM이 남긴 이유 (요약) |
 |---:|---|---|
@@ -100,15 +100,15 @@ Isaac Sim 5.1과 Qwen3-VL-8B로 실행한 결과입니다. 지도의 숫자는 V
 | 사무동 (24 x 24 m) | 업무실, 회의실, 휴게실, 관제실. 방 문패와 서버 랙 명판 |
 | 펌프실 (12 x 10 m) | 사무동 복도 남쪽 통로로 연결. 원심 펌프 P-101과 전동기 M-101(커플링 가드), 흡입 배관과 토출 배관, 밸브와 압력계, 압력 탱크 TK-101, 전동기 제어반 MCC-1, 부품 선반 |
 
-![펌프실 전경](docs/images/pump_room/pump_room_overview.jpg)
+![펌프실 전경](RILS/과제/롯데/G1-sim-test/docs/images/pump_room/pump_room_overview.jpg)
 
-![로봇 머리 카메라로 본 펌프실: 입구, 펌프와 전동기, 압력 탱크](docs/images/pump_room/pump_room_head_views.jpg)
+![로봇 머리 카메라로 본 펌프실: 입구, 펌프와 전동기, 압력 탱크](RILS/과제/롯데/G1-sim-test/docs/images/pump_room/pump_room_head_views.jpg)
 
 ### 로봇이 직접 만든 SLAM 지도
 
 G1이 캠퍼스를 한 바퀴 걸으면서 머리의 LiDAR(MID-360)와 IMU로 만든 지도입니다. 자세 추정은 FAST-LIO2(LiDAR-관성 SLAM)가 하고, 그 점군에서 바닥 평면을 맞춰 3D 점군과 0.1 m 점유 지도를 만듭니다. MuJoCo / Isaac Sim 같은 결과가 나옴을 확인함
 
-![로봇이 만든 SLAM 지도: 3D 점군, 점유 지도, 정답 지도와 비교](docs/images/slam/slam_map.png)
+![로봇이 만든 SLAM 지도: 3D 점군, 점유 지도, 정답 지도와 비교](RILS/과제/롯데/G1-sim-test/docs/images/slam/slam_map.png)
 
 | 항목 | 결과 |
 |---|---|
@@ -118,14 +118,18 @@ G1이 캠퍼스를 한 바퀴 걸으면서 머리의 LiDAR(MID-360)와 IMU로 �
 | 실제 빈 공간 중 빈 공간으로 표시된 비율 | 87% (나머지는 물체 뒤 그림자라 미확인) |
 | 이 지도로 VLN 실행 (컨베이어 지시, Qwen3-VL-4B) | 성공: 결정 19회, 컨베이어 0.60 m 앞에서 정지, 판정 yes(정답), 충돌 0 |
 
+<<<<<<< HEAD
 파운데이션 SLAM 모델 없이 G1 LiDAR 센서 기반 SLAM이 축척이 정확하고 CPU로도 실시간으로 돌아가는 것을 확인함
 만든 지도는 점유 지도(`map.yaml`, `map.pgm`), 3D 점군(`cloud.pcd`), 사람이 그린 주석과 자동 토폴로지(`semantic_map.json`)를 한 폴더에 묶어 보관합니다. 추후 이 경로로 외부 에이전트와 정보를 나눌 것
+=======
+파운데이션 SLAM 모델은 쓰지 않았습니다. G1 머리에는 LiDAR가 있어, 거리를 직접 재는 LiDAR-관성 SLAM이 축척이 정확하고 CPU로도 실시간으로 돕니다. 파운데이션 모델은 카메라만 있는 로봇이나, 나중에 시멘틱 층을 자동으로 채우는 용도로 검토할 만합니다. 만든 지도는 점유 지도(`map.yaml`, `map.pgm`), 3D 점군(`cloud.pcd`), 사람이 그린 주석과 자동 토폴로지(`semantic_map.json`)를 한 폴더에 묶어 외부 에이전트와 공유합니다. 자세한 내용은 [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md)에 있습니다.
+>>>>>>> 4615696 (add : exper metric)
 
 ### 로봇 지도 위의 사람 주석과 자동 토폴로지
 
 점유 지도만으로는 "조립 라인"이 어디인지 알 수 없습니다. 그래서 사람이 주석 도구(`tools/map_annotator.html`)로 로봇이 만든 지도 위에 방 9개와 통로 4개를 그리고 이름과 별칭을 붙였습니다. 기준점도 4개 찍었습니다. 시뮬레이터 정답은 보지 않고 지도에 보이는 벽과 설비만 보고 그렸습니다. 방 사이의 연결과 출입구는 지도와 주석에서 자동으로 만들어집니다.
 
-![로봇 지도 위에 그린 방과 통로, 자동으로 만든 장소 그래프와 출입구](docs/images/slam/annotated_topology.png)
+![로봇 지도 위에 그린 방과 통로, 자동으로 만든 장소 그래프와 출입구](RILS/과제/롯데/G1-sim-test/docs/images/slam/annotated_topology.png)
 
 | 항목 | 결과 |
 |---|---|
@@ -138,7 +142,7 @@ G1이 캠퍼스를 한 바퀴 걸으면서 머리의 LiDAR(MID-360)와 IMU로 �
 
 위 실행은 시뮬레이터가 아는 시작 자세로 지도 묶음을 시뮬레이터 좌표에 옮겼습니다. 실제 로봇은 다른 날 다시 켜면 저장한 지도 안에서 자기가 어디 있는지 모릅니다. 그래서 `localizer` 노드가 머리 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 위치를 찾고, VLN은 그 위치로 지도 묶음 좌표에서 움직입니다. 사람은 로봇이 선 곳을 지도에서 대략(1.5 m, 20도 안) 알려 주기만 합니다. 걷는 동안 odom이 어긋나도 스캔을 계속 지도에 맞춰 바로잡습니다.
 
-![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](docs/images/slam/localization.png)
+![지도 안에서 위치 찾기: odom이 크게 어긋나도 지도 좌표의 위치는 정답과 0.2 m 안](RILS/과제/롯데/G1-sim-test/docs/images/slam/localization.png)
 
 | 항목 | 결과 |
 |---|---|
@@ -150,18 +154,18 @@ G1이 캠퍼스를 한 바퀴 걸으면서 머리의 LiDAR(MID-360)와 IMU로 �
 | 탱크 압력계 과제, 같은 odom 어긋남, 125 m | 위치 오차 평균 0.10 m, 최대 0.20 m (odom만으로는 35.8 m 틀림). 펌프실까지 갔지만 4B가 펌프를 탱크로 보고 답해 실패 |
 | 계산 시간 (Mac Docker, CPU) | 첫 위치 추정 0.6초, 추적 한 번 0.1초 |
 
-방식과 실제 로봇에서 필요한 것은 [SLAM_MAPPING.md](docs/SLAM_MAPPING.md)의 "지도 안에서 위치 찾기"에 있습니다.
+방식과 실제 로봇에서 필요한 것은 [SLAM_MAPPING.md](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md)의 "지도 안에서 위치 찾기"에 있습니다.
 
 
 ### 시멘틱 맵과 토폴로지 맵
 
 SLAM으로 만든 기하 지도 위에 의미 정보를 층층이 쌓은 3D 장면 그래프입니다. 맨 아래가 장면과 그 위의 객체 91개이고, 그 위로 장소 13개와 출입구 12개로 이루어진 토폴로지 그래프, 건물 3개, 캠퍼스가 있습니다. 선은 각 노드와 그 노드가 속한 상위 노드를 잇습니다.
 
-![계층형 3D 장면 그래프](docs/images/semantic/scene_graph_3d.png)
+![계층형 3D 장면 그래프](RILS/과제/롯데/G1-sim-test/docs/images/semantic/scene_graph_3d.png)
 
 같은 지도를 위에서 본 그림입니다. 색칠한 영역이 구역, 작은 점이 객체(종류별 색), 검은 선이 장소 사이의 연결입니다. 작은 흰 원은 출입구, 초록 삼각형은 사람이 단 기준점입니다.
 
-![위에서 본 시멘틱 맵과 토폴로지 맵](docs/images/semantic/semantic_topological_2d.png)
+![위에서 본 시멘틱 맵과 토폴로지 맵](RILS/과제/롯데/G1-sim-test/docs/images/semantic/semantic_topological_2d.png)
 
 - 시멘틱 레이어는 구역 9개와 객체 91개(33종)입니다. 객체마다 명판 글자, 속한 구역, 3D 상자가 있습니다.
 - 토폴로지 레이어는 장소 13개(구역 9개와 창고 통로, 연결 통로, 사무동 복도, 펌프실 통로)와 출입구를 가진 연결 12개입니다.
@@ -170,9 +174,9 @@ SLAM으로 만든 기하 지도 위에 의미 정보를 층층이 쌓은 3D 장�
 
 ## 문서
 
-- [계층형 VLN 설계와 모델 선정](docs/HVLN.md)
-- [로봇이 직접 만드는 SLAM 지도](docs/SLAM_MAPPING.md)
-- [Ubuntu와 Isaac Sim 실행 순서](docs/UBUNTU_ISAAC.md)
-- [ROS 2 인터페이스](docs/ROS2_INTERFACE.md)
-- [검증 기록](docs/VALIDATION.md)
-- [출처와 라이선스](THIRD_PARTY.md)
+- [계층형 VLN 설계와 모델 선정](RILS/과제/롯데/G1-sim-test/docs/HVLN.md)
+- [로봇이 직접 만드는 SLAM 지도](RILS/과제/롯데/G1-sim-test/docs/SLAM_MAPPING.md)
+- [Ubuntu와 Isaac Sim 실행 순서](RILS/과제/롯데/G1-sim-test/docs/UBUNTU_ISAAC.md)
+- [ROS 2 인터페이스](RILS/과제/롯데/G1-sim-test/docs/ROS2_INTERFACE.md)
+- [검증 기록](RILS/과제/롯데/G1-sim-test/docs/VALIDATION.md)
+- [출처와 라이선스](RILS/과제/롯데/G1-sim-test/THIRD_PARTY.md)
