@@ -12,7 +12,8 @@ Publishes /slam/map (OccupancyGrid, frame slam_map, latched, every 2 s) and /sla
 Saves <output_root>/<name>/ (g1_factory.slam_map): map.yaml + map.pgm (ROS map_server / Nav2 format),
 map.png, cloud.pcd, trajectory.csv, meta.json; with ground truth also map_world.yaml/.pgm (same map in the
 simulator frame, for the VLN in simulation), semantic_truth.json (the simulator's semantic map in the robot's map
-frame, only to check annotations against), evaluation.json and comparison.png. The package's semantic_map.json is
+frame, only to check annotations against), evaluation.json, comparison.png and trajectory_truth.csv (the true LiDAR
+path, row by row with trajectory.csv, for scripts/eval_map.py). The package's semantic_map.json is
 built from a person's annotations (scripts/build_map_package.py).
 """
 from __future__ import annotations
@@ -234,6 +235,10 @@ class SlamMapNode(Node):
                           ty+np.sin(tyaw)*self.lidar_xyz[0]+np.cos(tyaw)*self.lidar_xyz[1]], axis=1)
         slam_world = (np.c_[traj[:, 1:3], np.ones(len(traj))]@T.T)[:, :2]
         out["trajectory"] = S.trajectory_error(slam_world, lidar)
+        with (folder/"trajectory_truth.csv").open("w", newline="") as f:  # same rows as trajectory.csv, simulator frame
+            w = csv.writer(f)
+            w.writerow(["t_s", "x_m", "y_m", "yaw_rad"])
+            w.writerows([[round(float(v), 4) for v in row] for row in np.c_[traj[:, 0], lidar, tyaw]])
         if self.truth_map is not None:
             gt, gt_origin, gt_res = self.truth_map
             bounds = (gt_origin[0], gt_origin[1], gt_origin[0]+gt.shape[1]*gt_res, gt_origin[1]+gt.shape[0]*gt_res)

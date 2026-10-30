@@ -1,0 +1,38 @@
+# Routes for the localisation measurement (launch/g1_localization_eval.launch.py, docs/METRICS.md).
+# The robot is walked along these waypoints (simulator frame, m) on the simulator's map by global_planner and
+# path_follower; the localizer only measures (publish_tf:=false). The start differs from the mapping start
+# (-12, 3.8, 0) so the localizer has to find itself in a map frame it did not start in.
+tours:
+  localization:
+    spawn: [12.0, -3.8, 1.5708]       # charging station, facing north. Isaac: run_isaac_sim.sh --spawn 12 -3.8 1.5708
+    waypoints:
+      - [13.0, -6.5]     # charging
+      - [20.0, -8.0]
+      - [0.0, -13.0]     # south cross aisle
+      - [-13.0, -12.5]
+      - [-13.0, -6.5]    # quality inspection
+      - [-21.0, 0.0]     # west end of the main aisle
+      - [-13.0, 6.5]     # material storage
+      - [0.0, 13.0]      # north cross aisle
+      - [13.0, 6.5]      # assembly line
+      - [21.0, 9.0]
+      - [26.0, 0.0]      # warehouse-office bridge
+      - [33.0, 5.0]      # engineering workstations
+      - [39.5, 0.0]      # office corridor
+      - [47.0, 5.0]      # meeting room
+      - [47.0, -5.0]     # control room
+      - [33.0, -5.0]     # staff lounge
+      - [39.5, -14.0]    # pump room passage
+      - [37.0, -20.0]    # pump room
+      - [43.0, -23.0]
+      - [39.5, -14.0]
+      - [39.5, 0.0]
+      - [26.0, 0.0]
+      - [0.0, 0.0]       # main crossing
+  localization_short:                # development check of the pipeline (MuJoCo), about 45 m
+    spawn: [12.0, -3.8, 1.5708]
+    waypoints:
+      - [13.0, -6.5]
+      - [26.0, 0.0]
+      - [39.5, 0.0]
+      - [39.5, -14.0]

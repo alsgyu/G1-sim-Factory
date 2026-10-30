@@ -78,6 +78,8 @@ class LocalizerNode(Node):
                              init_min_inliers=float(p("init_min_inliers", 0.8).value),
                              max_points=int(p("max_points", 800).value))
         self.map_frame = p("map_frame", "map").value
+        # false: measurement only (scripts/eval: the robot is driven on the simulator's map, map -> odom stays its own)
+        self.tf_enabled = bool(p("publish_tf", True).value)
         self.period = 1.0/float(p("rate_hz", 2.0).value)
         self.tolerance = float(p("transform_tolerance_s", 0.5).value)
         self.pending = parse_pose(p("initial_pose", "", ParameterDescriptor(dynamic_typing=True)).value)
@@ -195,7 +197,7 @@ class LocalizerNode(Node):
 
     # ------------------------------------------------------------------ outputs
     def publish_tf(self):
-        if not self.loc.localized or self.odom is None:
+        if not self.tf_enabled or not self.loc.localized or self.odom is None:
             return
         x, y, yaw = self.loc.T
         tf = TransformStamped()

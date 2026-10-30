@@ -1,7 +1,8 @@
 """mapping_tour: walks the G1 through the campus once for SLAM mapping (in place of a person with a joystick).
 
 Stands still for `settle_s` (FAST-LIO2 initialises and the map node measures gravity) and until slam_map reports
-that scans come in (gives up after `slam_timeout_s` instead of walking a tour that maps nothing), then sends the
+that scans come in (gives up after `slam_timeout_s` instead of walking a tour that maps nothing; wait_for_slam:=false
+walks a route without SLAM and stays until the launch ends, launch/g1_localization_eval.launch.py), then sends the
 waypoints of
 the tour (configs/slam_mapping.yaml) one by one on /goal_pose to global_planner + path_follower. A waypoint ends
 with reached or failed on /nav/status; failures are logged and skipped. At the end it publishes /mapping/done,
@@ -36,6 +37,9 @@ class MappingTour(Node):
         self.slam_timeout = float(p("slam_timeout_s", 90.0).value)
         self.slam_ready, self.last_wait_log, self.slam_message = False, 0.0, ""
         self.save_timeout = float(p("save_timeout_s", 120.0).value)
+        # false: walk a route without SLAM (localisation measurement, launch/g1_localization_eval.launch.py)
+        self.wait_for_slam = bool(p("wait_for_slam", True).value)
+        self.slam_ready = not self.wait_for_slam
         self.pose, self.index, self.goal_id, self.t0 = None, -1, None, None
         self.done_at, self.finished = None, False
         self.log = []
@@ -58,7 +62,8 @@ class MappingTour(Node):
             return
         if self.t0 is None:
             self.t0 = self.now()
-            self.get_logger().info(f"standing {self.settle:.0f} s for SLAM initialisation, then {len(self.waypoints)} waypoints")
+            self.get_logger().info(f"standing {self.settle:.0f} s{' for SLAM initialisation' if self.wait_for_slam else ''}, "
+                                   f"then {len(self.waypoints)} waypoints")
         waited = self.now()-self.t0
         if self.index < 0 and waited >= self.settle:
             if self.slam_ready:
@@ -70,7 +75,7 @@ class MappingTour(Node):
             elif waited-self.last_wait_log >= 10.0:
                 self.last_wait_log = waited
                 self.get_logger().info(f"waiting for SLAM scans ({waited:.0f} s) {self.slam_message}")
-        if self.done_at is not None and self.now()-self.done_at > self.save_timeout:
+        if self.done_at is not None and self.wait_for_slam and self.now()-self.done_at > self.save_timeout:
             self.get_logger().error("map node did not report the map saved; exiting")
             self.finished = True
 
@@ -81,7 +86,8 @@ class MappingTour(Node):
         self.index += 1
         if self.index >= len(self.waypoints):
             failed = sum(1 for e in self.log if e["outcome"] != "reached")
-            self.get_logger().info(f"tour finished ({failed} waypoints not reached); saving the map")
+            self.get_logger().info(f"tour finished ({failed} waypoints not reached)"
+                                   + ("; saving the map" if self.wait_for_slam else ""))
             self.pub_done.publish(String(data=json.dumps({"waypoints": self.log})))
             self.done_at = self.now()
             return
