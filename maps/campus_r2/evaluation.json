@@ -1,0 +1,23 @@
+{
+ "world_from_map": {
+  "x": -7.011,
+  "y": 4.707,
+  "yaw_rad": -0.0007
+ },
+ "trajectory": {
+  "ate_rmse_m": 0.08,
+  "max_m": 0.198,
+  "final_m": 0.007,
+  "path_m": 328.8,
+  "final_drift_pct": 0.0
+ },
+ "map": {
+  "obstacle_precision": 0.727,
+  "obstacle_recall": 1.0,
+  "free_marked_free": 0.0,
+  "free_marked_occupied": 0.088,
+  "free_unknown": 0.912,
+  "outside_marked_free": 0.0,
+  "tolerance_m": 0.2
+ }
+}
