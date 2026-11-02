@@ -183,7 +183,15 @@ class SlamGrid:
         w, h = (cells.max(axis=0)-lo+m+1)
         flat = (cells[:, 1]-lo[1])*w+(cells[:, 0]-lo[0])
         z = cloud[:, 2]
-        free = np.bincount(flat[np.abs(z) < self.floor_tol], minlength=w*h).reshape(h, w) > 0
+        # Floor: every cell a floor voxel covers. Turned (levelled, wall-aligned) voxel centres do not sit one per cell,
+        # and binned by centre alone a few percent of a fully seen floor stays unknown; four samples per voxel, a
+        # quarter cell from its centre, reach every cell under it.
+        q = self.resolution/4
+        foot = np.concatenate([raw[np.abs(z) < self.floor_tol]+[dx, dy, 0.0] for dx in (-q, q) for dy in (-q, q)])
+        fc = np.floor((foot@R.T)[:, :2]/self.resolution).astype(np.int64)-lo
+        fc = fc[(fc >= 0).all(axis=1) & (fc[:, 0] < w) & (fc[:, 1] < h)]
+        free = np.zeros((h, w), bool)
+        free[fc[:, 1], fc[:, 0]] = True
         hits = np.bincount(flat[(z >= self.band[0]) & (z <= self.band[1])], minlength=w*h).reshape(h, w)
         grid = np.full((h, w), UNKNOWN, np.int8)
         grid[free] = FREE

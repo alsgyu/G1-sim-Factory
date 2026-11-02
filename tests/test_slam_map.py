@@ -183,6 +183,28 @@ def test_maps_are_turned_so_the_walls_run_along_x_and_y():
     assert abs(math.degrees(g2.build(heading=b)["wall_yaw"])-46.0) < 0.3
 
 
+def test_a_turned_map_has_no_holes_in_a_fully_seen_floor():
+    # Every floor voxel seen, but SLAM started 19 deg off the walls (an Isaac Sim run): the turned voxel centres do
+    # not sit one per cell, and binned by centre alone some 7 % of the floor cells came out unknown.
+    x, y = np.meshgrid(np.arange(-4, 4, 0.02), np.arange(-3, 3, 0.02))
+    floor = np.c_[x.ravel(), y.ravel(), np.zeros(x.size)]
+    t, h = np.meshgrid(np.arange(0, 1, 0.002), np.arange(0, 2, 0.05))
+    walls = [np.c_[x0+(x1-x0)*t.ravel(), y0+(y1-y0)*t.ravel(), h.ravel()]
+             for x0, y0, x1, y1 in ((-4, -3, 4, -3), (-4, 3, 4, 3), (-4, -3, -4, 3), (4, -3, 4, 3))]
+    a = math.radians(19.25)
+    Rz = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
+    g = S.SlamGrid()
+    g.add(np.concatenate([floor, *walls])@Rz.T)
+    out = g.build()
+    assert abs(math.degrees(out["wall_yaw"])-19.25) < 0.3
+    grid, (ox, oy) = out["grid"], out["origin"]
+    cx, cy = np.meshgrid(np.arange(-3.6, 3.6, 0.1), np.arange(-2.6, 2.6, 0.1))
+    inside = grid[((cy-oy)/0.1).astype(int), ((cx-ox)/0.1).astype(int)]
+    assert (inside == S.FREE).all()
+    occ = np.argwhere(grid == S.OCCUPIED)  # the walls stay one or two cells thick
+    assert 2 <= (np.bincount(occ[:, 0]) >= 40).sum() <= 6
+
+
 def test_depth_camera_lidar_points_lie_on_the_rendered_surfaces():
     """Isaac Sim emulation: four depth cameras rendering a floor 1.25 m down and a wall 12 m ahead."""
     from g1_factory.sensors import depth_cameras_to_points, mid360_directions
@@ -210,3 +232,16 @@ def test_depth_camera_lidar_points_lie_on_the_rendered_surfaces():
     far_floor = on_floor & (np.hypot(xyz[:, 0], xyz[:, 1]) > 15)
     assert far_floor.sum() > 200  # grazing floor 15-40 m away stays on the floor
     assert np.all(np.diff(idx) >= 0)
+
+
+def test_isaac_lidar_self_filter_removes_the_robot_but_not_the_scene():
+    from g1_factory.sensors import outside_own_body
+    rng = np.random.default_rng(3)
+    a = rng.uniform(-math.pi, math.pi, 500)
+    r = rng.uniform(0.15, 0.39, 500)                  # shoulders, arms, torso: within 0.39 m of the pelvis axis,
+    body = np.c_[-0.05+r*np.cos(a), r*np.sin(a), rng.uniform(-0.37, -0.26, 500)]  # 0.26-0.37 m below the sensor
+    wall = np.c_[np.full(200, 0.6), rng.uniform(-1, 1, 200), rng.uniform(-1.1, 0.5, 200)]  # a wall 0.6 m ahead
+    floor = np.c_[rng.uniform(-6, 6, (300, 2)), np.full(300, -1.2)]
+    floor = floor[np.hypot(floor[:, 0]+0.05, floor[:, 1]) > 0.94]  # the lowest beam reaches the floor ~0.94 m out
+    assert not outside_own_body(body).any()
+    assert outside_own_body(wall).all() and outside_own_body(floor).all()

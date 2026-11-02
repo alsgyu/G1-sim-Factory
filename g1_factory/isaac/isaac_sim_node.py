@@ -106,7 +106,7 @@ from pxr import Gf, UsdGeom, UsdPhysics  # noqa: E402,F401
 from g1_factory.planning import OccupancyGrid  # noqa: E402
 from g1_factory.policy_core import JOINT_NAMES, G1PolicyCore, projected_gravity  # noqa: E402
 from g1_factory.routes import zone_at  # noqa: E402
-from g1_factory.sensors import depth_cameras_to_points, mid360_directions  # noqa: E402
+from g1_factory.sensors import depth_cameras_to_points, mid360_directions, outside_own_body  # noqa: E402
 
 PHYSICS_DT, DECIMATION = 0.005, 4          # 200 Hz physics, 50 Hz policy (as in training)
 IMU_WINDOW = 4                             # IMU acceleration from the velocity change over 20 ms
@@ -310,6 +310,8 @@ class IsaacG1:
         self.lidar_frame += 1
         depths = [depth_of(cam) for cam in self.lidar_cams]
         xyz, idx = depth_cameras_to_points(dirs, depths, self.lidar_rot, LIDAR_CAM_FOV, LIDAR_CAM_RES)
+        keep = outside_own_body(xyz, axis_xy=(-LIDAR_XYZ[0], -LIDAR_XYZ[1]))  # the depth cameras see the robot too
+        xyz, idx = xyz[keep], idx[keep]
         return xyz, np.full(len(idx), 100.0, np.float32), (idx % 4).astype(np.uint8), idx
 
     def imu(self, rot, lin_w, ang_w):

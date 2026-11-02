@@ -95,7 +95,7 @@ bash scripts/run_isaac_sim.sh --spawn -12 3.8 0
 bash scripts/g1_docker.sh ros2 launch launch/g1_slam_mapping.launch.py name:=campus
 ```
 
-매번 `maps/<이름>/evaluation.json`을 보고 진행 여부를 판단합니다. 장애물 정밀도가 0.9보다 낮거나 위치 오차(`ate_rmse_m`)가 0.3 m보다 크면 지도에 문제가 있는 것이니 멈추고 원인을 확인합니다. 경유점 실패도 로그에서 확인합니다. 그 지도는 버리지 말고 실패로 기록합니다.
+매번 `maps/<이름>/evaluation.json`을 보고 진행 여부를 판단합니다. 장애물 정밀도(`obstacle_precision`)가 0.9보다 낮거나, 빈 공간 인식률(`free_marked_free`)이 0.7보다 낮거나, 위치 오차(`ate_rmse_m`)가 0.3 m보다 크면 지도에 문제가 있는 것이니 멈추고 원인을 확인합니다. 경유점 실패도 로그에서 확인합니다. 그 지도는 버리지 말고 실패로 기록합니다.
 
 ### 2단계: 주석과 토폴로지 (1.2)
 

@@ -86,6 +86,20 @@ def mid360_directions(n: int, frame: int, elevation_rad=(math.radians(-52.0), ma
     return np.stack([np.cos(el)*np.cos(az), np.cos(el)*np.sin(az), np.sin(el)], axis=1)
 
 
+def outside_own_body(xyz, axis_xy=(-0.05, 0.0), radius=0.45, z_range=(-0.8, 0.3)) -> np.ndarray:
+    """Mask of LiDAR points (sensor frame) that are not on the robot itself, like a driver's self-filter.
+
+    The G1's shoulders, arms and torso are seen 0.26-0.37 m below the head LiDAR, at most 0.49 m away and within
+    0.39 m of the pelvis axis (MuJoCo rays with the robot kept, walking and turning); the legs are below the lowest
+    beam. A cylinder of `radius` around the pelvis axis (`axis_xy` in the sensor frame), between z_range metres
+    below and above the sensor, removes all of them and no point of the scene. The MuJoCo ray caster skips the
+    robot's geoms instead; without either, the SLAM map gets an obstacle trail along the walked path.
+    """
+    xyz = np.asarray(xyz)
+    r = np.hypot(xyz[:, 0]-axis_xy[0], xyz[:, 1]-axis_xy[1])
+    return ~((r <= radius) & (xyz[:, 2] >= z_range[0]) & (xyz[:, 2] <= z_range[1]))
+
+
 def depth_cameras_to_points(dirs, depths, cam_rots, fov, res, min_range=0.1, max_range=40.0):
     """MID-360-like scan from depth cameras around the sensor (the Isaac Sim emulation): (xyz (M, 3), ray index (M,)).
 
