@@ -1,0 +1,15 @@
+# What a person knows is in each annotated room of the campus map package (by place id), in English and Korean.
+# Used only when an instruction names no room or corridor at all ("Check whether the vending machine is upright"),
+# never to override a named place, and never gives a position: the target is still the room. These are the kinds
+# of equipment each room is for, not object locations; ids the loaded map package does not have are ignored.
+places:
+  material_storage: [storage rack, shelf, shelves, pallet, pallets, raw material, 선반, 적재 선반, 팔레트, 원자재]
+  assembly_line: [conveyor, conveyor belt, workbench, assembly station, 컨베이어, 작업대, 조립 작업대]
+  inspection: [inspection station, vision inspection station, metrology, quality check, 검사대, 검사 장비, 비전 검사 장비, 품질 확인]
+  charging: [charging dock, charger, dock, docks, amr, amr cart, cart, 충전 도크, 충전기, 도크, 카트, amr 카트]
+  office_workstations: [desk, desks, workstation, workstations, computer, engineer, 책상, 컴퓨터, 업무 공간]
+  office_meeting: [meeting table, conference table, meeting, conference, presentation screen, 회의 테이블, 회의, 발표 화면]
+  office_lounge: [vending machine, sofa, couch, coffee table, coffee, break, 자판기, 소파, 커피, 휴식]
+  office_control: [server rack, server racks, servers, status indicator, monitor wall, control desk, 서버 랙, 서버, 상태 표시등, 관제 모니터]
+  pump_room: [pump, motor, coupling guard, pressure tank, tank, valve, pressure gauge, piping, pipe, motor control center, mcc,
+              펌프, 모터, 전동기, 커플링 가드, 압력 탱크, 탱크, 밸브, 압력계, 배관, 제어반]

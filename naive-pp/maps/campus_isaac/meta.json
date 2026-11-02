@@ -1,0 +1,34 @@
+{
+ "frame": "map: origin on the floor under the LiDAR at start-up, x and y along the main walls (x the one closest to the start heading), z up, floor at z = 0, units m",
+ "floor_levelling_deg": 3.104,
+ "wall_alignment_deg": 19.25,
+ "slam": "FAST-LIO2 (LiDAR-inertial odometry, ROS 2 branch) + g1_factory.slam_map occupancy",
+ "sensor": "Livox MID-360 (head), internal IMU",
+ "resolution_m": 0.1,
+ "scans": 9460,
+ "duration_s": 945.9,
+ "trajectory": {
+  "ate_rmse_m": 0.112,
+  "max_m": 0.245,
+  "final_m": 0.052,
+  "path_m": 327.7,
+  "final_drift_pct": 0.02
+ },
+ "name": "campus_isaac",
+ "source": "Isaac Sim 5.1 mapping tour of 2026-11-02 (FAST-LIO2 on the head LiDAR). The occupancy grid was rebuilt from that run's cloud.pcd with the LiDAR self-filter and floor-voxel footprints of g1_factory/slam_map.py (commit 47e3fef); the run itself predates those fixes.",
+ "annotations": "moved from maps/campus_dev with scripts/transfer_annotations.py",
+ "origin": [
+  -14.8,
+  -30.7
+ ],
+ "size_cells": [
+  796,
+  482
+ ],
+ "map_vs_truth_simulation_only": {
+  "obstacle_precision": 0.983,
+  "obstacle_recall": 0.997,
+  "free_marked_free": 0.847,
+  "tolerance_m": 0.2
+ }
+}
