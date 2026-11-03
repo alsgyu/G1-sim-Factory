@@ -71,6 +71,7 @@ class Plan:
         return {"target": {"kind": self.target.kind, "id": self.target.id, "label": self.target.label},
                 "goal": [round(float(v), 3) for v in self.goal],
                 "route": self.route.labels if self.route else None,
+                "route_places": self.route.places if self.route else [],
                 "route_text": self.route.text() if self.route else None,
                 "doors": [[round(float(v), 2) for v in d] for d in self.route.doors] if self.route else [],
                 "search": self.search, "length_m": round(self.length_m, 2), "poses": len(self.points),

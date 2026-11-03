@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>naive-pp minimap</title>
+<style>
+  :root {
+    --ink: #1f2328; --muted: #5c6470; --card: rgba(255, 255, 255, .95); --line: #d9dde3;
+    --accent: #e8590c; --ok: #2b8a3e; --warn: #e67700; --bad: #c92a2a; --robot: #1c7ed6; --bg: #e9ebed;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  #map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #map.drag { cursor: grabbing; }
+  .card { position: fixed; background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .08); }
+  #hud { top: 12px; left: 12px; width: min(380px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto;
+    padding: 12px 14px; }
+  #hud h1 { font-size: 15px; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; }
+  #hud h1 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  #conn { color: var(--bad); font-size: 12px; font-weight: 600; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; }
+  dt { color: var(--muted); white-space: nowrap; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  #instr { font-style: italic; }
+  #target { color: var(--accent); font-weight: 650; }
+  .chip { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 12px; font-weight: 400;
+    background: #f1f3f5; color: var(--muted); margin-left: 4px; font-style: normal; }
+  #log { margin: 10px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); list-style: none; font-size: 12px;
+    color: var(--muted); }
+  #log li { display: grid; grid-template-columns: 52px 74px 1fr; gap: 6px; padding: 1px 0; }
+  #log b { font-weight: 600; color: var(--ink); }
+  #tools { top: 12px; right: 12px; padding: 6px; display: flex; gap: 6px; }
+  button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+    border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  button[aria-pressed="true"] { background: #e7f1fb; border-color: #9ec5ee; }
+  #legend { bottom: 12px; right: 12px; padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex;
+    gap: 12px; flex-wrap: wrap; }
+  #legend i { display: inline-block; width: 16px; height: 4px; border-radius: 2px; vertical-align: middle;
+    margin-right: 5px; }
+  #banner { position: fixed; top: 60px; right: 12px; max-width: min(520px, calc(100% - 24px)); padding: 10px 16px;
+    border-radius: 10px; color: #fff; font-weight: 650; font-size: 16px; box-shadow: 0 2px 12px rgba(0, 0, 0, .15); }
+  @media (max-width: 760px) {
+    #hud { top: auto; bottom: 12px; max-height: 42%; }
+    #legend { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+<section id="hud" class="card">
+  <h1><span>naive-pp 미니맵 <small id="pkg"></small></span><span id="conn" hidden>연결 끊김</span></h1>
+  <dl>
+    <dt>지시</dt><dd id="instr">지시를 기다리는 중</dd>
+    <dt>목적지</dt><dd><span id="target">-</span><span id="match"></span></dd>
+    <dt>경로</dt><dd id="route">-</dd>
+    <dt>상태</dt><dd id="state">-</dd>
+    <dt>현재 위치</dt><dd id="place">-</dd>
+    <dt>위치 추정</dt><dd id="loc">-</dd>
+  </dl>
+  <ul id="log"></ul>
+</section>
+<div id="tools" class="card">
+  <button id="fit" type="button">전체 보기</button>
+  <button id="follow" type="button" aria-pressed="false">로봇 따라가기</button>
+  <button id="save" type="button">PNG 저장</button>
+</div>
+<div id="banner" hidden></div>
+<div id="legend" class="card">
+  <span><i style="background: var(--accent)"></i>계획 경로</span>
+  <span><i style="background: var(--robot)"></i>지나온 길</span>
+  <span><i style="background: var(--ok); width: 9px; height: 9px; border-radius: 50%"></i>목표점</span>
+  <span><i style="background: none; border: 2px solid var(--accent); height: 10px"></i>목적지 방</span>
+</div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const cv = $("map");
+const ctx = cv.getContext("2d");
+const STATE = {
+  instruction: "지시 수신", accepted: "지시 접수", waiting: "위치 추정 대기", planned: "경로 계획, 이동 시작",
+  following: "이동 중", replanning: "재계획 중", replanned: "재계획, 이동 중", plan_failed: "경로 없음, 재시도 대기",
+  done: "도착", failed: "실패", canceled: "취소됨",
+};
+const TERMINAL = new Set(["done", "failed", "canceled"]);
+let meta = null, img = null, st = null, byId = {};
+let view = { s: 1, tx: 0, ty: 0 }, fitScale = 1, follow = false, dpr = 1;
+
+function hudWidth() { return innerWidth > 760 ? $("hud").offsetWidth + 24 : 0; }
+
+function fit() {
+  const left = hudWidth(), W = innerWidth - left, H = innerHeight;
+  const s = Math.min((W - 24) / meta.width, (H - 24) / meta.height);
+  view = { s, tx: left + (W - meta.width * s) / 2, ty: (H - meta.height * s) / 2 };
+  fitScale = s;
+}
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(innerWidth * dpr);
+  cv.height = Math.round(innerHeight * dpr);
+}
+
+const px = (x, y) => [view.tx + (x - meta.origin[0]) / meta.resolution * view.s,
+                      view.ty + (meta.height - (y - meta.origin[1]) / meta.resolution) * view.s];
+const metres = (m) => m / meta.resolution * view.s;
+
+function rectPath(p) {
+  ctx.beginPath();
+  for (const [x0, y0, x1, y1] of p.rects) {
+    const [a, b] = px(x0, y1), [c, d] = px(x1, y0);
+    ctx.rect(a, b, c - a, d - b);
+  }
+}
+
+function polyline(points, color, width, dash) {
+  if (!points || points.length < 2) return;
+  ctx.beginPath();
+  points.forEach(([x, y], i) => { const [u, v] = px(x, y); i ? ctx.lineTo(u, v) : ctx.moveTo(u, v); });
+  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+  ctx.lineJoin = ctx.lineCap = "round"; ctx.stroke(); ctx.setLineDash([]);
+}
+
+const font = (size, weight, italic) => `${italic ? "italic " : ""}${weight} ${size.toFixed(1)}px system-ui, ` +
+  `-apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif`;
+
+function label(text, x, y, size, color, weight, italic) {
+  ctx.font = font(size, weight, italic);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineWidth = Math.max(3, size / 3.5); ctx.strokeStyle = "rgba(255,255,255,.92)"; ctx.lineJoin = "round";
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y);
+}
+
+function pill(text, x, y) {
+  ctx.font = "600 11px system-ui, sans-serif";
+  const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = "#e8590c";
+  ctx.beginPath(); ctx.roundRect(x - w / 2, y - 8, w, 16, 8); ctx.fill();
+  ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y + 0.5);
+}
+
+function draw(ts) {
+  const W = innerWidth, H = innerHeight;
+  if (follow && st && st.pose) {  // ease the view towards the robot, keep the zoom
+    const left = hudWidth(), [rx, ry] = px(st.pose[0], st.pose[1]);
+    view.tx += (left + (W - left) / 2 - rx) * 0.12;
+    view.ty += (H / 2 - ry) * 0.12;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#e9ebed"; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = view.s < 1;
+  ctx.drawImage(img, view.tx, view.ty, meta.width * view.s, meta.height * view.s);
+
+  const target = st && st.target ? st.target.place : null;
+  const route = new Set(st ? st.route : []);
+  const ended = st && TERMINAL.has(st.state) && st.state !== "done";
+  for (const p of meta.places) {
+    if (!route.has(p.id) || p.id === target) continue;
+    rectPath(p); ctx.fillStyle = "rgba(28,126,214,.06)"; ctx.fill();
+    ctx.strokeStyle = "rgba(28,126,214,.55)"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (target && byId[target]) {
+    const a = st.state === "done" ? 0.2 : 0.14 + 0.1 * Math.sin(ts / 280);
+    rectPath(byId[target]); ctx.fillStyle = `rgba(232,89,12,${a.toFixed(3)})`; ctx.fill();
+    ctx.strokeStyle = "#e8590c"; ctx.lineWidth = 3; ctx.stroke();
+  }
+  if (st) {
+    for (const [x, y] of st.doors || []) {
+      const [u, v] = px(x, y);
+      ctx.beginPath(); ctx.arc(u, v, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "rgba(28,126,214,.9)"; ctx.lineWidth = 2; ctx.stroke();
+    }
+    polyline(st.plan, ended ? "rgba(92,100,112,.7)" : "rgba(232,89,12,.9)", 3.5, ended ? [8, 6] : null);
+    polyline(st.trail, "rgba(28,126,214,.85)", 2.5);
+  }
+  names(target);
+  if (st && st.goal) {
+    const [u, v] = px(st.goal[0], st.goal[1]), yaw = st.goal[2];
+    ctx.beginPath(); ctx.moveTo(u, v); ctx.lineTo(u + 20 * Math.cos(yaw), v - 20 * Math.sin(yaw));
+    ctx.strokeStyle = "#2b8a3e"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(u, v, 7.5, 0, 2 * Math.PI);
+    ctx.fillStyle = "#2b8a3e"; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  if (st && st.pose) {
+    const [u, v] = px(st.pose[0], st.pose[1]), yaw = st.pose[2], r = Math.max(10, metres(0.45));
+    const fixed = st.localization === "localized";
+    ctx.save(); ctx.translate(u, v); ctx.rotate(-yaw);
+    ctx.beginPath(); ctx.moveTo(r, 0); ctx.lineTo(-r * 0.7, r * 0.65); ctx.lineTo(-r * 0.35, 0);
+    ctx.lineTo(-r * 0.7, -r * 0.65); ctx.closePath();
+    ctx.fillStyle = fixed ? "#1c7ed6" : "#868e96"; ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    if (!fixed) { ctx.beginPath(); ctx.arc(u, v, r * 1.6, 0, 2 * Math.PI); ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "#868e96"; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); }
+  }
+  requestAnimationFrame(draw);
+}
+
+// Room names always (shrunk to fit the room), the target first and above its goal marker; corridor and anchor names
+// only where they do not cover another name.
+function names(target) {
+  const zoom = view.s / fitScale, base = Math.min(22, 12 + 3 * Math.log2(Math.max(zoom, 1)));
+  const taken = [];
+  const free = (b) => !taken.some((t) => b[0] < t[2] && t[0] < b[2] && b[1] < t[3] && t[1] < b[3]);
+  const rank = (p) => (p.id === target ? 0 : p.kind === "room" ? 1 : 2);
+  for (const p of meta.places.filter((q) => q.center).sort((a, b) => rank(a) - rank(b))) {
+    const room = p.kind === "room", isTarget = p.id === target, weight = room || isTarget ? 650 : 500;
+    let s = room ? base + (isTarget ? 2 : 0) : base - 2;
+    if (room && !isTarget) {
+      ctx.font = font(s, weight, false);
+      const width = Math.max(...p.rects.map(([x0, , x1]) => metres(x1 - x0)));
+      s = Math.max(9, Math.min(s, s * width * 0.92 / ctx.measureText(p.label).width));
+    }
+    ctx.font = font(s, weight, !room);
+    const w = ctx.measureText(p.label).width;
+    let [u, v] = px(p.center[0], p.center[1]);
+    if (isTarget && st.goal) { [u, v] = px(st.goal[0], st.goal[1]); v -= s * 2.1; }  // keep the goal visible
+    const box = [u - w / 2 - 2, v - s * 0.7, u + w / 2 + 2, v + (p.alias ? s * 1.6 : s * 0.7)];
+    if (!room && !isTarget && !free(box)) continue;
+    taken.push(box);
+    const color = isTarget ? "#c2410c" : room ? "#1f2328" : "#5c6470";
+    label(p.label, u, v, s, color, weight, !room);
+    if (p.alias) label(p.alias, u, v + s * 1.05, s * 0.85, isTarget ? "#c2410c" : "#5c6470", 500, !room);
+    if (isTarget) pill(st.state === "done" ? "도착" : "목적지", u, v - s * 1.35);
+  }
+  for (const a of meta.anchors) {
+    const isTarget = st && st.target && st.target.kind === "anchor" && st.target.id === a.id;
+    if (zoom < 2.2 && !isTarget) continue;
+    const [u, v] = px(a.xy[0], a.xy[1]), s = base - 2;
+    ctx.beginPath(); ctx.moveTo(u, v - 5); ctx.lineTo(u + 5, v); ctx.lineTo(u, v + 5); ctx.lineTo(u - 5, v);
+    ctx.closePath(); ctx.fillStyle = isTarget ? "#e8590c" : "#5c6470"; ctx.fill();
+    ctx.font = font(s, 500, false);
+    const w = ctx.measureText(a.label).width, box = [u - w / 2, v - 12 - s * 0.7, u + w / 2, v - 12 + s * 0.7];
+    if (!isTarget && !free(box)) continue;
+    taken.push(box);
+    label(a.label, u, v - 12, s, isTarget ? "#e8590c" : "#5c6470", isTarget ? 650 : 500, false);
+  }
+}
+
+function placeName(id) {
+  const p = byId[id];
+  return p ? p.label + (p.alias ? ` (${p.alias})` : "") : id || "-";
+}
+
+function update() {
+  $("instr").textContent = st.instruction ? `"${st.instruction}"` : "지시를 기다리는 중";
+  if (st.target) {
+    $("target").textContent = st.target.kind === "place" ? placeName(st.target.id)
+      : `${st.target.label}${st.target.place ? " · " + placeName(st.target.place) : ""}`;
+    $("match").textContent = "";
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = `${st.target.match}: "${st.target.matched}"`;
+    $("match").append(chip);
+  } else { $("target").textContent = "-"; $("match").textContent = ""; }
+  const route = (st.route || []).map((id) => byId[id] ? byId[id].label : id);
+  $("route").textContent = route.length ? route.join(" → ") : "-";
+  let state = STATE[st.state] || st.state || "-";
+  if (st.remaining_m != null) state += ` · 남은 ${st.remaining_m.toFixed(1)} m`;
+  if (st.elapsed_s != null) state += ` · ${Math.round(st.elapsed_s)} s`;
+  $("state").textContent = state;
+  $("place").textContent = st.place ? placeName(st.place) : "-";
+  $("loc").textContent = st.localization || "-";
+  const log = $("log");
+  log.replaceChildren(...st.events.slice().reverse().map((e) => {
+    const li = document.createElement("li"), t = document.createElement("span"), s = document.createElement("b"),
+          x = document.createElement("span");
+    t.textContent = e.t == null ? "" : `${e.t.toFixed(1)} s`; s.textContent = e.state; x.textContent = e.text;
+    li.append(t, s, x); return li;
+  }));
+  const banner = $("banner"), r = st.result;
+  if (r) {
+    let text, color;
+    if (r.state === "done" && r.in_target_place) {
+      text = `✓ 도착: ${placeName(st.target.place)} · 목표점까지 ${r.goal_distance_m} m`; color = "var(--ok)";
+    } else if (r.state === "done") {
+      text = `도착했지만 목적지 방 밖: ${r.place || "-"} · 목표점까지 ${r.goal_distance_m} m`; color = "var(--warn)";
+    } else {
+      text = `${r.state === "canceled" ? "취소됨" : "✗ 실패"}${r.reason ? ": " + r.reason : ""}`; color = "var(--bad)";
+    }
+    banner.textContent = text; banner.style.background = color; banner.hidden = false;
+  } else banner.hidden = true;
+}
+
+async function poll() {
+  try {
+    const res = await fetch("state.json", { cache: "no-store" });
+    st = await res.json();
+    $("conn").hidden = true;
+    update();
+  } catch (err) {
+    $("conn").hidden = false;
+  }
+  setTimeout(poll, 250);
+}
+
+function save() {
+  const head = 52, out = document.createElement("canvas");
+  out.width = cv.width; out.height = cv.height + Math.round(head * dpr);
+  const c = out.getContext("2d");
+  c.fillStyle = "#fff"; c.fillRect(0, 0, out.width, out.height);
+  c.drawImage(cv, 0, Math.round(head * dpr));
+  c.scale(dpr, dpr); c.textBaseline = "middle";
+  c.fillStyle = "#1f2328"; c.font = "600 14px system-ui, sans-serif";
+  c.fillText(st && st.instruction ? `"${st.instruction}"` : "naive-pp", 12, 16);
+  c.fillStyle = "#5c6470"; c.font = "13px system-ui, sans-serif";
+  c.fillText(`${$("target").textContent} · ${$("state").textContent} · ${$("route").textContent}`, 12, 36);
+  out.toBlob((blob) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `minimap_${meta.package}_${Date.now()}.png`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+}
+
+let dragFrom = null;
+cv.addEventListener("pointerdown", (e) => { dragFrom = [e.clientX, e.clientY]; cv.classList.add("drag");
+  cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", (e) => {
+  if (!dragFrom) return;
+  view.tx += e.clientX - dragFrom[0]; view.ty += e.clientY - dragFrom[1]; dragFrom = [e.clientX, e.clientY];
+  setFollow(false);
+});
+cv.addEventListener("pointerup", () => { dragFrom = null; cv.classList.remove("drag"); });
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0015), s = Math.min(fitScale * 24, Math.max(fitScale * 0.6, view.s * f));
+  const k = s / view.s;
+  view.tx = e.clientX - (e.clientX - view.tx) * k; view.ty = e.clientY - (e.clientY - view.ty) * k; view.s = s;
+}, { passive: false });
+function setFollow(on) {
+  follow = on; $("follow").setAttribute("aria-pressed", String(on));
+  if (on && view.s < fitScale * 2) {  // zoom in around the screen centre
+    const k = fitScale * 3 / view.s, cx = innerWidth / 2, cy = innerHeight / 2;
+    view.tx = cx - (cx - view.tx) * k; view.ty = cy - (cy - view.ty) * k; view.s *= k;
+  }
+}
+$("fit").onclick = () => { setFollow(false); fit(); };
+$("follow").onclick = () => setFollow(!follow);
+$("save").onclick = save;
+addEventListener("resize", () => { const was = view.s === fitScale; resize(); if (was) fit(); });
+
+(async () => {
+  meta = await (await fetch("meta.json")).json();
+  byId = Object.fromEntries(meta.places.map((p) => [p.id, p]));
+  $("pkg").textContent = meta.package;
+  img = new Image();
+  img.src = "map.png";
+  await img.decode();
+  resize(); fit(); poll(); requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

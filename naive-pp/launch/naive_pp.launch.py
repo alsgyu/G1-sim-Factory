@@ -11,8 +11,9 @@
         instruction:="Go to the pump room" output_dir:=/ws/naive-pp/outputs/run1
 
 Nodes: map_file (the package's SLAM map on /slam_map, rooms and doorways on /slam/semantic_map), localizer
-(TF map -> odom from LiDAR scans), naive_pp (planner), path_follower (/plan -> /cmd_vel), optionally g1_sim
-(MuJoCo, sim:=true) and naive_pp_client (instruction:=..., the launch ends when it does).
+(TF map -> odom from LiDAR scans), naive_pp (planner), path_follower (/plan -> /cmd_vel), minimap (web page at
+http://localhost:8765, minimap:=false to leave out), optionally g1_sim (MuJoCo, sim:=true) and naive_pp_client
+(instruction:=..., the launch ends when it does).
 """
 import json
 import math
@@ -49,6 +50,8 @@ DEFAULTS = {
     "remaps": ("", "Comma-separated topic remaps for every node, e.g. /livox/lidar:=/point_cloud"),
     "max_speed": ("0.4", "path_follower forward speed limit (m/s)"),
     "goal_mode": ("center", "center: stand in the middle of the room | entrance: just inside its main doorway"),
+    "minimap": ("true", "Serve the live minimap (map, room names, robot, plan, target room) at http://localhost:PORT"),
+    "minimap_port": ("8765", "Port of the minimap web page"),
     "instruction": ("", "Send this instruction once localized, record the run in output_dir, then stop everything"),
     "output_dir": (str(HERE/"outputs/run"), "Where naive_pp_client writes feedback, trajectory and summary"),
     "timeout_s": ("1200.0", "naive_pp_client gives up after this many simulation seconds"),
@@ -92,6 +95,9 @@ def setup(context):
         node("g1_factory.ros2.follower_node", "path_follower", {**sim_time, "max_speed_mps": arg("max_speed"),
                                                                 "goal_timeout_s": 3600.0}, remaps),
     ]
+    if arg("minimap").lower() == "true":
+        actions.append(node("naive_pp.ros.minimap_node", "minimap", {**sim_time, "package": package,
+                                                                     "port": int(arg("minimap_port"))}, remaps))
     if arg("sim").lower() == "true":
         out = Path(arg("output_dir"))
         actions.insert(0, node("g1_factory.ros2.sim_node", "g1_sim", {

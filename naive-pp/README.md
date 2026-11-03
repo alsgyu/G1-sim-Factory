@@ -1,6 +1,6 @@
 # naive-pp: 지시문 → 로봇 지도 위 장소 → 경로 계획 → G1 이동
 
-외부 에이전트가 "Go to the operations control room and check whether the status indicator lights on the server rack are on." 같은 지시를 보내면, 지시문에서 **로봇이 만든 지도 위의 장소**를 규칙으로 찾고, 장소 그래프(토폴로지)로 경로를 정한 뒤, 점유 지도 위 A*로 길을 만들어 G1을 그 장소까지 걷게 합니다. VLN·VLM은 쓰지 않고, 도착 후 확인 동작도 하지 않습니다. 길 찾기만 합니다.
+외부 에이전트가 "Go to the operations control room and check whether the status indicator lights on the server rack are on." 같은 지시를 보내면, 지시문에 나온 장소 이름을 **로봇이 만든 지도에 사람이 붙인 장소 정보**(방·통로 이름, 별칭, 기준점)와 규칙으로 맞춰 목표 장소(장소 그래프의 노드)를 찾습니다. 그 장소의 빈 공간 안에 목표 좌표를 정하고, 장소 그래프(토폴로지)로 지날 방과 출입구를 정한 뒤, 점유 지도 위 A*로 길을 만들어 G1을 그 장소까지 걷게 합니다. VLN·VLM은 쓰지 않고, 도착 후 확인 동작도 하지 않습니다. 길 찾기만 합니다. 걷는 모습은 브라우저 [미니맵](#미니맵)에서 방 이름과 함께 봅니다.
 
 | 항목 | 내용 |
 |---|---|
@@ -25,6 +25,7 @@ flowchart LR
   LOC -- "TF map→odom" --> A
   SIM -- "/livox/lidar" --> A
   A -- "/vln/feedback" --> EA
+  A -- "/plan, /vln/feedback" --> MM[미니맵<br/>브라우저 :8765]
 ```
 
 ### 1. 지시 해석 (`naive_pp/grounding.py`)
@@ -41,7 +42,7 @@ flowchart LR
 
 ### 2. 목표 자세 (`naive_pp/planner.py`)
 
-방이나 통로가 목표이면, 그 장소의 빈 칸 중 장애물에서 0.8 m 이상 떨어진 칸 가운데 장소 중앙에 가장 가까운 칸에 섭니다. 문간이나 설비 바로 앞이 아니라 방 안의 넓은 곳에 서고, 마지막 1 m를 걸어 들어온 방향(문 → 방 안쪽)을 바라봅니다. `goal_mode:=entrance`이면 주 출입구 바로 안쪽에 섭니다. 기준점은 그 점에서 가장 가까운 통행 가능 칸, 좌표 지시는 주어진 자세입니다.
+장소 그래프의 노드에 저장된 한 점을 그대로 쓰지 않고, 그 장소의 빈 칸에서 목표 좌표를 계산합니다. 방이나 통로가 목표이면, 그 장소의 빈 칸 중 장애물에서 0.8 m 이상 떨어진 칸 가운데 장소 중앙에 가장 가까운 칸에 섭니다. 문간이나 설비 바로 앞이 아니라 방 안의 넓은 곳에 서고, 마지막 1 m를 걸어 들어온 방향(문 → 방 안쪽)을 바라봅니다. `goal_mode:=entrance`이면 주 출입구 바로 안쪽에 섭니다. 기준점은 그 점에서 가장 가까운 통행 가능 칸, 좌표 지시는 주어진 자세입니다.
 
 ### 3. 토폴로지 경로 (`naive_pp/topology.py`)
 
@@ -123,7 +124,7 @@ bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0 --no-map-tf
 ```
 
 ```bash
-# 터미널 2: map_file + localizer + naive_pp + path_follower
+# 터미널 2: map_file + localizer + naive_pp + path_follower + minimap (http://localhost:8765)
 bash scripts/g1_docker.sh ros2 launch naive-pp/launch/naive_pp.launch.py initial_pose:=0,0,0
 ```
 
@@ -137,6 +138,23 @@ bash scripts/g1_docker.sh python3 scripts/send_instruction.py "Go to the operati
 - 지시를 하나 보내고 기록한 뒤 끝내려면 `instruction:="..." output_dir:=/ws/naive-pp/outputs/<이름>`을 붙입니다.
 - VLN 스택(`launch/g1_hvln.launch.py`)과 동시에 띄우지 마세요. 둘 다 `/vln/instruction`을 받습니다.
 - Isaac Sim 실행은 아직 해 보지 않았습니다(이 결과는 GPU 없는 Mac의 MuJoCo). 토픽, TF, QoS는 상위 저장소의 VLN 스택이 Isaac Sim에서 쓰는 것과 같습니다.
+
+### 미니맵
+
+터미널 2의 launch가 미니맵도 띄웁니다. 같은 컴퓨터의 브라우저에서 http://localhost:8765 를 엽니다. Docker가 호스트 네트워크를 쓰므로 다른 컴퓨터에서는 `http://<우분투 IP>:8765`입니다.
+
+- 지도 묶음의 점유 지도와 방마다 색, 이름(라벨 + 한국어 별칭)
+- 로봇: `localizer`가 정한 지도 좌표 자세(`/odom` + `map → odom`, naive_pp가 계획에 쓰는 자세와 같음). 시뮬레이터 정답이 아닙니다. 위치를 못 찾았으면 회색입니다.
+- 목적지 방(주황 테두리, "목적지" 표시), 토폴로지 경로의 방(파란 점선)과 출입구, 계획 경로(주황), 지나온 길(파랑), 목표점(초록)
+- 지시문, 찾은 목적지와 맞은 말(`exact: "operations control room"`), 경로, 남은 거리, 지금 있는 방, 피드백 기록
+- 도착하면 "✓ 도착: Operations control (관제실) · 목표점까지 0.14 m" 배너
+- 휠로 확대, 끌어서 이동, "로봇 따라가기", "PNG 저장"(지시문과 상태를 위에 적은 그림)
+
+`minimap:=false`로 끄고 `minimap_port:=8080`으로 포트를 바꿉니다. 기록한 실행(`output_dir`)은 ROS 없이 다시 볼 수 있습니다. 배속은 `--speed`, 반복은 `--loop`입니다.
+
+```bash
+bash scripts/g1_docker.sh python3 naive-pp/scripts/minimap_replay.py naive-pp/outputs/e2e_servers_en --speed 4
+```
 
 ### MuJoCo (개발용, GPU 없이)
 
@@ -181,6 +199,7 @@ bash scripts/g1_docker.sh python3 naive-pp/scripts/transfer_annotations.py maps/
 | `/plan` | `nav_msgs/Path` | naive_pp → path_follower | 지도 좌표, 0.1 m 간격, 마지막 자세 = 도착 방향, stamp = 계획 id |
 | `/naive_pp/goal`, `/naive_pp/route` | `PoseStamped`, `Path` (latched) | naive_pp → RViz | 목표 자세, 로봇 → 출입구들 → 목표 |
 | `/slam_map`, `/slam/semantic_map` | `OccupancyGrid`, `String` (latched) | map_file → 누구나 | 지도 묶음의 점유 지도, 방·출입구 |
+| `http://localhost:8765` | 웹 페이지 | minimap → 브라우저 | 지도, 방 이름, 로봇 자세, 계획, 목적지 방, 피드백 |
 | 구독: `/odom`, `/tf`, `/localization/status`, `/livox/lidar`, `/nav/status` | | | 자세, 위치 추정 상태, 지도에 없는 장애물, 도착/실패 |
 
 지시 형식:
@@ -200,7 +219,7 @@ Go to the operations control room and check whether ...          자연어
 |---|---|
 | `accepted` | `target` {kind, id, label}, `match` (exact/partial/keyword/id/pose), `matched`, `waypoints`, `also_mentioned` |
 | `waiting` | 아직 위치를 못 찾음 |
-| `planned`, `replanned` | `goal` [x, y, yaw], `route`, `route_text`, `doors`, `length_m`, `search` (route/map), `planning_s` |
+| `planned`, `replanned` | `goal` [x, y, yaw], `route`, `route_places`, `route_text`, `doors`, `length_m`, `search` (route/map), `planning_s` |
 | `replanning`, `plan_failed` | `reason` |
 | `progress` (5초마다) | `remaining_m`, `place`, `pose`, `travelled_m`, `lidar_obstacle_cells` |
 | `done`, `failed`, `canceled` | `pose`, `place`, `in_target_place`, `goal_distance_m`, `elapsed_s`, `travelled_m`, `replans`, `reason` |
@@ -221,12 +240,15 @@ Go to the operations control room and check whether ...          자연어
 | `naive_pp/planner.py` | 목표 자세, 경로 제한 A*, 단축, `NaivePlanner` |
 | `naive_pp/ros/pp_node.py` | ROS 2 노드 `naive_pp` |
 | `naive_pp/ros/client_node.py` | 시험용 외부 에이전트: 지시 1회, 기록, 종료 |
-| `launch/naive_pp.launch.py` | map_file + localizer + naive_pp + path_follower (+ MuJoCo, + client) |
+| `naive_pp/minimap.py`, `minimap.html` | 미니맵 웹 페이지 (ROS 없음) |
+| `naive_pp/ros/minimap_node.py` | ROS 2 노드 `minimap`: 토픽 → 미니맵 |
+| `launch/naive_pp.launch.py` | map_file + localizer + naive_pp + path_follower + minimap (+ MuJoCo, + client) |
 | `configs/place_keywords.yaml` | 방마다 사람이 적은 설비 종류 (장소 이름이 없을 때만) |
 | `configs/instructions.yaml` | 시험 지시 20개와 기대 장소 |
 | `maps/campus_dev/` | MuJoCo에서 G1이 FAST-LIO2로 만든 지도 + 사람 주석 (상위 저장소 README의 지도) |
 | `maps/campus_isaac/` | Isaac Sim에서 G1이 만든 지도 + 옮긴 주석 |
 | `scripts/plan_offline.py`, `report_run.py`, `transfer_annotations.py` | 오프라인 계획·그림, 실행 보고, 주석 옮기기 |
+| `scripts/minimap_replay.py` | 기록한 실행을 미니맵에서 다시 보기 (ROS 없음) |
 
 `evaluation.json`(지도 좌표와 시뮬레이터 좌표의 관계)은 시뮬레이션 평가와 `initial_pose:=spawn`에만 쓰고, 계획 노드는 읽지 않습니다.
 
