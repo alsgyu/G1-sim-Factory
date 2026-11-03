@@ -175,4 +175,5 @@ SLAM으로 만든 기하 지도 위에 의미 정보를 층층이 쌓은 3D 장�
 - [Ubuntu와 Isaac Sim 실행 순서](docs/UBUNTU_ISAAC.md)
 - [ROS 2 인터페이스](docs/ROS2_INTERFACE.md)
 - [검증 기록](docs/VALIDATION.md)
+- [VLN 없이 지시문 → 로봇 지도 위 장소 → A* 경로 계획 (naive-pp, 별도 저장소 G1-pp. 이 저장소를 submodule로 씀)](https://github.com/alsgyu/G1-pp)
 - [출처와 라이선스](THIRD_PARTY.md)
