@@ -349,7 +349,7 @@ class VLNNavigatorNode(Node):
                 self.state, self.arrival = "settling", self.now()
                 return
             center, near = located
-            if behind_partition(center[:2], self.pose[:2], self.costmap.occupied):
+            if behind_partition(center[:2], self.pose[:2], self.costmap.occupied, grid=self.costmap.grid):
                 self.navigator.history.append("the object you selected is behind a wall or glass partition (depth "
                                               "hit the wall): walk around to it through a doorway first")
                 self.state, self.arrival = "settling", self.now()

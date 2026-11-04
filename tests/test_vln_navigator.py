@@ -276,7 +276,7 @@ def test_waypoints_are_offered_when_the_robot_brushed_an_obstacle(roadmap):
 ])
 def test_targets_behind_glass_partitions_are_not_approached(roadmap, target, robot, through_glass):
     from g1_factory.vln_navigator import behind_partition
-    assert behind_partition(target, robot, roadmap.costmap.occupied) is through_glass
+    assert behind_partition(target, robot, roadmap.costmap.occupied, grid=roadmap.costmap.grid) is through_glass
 
 
 def test_approach_targets_outside_the_step_region_are_rejected():

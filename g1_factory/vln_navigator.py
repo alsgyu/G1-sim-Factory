@@ -581,7 +581,45 @@ def outside_region(target_xy, regions: dict, region: str | None, margin=3.0) -> 
     return not (x0-margin <= x <= x1+margin and y0-margin <= y <= y1+margin)
 
 
-def behind_partition(target_xy, robot_xy, occupied, max_wall=0.35, open_behind=0.6, step=0.05) -> bool:
+def _grid_partition(target, direction, span, grid, occupied, max_wall, open_behind):
+    """Measure the run containing the target and the free run immediately behind it (metres)."""
+    # Distances on the viewing ray are signed, with zero at the depth return.
+    start = -min(span, max_wall + grid.resolution)
+    end = max_wall + open_behind + grid.resolution
+    cuts = [start, end]
+    for axis, velocity in enumerate(direction):
+        if velocity == 0:
+            continue
+        offset = target[axis] - grid.origin[axis]
+        first, last = sorted(((offset + start * velocity) / grid.resolution,
+                              (offset + end * velocity) / grid.resolution))
+        for index in range(math.floor(first) + 1, math.ceil(last)):
+            distance = (index * grid.resolution - offset) / velocity
+            if start < distance < end:
+                cuts.append(distance)
+    cuts.sort()
+
+    # Classify one interior point per cell. Cells touched only at a corner
+    # have no length along the ray. Keep the same unknown/outside policy as occupied().
+    tol = 1e-9 * grid.resolution
+    runs = []
+    for lo, hi in zip(cuts, cuts[1:]):
+        if hi - lo <= tol:
+            continue
+        blocked = occupied(target + (0.5 * (lo + hi)) * direction)
+        if runs and runs[-1][0] == blocked:
+            runs[-1] = (blocked, runs[-1][1], hi)
+        else:
+            runs.append((blocked, lo, hi))
+    for i in range(1, len(runs) - 1):
+        blocked, front, back = runs[i]
+        if blocked and front <= tol and back >= -tol:
+            return bool(back - front <= max_wall + tol and runs[i+1][2] - back >= open_behind - tol)
+    return False
+
+
+def behind_partition(target_xy, robot_xy, occupied, max_wall=0.35, open_behind=0.6, step=0.05,
+                     *, grid=None) -> bool:
     """The localized point sits on a thin mapped wall with open floor behind it.
 
     Depth stops at glass partitions and windows, so an object seen through one is localized on the wall
@@ -592,7 +630,12 @@ def behind_partition(target_xy, robot_xy, occupied, max_wall=0.35, open_behind=0
     if not occupied(target):
         return False
     span = float(np.linalg.norm(target-robot))
-    away = (target-robot)/max(span, 1e-6)
+    if span == 0:
+        return False
+    away = (target-robot)/span
+    if grid is not None:
+        return _grid_partition(target, away, span, grid, occupied, max_wall, open_behind)
+    # Legacy callers can supply an occupancy predicate without grid geometry.
     s = 0.0
     while s < span and occupied(target-s*away):
         s += step
