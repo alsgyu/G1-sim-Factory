@@ -124,7 +124,8 @@ bash scripts/run_isaac_sim.sh --gui --spawn -12 3.8 0 --no-map-tf
 
 ```bash
 # 터미널 2: map_file + localizer + naive_pp + path_follower
-bash scripts/g1_docker.sh ros2 launch naive-pp/launch/naive_pp.launch.py initial_pose:=0,0,0
+bash scripts/g1_docker.sh ros2 launch naive-pp/launch/naive_pp.launch.py \
+    package:=/ws/naive-pp/maps/campus_isaac initial_pose:=-0.2,2.2,0
 ```
 
 ```bash
@@ -133,7 +134,8 @@ bash scripts/g1_docker.sh python3 scripts/send_instruction.py "Go to the operati
 ```
 
 - `initial_pose`는 지도 묶음 좌표의 대략적인 시작 자세(1.5 m, 20° 안)입니다. `0,0,0`은 지도를 만들 때 출발한 자리이고, `campus_dev` 지도는 스폰 (-12, 3.8, 0)에서 만들었습니다. 다른 곳에서 시작하면 지도에서 읽은 자세를 주거나, 비워 두고 RViz "2D Pose Estimate"(`/initialpose`)로 줍니다. 시뮬레이션에서만 `initial_pose:=spawn spawn:=x,y,yaw`이 스폰을 지도 좌표로 옮겨 줍니다(사람이 지도에서 짚어 주는 것을 대신함).
-- Isaac Sim 지도로 바꾸려면 `package:=naive-pp/maps/campus_isaac`. 이 지도의 원점은 (-11.71, 1.66) 근처에서 시작한 매핑이라, 스폰 (-12, 3.8, 0)이면 `initial_pose:=-0.2,2.2,0`입니다.
+- Isaac Sim에서는 Isaac Sim LiDAR로 만든 `campus_isaac` 지도를 씁니다. 이 지도의 원점은 (-11.71, 1.66) 근처에서 시작한 매핑이라, 스폰 (-12, 3.8, 0)이면 `initial_pose:=-0.2,2.2,0`입니다. `package`를 빼면 `campus_dev`(MuJoCo에서 만든 지도, `initial_pose:=0,0,0`)를 씁니다.
+- Isaac Sim 컨테이너와 naive-pp 컨테이너는 모두 Fast DDS(`g1_docker.sh` 기본값)와 같은 `ROS_DOMAIN_ID`를 씁니다. `G1_DDS=cyclonedds`는 MuJoCo에서만 붙입니다.
 - 지시를 하나 보내고 기록한 뒤 끝내려면 `instruction:="..." output_dir:=/ws/naive-pp/outputs/<이름>`을 붙입니다.
 - VLN 스택(`launch/g1_hvln.launch.py`)과 동시에 띄우지 마세요. 둘 다 `/vln/instruction`을 받습니다.
 - Isaac Sim 실행은 아직 해 보지 않았습니다(이 결과는 GPU 없는 Mac의 MuJoCo). 토픽, TF, QoS는 상위 저장소의 VLN 스택이 Isaac Sim에서 쓰는 것과 같습니다.
@@ -173,6 +175,8 @@ bash scripts/g1_docker.sh python3 naive-pp/scripts/transfer_annotations.py maps/
 `annotations.json`, `semantic_map.json`, `topology.png`가 새 지도 폴더에 생깁니다. 맞춤이 나쁘면(장애물 위 점 60 % 미만) 아무것도 쓰지 않고 멈춥니다. `topology.png`를 눈으로 확인한 뒤 `package:=maps/campus`로 실행합니다.
 
 ## ROS 2 인터페이스
+
+노드, 토픽, QoS, 데이터 크기, Isaac Sim과 MuJoCo의 차이는 [docs/ROS2_INTERFACE.md](docs/ROS2_INTERFACE.md)에 정리했습니다.
 
 | 토픽 | 타입 | 방향 | 내용 |
 |---|---|---|---|
