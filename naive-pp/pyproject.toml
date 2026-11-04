@@ -1,9 +1,0 @@
-[project]
-name = "naive-pp"
-version = "0.1.0"
-description = "Instruction -> place on the robot's annotated SLAM map -> topological route -> A* path for the Unitree G1 (no VLN)"
-requires-python = ">=3.10"
-dependencies = ["numpy>=1.26,<3", "PyYAML>=6.0,<7", "Pillow>=10,<13"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

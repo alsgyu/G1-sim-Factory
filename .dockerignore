@@ -1,9 +1,0 @@
-.git
-.venv*
-external
-third_party
-models
-outputs
-**/__pycache__
-.pytest_cache
-.hf_cache
