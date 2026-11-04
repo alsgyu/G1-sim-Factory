@@ -285,6 +285,23 @@ bash scripts/vln_console.sh
 
 외부 에이전트 프로그램은 같은 방식으로 `/vln/instruction`에 발행하고 `/vln/feedback`을 구독합니다(QoS: [ROS2_INTERFACE.md](ROS2_INTERFACE.md) 3·4절). 한 줄짜리 예: `bash scripts/g1_docker.sh python3 scripts/send_instruction.py "창고 서쪽 끝에 있는 빨간 소화기함까지 가서 소화기가 들어 있는지 확인해"`.
 
+### 7.2 센서 토픽 원본 녹화 (rosbag2)
+
+7절 에피소드를 돌리는 동안 머리 카메라 RGB·깊이(+ color `camera_info`), `/livox/lidar`, `/odom`, `/tf`, `/tf_static`, `/clock`을 압축 없이 녹화합니다(기본 sqlite3 저장소, 설정은 평소대로 640×480 30 Hz, LiDAR 10 Hz). 과제마다 터미널 3개:
+
+```bash
+bash scripts/run_isaac_sim.sh --spawn -12 3.8 0                                        # 터미널 1, "ready"까지 대기
+bash scripts/record_bag.sh g1bag_conveyor                                              # 터미널 2, 녹화 시작
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor  # 터미널 3
+```
+
+- 터미널 3의 launch가 `done`으로 스스로 끝나면 터미널 2에서 **Ctrl-C** → `metadata.yaml`이 써지고 `scripts/check_bag.py`가 토픽별 메시지 수와 시뮬레이션 시간 기준 주기를 출력합니다. 마지막 줄이 `OK`이면 통과. 그다음 터미널 1도 Ctrl-C.
+- 결과: `outputs/bags/<이름>/`(`metadata.yaml` + `<이름>_0.db3`). 폴더째 전달합니다. `.db3` 하나가 4 GB를 넘으므로 FAT32 외장 드라이브는 안 되고 exFAT·NTFS·ext4를 씁니다.
+- 크기: 시뮬레이션 1초에 약 51 MB(영상이 90 %). 파일럿 기준 `inspect_conveyor` 약 100 s → 약 5 GB, `inspect_servers_office`(`--spawn 12 -3.8 0`) 약 240 s → 약 12 GB, `inspect_station_paraphrase`(`--spawn 12 3.8 3.1416`) 약 170 s → 약 9 GB. 녹화 전 `df -h ~`로 여유 공간 확인.
+- 시간: bag의 타임스탬프는 받은 시각(벽시계), 메시지 `header.stamp`와 `/clock`은 시뮬레이션 시간. Isaac이 실시간보다 느리면(파일럿 RTF 약 0.63) 벽시계로는 30 Hz보다 드물게 들어오지만 시뮬레이션 시간으로는 30 Hz입니다. `check_bag.py`가 RTF를 함께 출력합니다.
+- 주기가 95 % 미만이면 `FAIL` → 5절 `sysctl`(소켓 버퍼)과 디스크 쓰기 속도를 확인하고 다시 녹화.
+- 같은 이름의 폴더가 있으면 시작하지 않습니다. 시간으로 끊으려면 `bash scripts/record_bag.sh <이름> 300`(벽시계 300초 뒤 스스로 멈춤).
+
 ## 8. 실험 행렬
 
 먼저 작은 부분(8B, seed 0, 과제 11개 = Isaac 기동 포함 약 1.5–2.5시간):
