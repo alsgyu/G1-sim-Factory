@@ -26,6 +26,7 @@ from sensor_msgs.msg import CameraInfo, CompressedImage, Image, PointCloud2
 from std_msgs.msg import String
 from tf2_ros import Buffer, TransformListener
 
+from g1_factory.approach_validation import MODES, alternatives
 from g1_factory.grounding import SemanticMap
 from g1_factory.map_package import load_package, vln_inputs
 from g1_factory.planning import CostMap, OccupancyGrid as Grid, PlanningError, astar, path_blocked, smooth_path, densify
@@ -49,6 +50,12 @@ class VLNNavigatorNode(Node):
                                 p("vlm_model", "qwen3-vl:8b-instruct").value,
                                 timeout=float(p("vlm_timeout_s", 180.0).value))
         self.standoff = float(p("standoff_m", 1.4).value)
+        self.eval_mode = p("approach_eval", "disabled").value
+        if self.eval_mode not in ("disabled", *MODES):
+            raise ValueError(f"unknown approach_eval mode: {self.eval_mode}")
+        self.audit_dir = Path(p("audit_dir", "").value)
+        if self.eval_mode != "disabled":
+            self.audit_dir.mkdir(parents=True, exist_ok=True)
         self.max_decisions = int(p("max_decisions", 40).value)
         self.settle = float(p("settle_s", 0.8).value)
         config = load_config(ROOT/"configs/factory.yaml")
@@ -343,19 +350,46 @@ class VLNNavigatorNode(Node):
                     self.state, self.arrival = "settling", self.now()
             return
         if d.action == "approach":
+            trace = None
+            if self.eval_mode != "disabled":
+                from uuid import uuid4
+                trace = uuid4().hex
+                rgb, depth, transform = self.frame
+                np.savez_compressed(self.audit_dir/f"{trace}.npz", rgb=M.image_to_numpy(rgb),
+                                    depth_m=M.depth_to_metres(depth) if depth is not None else np.empty(0),
+                                    map_from_camera=transform, intrinsics=self.info.k, bbox=d.bbox,
+                                    rgb_stamp=M.to_seconds(rgb.header.stamp),
+                                    depth_stamp=M.to_seconds(depth.header.stamp) if depth is not None else -1)
+            def audit(outcome, **fields):
+                if trace is not None:
+                    event = dict(id=trace, mode=self.eval_mode, time=self.now(), pose=list(self.pose),
+                                 outcome=outcome, **fields)
+                    with (self.audit_dir/"events.jsonl").open("a") as f:
+                        f.write(json.dumps(event) + "\n")
             located = self.localize(d.bbox)
             if located is None:
+                audit("no_depth")
                 self.navigator.history.append("the target box had no valid depth; look again")
                 self.state, self.arrival = "settling", self.now()
                 return
             center, near = located
-            if behind_partition(center[:2], self.pose[:2], self.costmap.occupied, grid=self.costmap.grid):
+            options = None
+            if trace is not None:
+                options = alternatives(center[:2], near[:2], self.pose[:2], self.costmap, self.standoff)
+                audit("candidates", target=center[:2].tolist(), near=near[:2].tolist(),
+                      standoff=self.standoff, options=options)
+                hold = options[self.eval_mode]["hold"]
+            else:
+                hold = behind_partition(center[:2], self.pose[:2], self.costmap.occupied, grid=self.costmap.grid)
+            if hold:
+                audit("hold")
                 self.navigator.history.append("the object you selected is behind a wall or glass partition (depth "
                                               "hit the wall): walk around to it through a doorway first")
                 self.state, self.arrival = "settling", self.now()
                 return
             step = self.navigator.task.current if self.navigator.task else None
             if step and outside_region(center[:2], self.roadmap.regions, step.region):
+                audit("outside_region")
                 found = self.region_labels.get(region_at(self.roadmap.regions, center[:2]), "another area")
                 self.navigator.history.append(
                     f"the object you selected is in {found}, not in {self.region_labels.get(step.region, step.region)}: "
@@ -363,20 +397,25 @@ class VLNNavigatorNode(Node):
                 self.state, self.arrival = "settling", self.now()
                 return
             self.target_xy = [round(float(center[0]), 3), round(float(center[1]), 3)]
-            goal = approach_pose(center[:2], near[:2], self.pose[:2], self.standoff, self.costmap.occupied)
+            goal = (options[self.eval_mode]["goal"] if options is not None else
+                    approach_pose(center[:2], near[:2], self.pose[:2], self.standoff, self.costmap.occupied))
             self.report("target_located", target_xy=self.target_xy, approach=[round(v, 3) for v in goal])
             snapped = self.costmap.nearest_traversable(goal[:2], 1.5)
             if snapped is not None and already_in_front(snapped, self.pose[:2]):
+                audit("already_close", snapped=list(map(float, snapped)))
                 self.navigator.history.append("standing in front of the target")
                 d.action = "stop"
                 return self.act(d)
             if snapped is None:
+                audit("no_free_pose")
                 self.navigator.history.append("no free floor in front of the target")
                 self.state, self.arrival = "settling", self.now()
                 return
             try:
                 self.send_path(self.segment((snapped[0], snapped[1], goal[2])), goal[2], "approach")
+                audit("path_sent", snapped=list(map(float, snapped)))
             except PlanningError as exc:
+                audit("unreachable")
                 self.navigator.history.append(f"cannot reach the target ({exc})")
                 self.state, self.arrival = "settling", self.now()
             return

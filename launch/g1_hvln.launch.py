@@ -35,6 +35,7 @@ DEFAULTS = {
     "planner_mode": ("vln", "vln: VLN navigator (vision+instruction picks waypoints); oracle/rule: map-lookup + A* baselines"),
     "vlm_url": ("http://127.0.0.1:11434/v1", "OpenAI-compatible endpoint (Ollama, vLLM, ...)"),
     "vlm_model": ("qwen3-vl:8b-instruct", "Model name at vlm_url"),
+    "approach_eval": ("disabled", "Simulation comparison: disabled, depth, gate, edge, legacy, full"),
     "condition": ("", "Label stored in summary.json for experiment tables"),
     "seed": ("0", "Spawn perturbation seed; 0 = exact task spawn"),
     "spawn_noise_m": ("0.3", "Max spawn position perturbation (m) when seed != 0"),
@@ -107,7 +108,8 @@ def setup(context):
                                              "vlm_url": arg("vlm_url"), "vlm_model": arg("vlm_model"), **package},
              remaps),
         (node("vln_navigator_node", "vln_navigator", {**sim_time, "vlm_url": arg("vlm_url"),
-                                                      "vlm_model": arg("vlm_model"), **package},
+                                                      "vlm_model": arg("vlm_model"), "approach_eval": arg("approach_eval"),
+                                                      "audit_dir": str(out/"approaches"), **package},
               remaps+(["/map:=/slam_map"] if arg("map_file") or arg("map_package") else []))
          if arg("planner_mode") == "vln" else node("planner_node", "global_planner", sim_time, remaps)),
         node("follower_node", "path_follower", sim_time, remaps),
