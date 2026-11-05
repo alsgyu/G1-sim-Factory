@@ -128,6 +128,8 @@ class RoadMap:
         """Farthest straight-line-reachable waypoint per direction sector, numbered
         from the most frontal one."""
         xy = np.asarray(xy, float)
+        if not len(self.nodes):
+            return []
         delta = self.nodes-xy
         dist = np.linalg.norm(delta, axis=1)
         near = np.nonzero((dist >= min_range) & (dist <= max_range))[0]

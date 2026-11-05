@@ -365,6 +365,8 @@ class VLNNavigator:
         """One VLM decision (plus a plate check for approaches). intrinsics = (fx, fy, cx, cy, w, h)."""
         if self.task is None or self.task.current is None:
             return Decision("finished")
+        if not len(self.roadmap.nodes):
+            return Decision("failed", note="occupancy map has no traversable waypoints")
         if self.decisions >= self.max_decisions:
             return Decision("failed", note="decision limit reached")
         self.decisions += 1
