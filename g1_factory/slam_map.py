@@ -6,7 +6,7 @@ Frames
                x and y along the main walls, x the wall direction closest to the robot's heading at start-up (so
                maps from the same start pose match), rooms are axis-aligned rectangles for annotation. Scans are first levelled with the gravity measured at start-up;
                the final levelling fits a plane to the floor of the whole 3-D map, because a robot that sways while
-               it stands up gives a gravity estimate that is off by about a degree (1 deg = 0.7 m over 40 m).
+               it stands up gives a gravity estimate that is off by a degree or more (1 deg = 0.7 m over 40 m).
                A person annotates this map; an external agent receives it with the annotations.
 
 Occupancy (0.1 m cells, nav_msgs/OccupancyGrid values) from the levelled voxel map (0.1 m, 0.05 m in height): a
@@ -51,15 +51,29 @@ def floor_height(points: np.ndarray, sensor=(0.0, 0.0, 0.0), ring=(1.0, 8.0), bi
     return float((edges[k]+edges[k+1])/2)
 
 
-def fit_floor_plane(points: np.ndarray, near_m=15.0) -> np.ndarray:
-    """Plane z = a x + b y + c through the floor: fitted near the origin first, then grown over the whole map."""
+def fit_floor_plane(points: np.ndarray, seed_m=4.0, steps_m=(8.0, 16.0, 32.0, None)) -> np.ndarray:
+    """Plane z = a x + b y + c through the floor: fitted near the origin first, then grown over the whole map.
+
+    The window follows the plane outwards in steps (4, 8, 16, 32 m, all). A window fixed around z = 0 out to 15 m
+    held only while the gravity measured at start-up was within about 2 deg: at 3 deg the floor 15 m away is 0.8 m
+    off, out of the window, while the posts and shelves of racks stand in it at every height, and the fit settled
+    on a plane 1.5-2 deg off (an Isaac campus map of 2026-11-06: floor marked as obstacle on one side of the hall,
+    unknown on the other, a free strip between).
+    """
     p = np.asarray(points, float)
     A = np.c_[p[:, 0], p[:, 1], np.ones(len(p))]
-    sel = (np.hypot(p[:, 0], p[:, 1]) < near_m) & (np.abs(p[:, 2]) < 0.4)
+    r = np.hypot(p[:, 0], p[:, 1])
+    sel = (r < seed_m) & (np.abs(p[:, 2]) < 0.4)
     if sel.sum() < 50:
         sel = np.abs(p[:, 2]) < 0.4
     coef = np.linalg.lstsq(A[sel], p[sel, 2], rcond=None)[0]
-    for window in (0.3, 0.2, 0.12, 0.08):
+    for radius in steps_m:
+        sel = np.abs(p[:, 2]-A@coef) < 0.3
+        if radius is not None:
+            sel &= r < radius
+        if sel.sum() >= 50:
+            coef = np.linalg.lstsq(A[sel], p[sel, 2], rcond=None)[0]
+    for window in (0.2, 0.12, 0.08):
         sel = np.abs(p[:, 2]-A@coef) < window
         coef = np.linalg.lstsq(A[sel], p[sel, 2], rcond=None)[0]
     return coef

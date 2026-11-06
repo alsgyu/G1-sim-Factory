@@ -69,6 +69,37 @@ def test_tilted_scans_are_levelled_on_the_floor_plane():
     assert abs(np.median(out["cloud"][out["cloud"][:, 2] < 0.1, 2])) < 0.03
 
 
+def rack_hall():
+    """A 40 x 30 m hall, the start 2 m from the west wall, walls 3 m high and rack posts with shelves all over it,
+    as 0.1 m voxel centres (0.05 m in height), floor at z = 0."""
+    xs, ys = np.meshgrid(np.arange(-2.0, 38.0, 0.1), np.arange(-15.0, 15.0, 0.1))
+    zs = np.arange(0.0, 3.0, 0.05)
+    parts = [np.c_[xs.ravel(), ys.ravel(), np.zeros(xs.size)]]
+    def box(x0, x1, y0, y1, heights):
+        X, Y, Z = np.meshgrid(np.arange(x0, x1, 0.1), np.arange(y0, y1, 0.1), heights)
+        return np.c_[X.ravel(), Y.ravel(), Z.ravel()]
+    parts += [box(-2.0, 38.0, -15.0, -14.95, zs), box(-2.0, 38.0, 15.0, 15.05, zs),
+              box(-2.0, -1.95, -15.0, 15.0, zs), box(38.0, 38.05, -15.0, 15.0, zs)]
+    for cx in np.arange(3.0, 36.0, 3.0):
+        for cy in np.arange(-13.0, 14.0, 2.5):
+            parts += [box(cx, cx+0.2, cy, cy+0.2, zs), box(cx, cx+1.2, cy, cy+0.8, (0.5, 1.0, 1.5))]
+    return np.concatenate(parts)
+
+
+def test_a_start_tilt_of_several_degrees_is_levelled_among_racks():
+    """3-6 deg of gravity error at start-up: the floor 15 m away is 0.8-1.6 m off while rack posts stand at every
+    height; the fit follows the floor outwards instead of settling 2 deg off (Isaac campus map of 2026-11-06)."""
+    hall = rack_hall()
+    for deg in (3.0, 6.0):
+        for axis in (0.0, 1.2, 2.6, 4.0):
+            k = np.array([math.cos(axis), math.sin(axis), 0.0])
+            K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+            t = math.radians(deg)
+            tilt = np.eye(3)+math.sin(t)*K+(1-math.cos(t))*K@K
+            R, dz = S.floor_levelling(S.fit_floor_plane(hall@tilt.T))
+            assert math.degrees(math.acos(np.clip((R@tilt)[2, 2], -1, 1))) < 0.05, (deg, axis)
+
+
 def test_map_yaml_round_trip_keeps_orientation(tmp_path):
     grid = np.full((30, 50), S.UNKNOWN, np.int8)
     grid[5:10, 5:20] = S.FREE
