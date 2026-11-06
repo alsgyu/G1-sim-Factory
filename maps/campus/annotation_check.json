@@ -1,0 +1,37 @@
+{
+ "room_iou": {
+  "material_storage": 0.963,
+  "assembly_line": 0.938,
+  "inspection": 0.94,
+  "charging": 0.913,
+  "office_workstations": 0.97,
+  "office_meeting": 0.889,
+  "office_lounge": 0.93,
+  "office_control": 0.872,
+  "pump_room": 0.916
+ },
+ "room_iou_mean": 0.926,
+ "rooms_with_doorway": "9/9",
+ "doorway_error_m": {
+  "assembly_line": 2.35,
+  "charging": 1.8,
+  "inspection": 1.6,
+  "material_storage": 1.75,
+  "office_control": 0.63,
+  "office_lounge": 0.5,
+  "office_meeting": 0.44,
+  "office_workstations": 0.57,
+  "pump_room": 0.27
+ },
+ "room_to_room_edges": {
+  "annotated_map": [],
+  "truth": []
+ },
+ "places": 13,
+ "edges": 12,
+ "anchor_error_m": {
+  "Main aisle crossing": 0.51,
+  "Warehouse-office bridge": 0.12,
+  "Office entrance": 2.16
+ }
+}

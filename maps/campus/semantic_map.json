@@ -1,0 +1,822 @@
+{
+ "frame": "map",
+ "source": "annotations.json (person) + automatic topology from the SLAM map",
+ "occupancy": {
+  "bounds": [
+   -14.7,
+   -32.6,
+   65.1,
+   15.6
+  ],
+  "resolution": 0.1
+ },
+ "zones": [
+  {
+   "id": "material_storage",
+   "label": "Material storage",
+   "aliases": [
+    "자재 창고",
+    "원자재 보관"
+   ],
+   "kind": "room",
+   "bounds": [
+    -12.15,
+    -1.17,
+    9.71,
+    12.45
+   ],
+   "rects": [
+    [
+     -12.15,
+     -1.17,
+     9.71,
+     12.45
+    ]
+   ],
+   "entrance": [
+    2.75,
+    -0.45
+   ]
+  },
+  {
+   "id": "assembly_line",
+   "label": "Assembly line",
+   "aliases": [
+    "조립 라인",
+    "생산 라인"
+   ],
+   "kind": "room",
+   "bounds": [
+    13.05,
+    -1.37,
+    35.81,
+    12.25
+   ],
+   "rects": [
+    [
+     13.05,
+     -1.37,
+     35.81,
+     12.25
+    ]
+   ],
+   "entrance": [
+    20.45,
+    -0.85
+   ]
+  },
+  {
+   "id": "inspection",
+   "label": "Quality inspection",
+   "aliases": [
+    "품질 검사",
+    "검사 구역",
+    "비전 검사"
+   ],
+   "kind": "room",
+   "bounds": [
+    -12.28,
+    -19.02,
+    9.57,
+    -5.65
+   ],
+   "rects": [
+    [
+     -12.28,
+     -19.02,
+     9.57,
+     -5.65
+    ]
+   ],
+   "entrance": [
+    2.55,
+    -6.25
+   ]
+  },
+  {
+   "id": "charging",
+   "label": "Charging station",
+   "aliases": [
+    "충전 구역",
+    "충전 도크"
+   ],
+   "kind": "room",
+   "bounds": [
+    12.92,
+    -19.22,
+    35.67,
+    -5.85
+   ],
+   "rects": [
+    [
+     12.92,
+     -19.22,
+     35.67,
+     -5.85
+    ]
+   ],
+   "entrance": [
+    20.45,
+    -6.45
+   ]
+  },
+  {
+   "id": "office_workstations",
+   "label": "Engineering workstations",
+   "aliases": [
+    "업무실",
+    "엔지니어링 사무실"
+   ],
+   "kind": "room",
+   "bounds": [
+    39.7,
+    -1.62,
+    49.68,
+    8.45
+   ],
+   "rects": [
+    [
+     39.7,
+     -1.62,
+     49.68,
+     8.45
+    ]
+   ],
+   "entrance": [
+    45.45,
+    -0.95
+   ]
+  },
+  {
+   "id": "office_meeting",
+   "label": "Meeting room",
+   "aliases": [
+    "회의실"
+   ],
+   "kind": "room",
+   "bounds": [
+    53.85,
+    -1.72,
+    62.88,
+    8.34
+   ],
+   "rects": [
+    [
+     53.85,
+     -1.72,
+     62.88,
+     8.34
+    ]
+   ],
+   "entrance": [
+    58.05,
+    -1.05
+   ]
+  },
+  {
+   "id": "office_lounge",
+   "label": "Staff lounge",
+   "aliases": [
+    "휴게실",
+    "탕비실"
+   ],
+   "kind": "room",
+   "bounds": [
+    39.6,
+    -15.32,
+    49.57,
+    -5.55
+   ],
+   "rects": [
+    [
+     39.6,
+     -15.32,
+     49.57,
+     -5.55
+    ]
+   ],
+   "entrance": [
+    45.55,
+    -6.25
+   ]
+  },
+  {
+   "id": "office_control",
+   "label": "Operations control",
+   "aliases": [
+    "관제실",
+    "통제실",
+    "서버실"
+   ],
+   "kind": "room",
+   "bounds": [
+    53.75,
+    -15.42,
+    62.77,
+    -5.66
+   ],
+   "rects": [
+    [
+     53.75,
+     -15.42,
+     62.77,
+     -5.66
+    ]
+   ],
+   "entrance": [
+    57.85,
+    -6.35
+   ]
+  },
+  {
+   "id": "pump_room",
+   "label": "Pump room",
+   "aliases": [
+    "펌프실",
+    "유틸리티실"
+   ],
+   "kind": "room",
+   "bounds": [
+    45.64,
+    -29.39,
+    57.96,
+    -19.99
+   ],
+   "rects": [
+    [
+     45.64,
+     -29.39,
+     57.96,
+     -19.99
+    ]
+   ],
+   "entrance": [
+    51.75,
+    -20.65
+   ]
+  }
+ ],
+ "places": [
+  {
+   "id": "material_storage",
+   "label": "Material storage",
+   "kind": "zone",
+   "aliases": [
+    "자재 창고",
+    "원자재 보관"
+   ],
+   "rects": [
+    [
+     -12.15,
+     -1.17,
+     9.71,
+     12.45
+    ]
+   ],
+   "center": [
+    -0.15,
+    5.55
+   ],
+   "bounds": [
+    -12.15,
+    -1.17,
+    9.71,
+    12.45
+   ],
+   "free_m2": 194.1
+  },
+  {
+   "id": "assembly_line",
+   "label": "Assembly line",
+   "kind": "zone",
+   "aliases": [
+    "조립 라인",
+    "생산 라인"
+   ],
+   "rects": [
+    [
+     13.05,
+     -1.37,
+     35.81,
+     12.25
+    ]
+   ],
+   "center": [
+    24.55,
+    3.65
+   ],
+   "bounds": [
+    13.05,
+    -1.37,
+    35.81,
+    12.25
+   ],
+   "free_m2": 219.5
+  },
+  {
+   "id": "inspection",
+   "label": "Quality inspection",
+   "kind": "zone",
+   "aliases": [
+    "품질 검사",
+    "검사 구역",
+    "비전 검사"
+   ],
+   "rects": [
+    [
+     -12.28,
+     -19.02,
+     9.57,
+     -5.65
+    ]
+   ],
+   "center": [
+    -1.35,
+    -12.05
+   ],
+   "bounds": [
+    -12.28,
+    -19.02,
+    9.57,
+    -5.65
+   ],
+   "free_m2": 238.5
+  },
+  {
+   "id": "charging",
+   "label": "Charging station",
+   "kind": "zone",
+   "aliases": [
+    "충전 구역",
+    "충전 도크"
+   ],
+   "rects": [
+    [
+     12.92,
+     -19.22,
+     35.67,
+     -5.85
+    ]
+   ],
+   "center": [
+    24.15,
+    -12.35
+   ],
+   "bounds": [
+    12.92,
+    -19.22,
+    35.67,
+    -5.85
+   ],
+   "free_m2": 275.7
+  },
+  {
+   "id": "office_workstations",
+   "label": "Engineering workstations",
+   "kind": "zone",
+   "aliases": [
+    "업무실",
+    "엔지니어링 사무실"
+   ],
+   "rects": [
+    [
+     39.7,
+     -1.62,
+     49.68,
+     8.45
+    ]
+   ],
+   "center": [
+    44.85,
+    2.05
+   ],
+   "bounds": [
+    39.7,
+    -1.62,
+    49.68,
+    8.45
+   ],
+   "free_m2": 56.1
+  },
+  {
+   "id": "office_meeting",
+   "label": "Meeting room",
+   "kind": "zone",
+   "aliases": [
+    "회의실"
+   ],
+   "rects": [
+    [
+     53.85,
+     -1.72,
+     62.88,
+     8.34
+    ]
+   ],
+   "center": [
+    59.05,
+    1.65
+   ],
+   "bounds": [
+    53.85,
+    -1.72,
+    62.88,
+    8.34
+   ],
+   "free_m2": 50.7
+  },
+  {
+   "id": "office_lounge",
+   "label": "Staff lounge",
+   "kind": "zone",
+   "aliases": [
+    "휴게실",
+    "탕비실"
+   ],
+   "rects": [
+    [
+     39.6,
+     -15.32,
+     49.57,
+     -5.55
+    ]
+   ],
+   "center": [
+    44.75,
+    -9.35
+   ],
+   "bounds": [
+    39.6,
+    -15.32,
+    49.57,
+    -5.55
+   ],
+   "free_m2": 60.7
+  },
+  {
+   "id": "office_control",
+   "label": "Operations control",
+   "kind": "zone",
+   "aliases": [
+    "관제실",
+    "통제실",
+    "서버실"
+   ],
+   "rects": [
+    [
+     53.75,
+     -15.42,
+     62.77,
+     -5.66
+    ]
+   ],
+   "center": [
+    58.45,
+    -8.65
+   ],
+   "bounds": [
+    53.75,
+    -15.42,
+    62.77,
+    -5.66
+   ],
+   "free_m2": 52.2
+  },
+  {
+   "id": "pump_room",
+   "label": "Pump room",
+   "kind": "zone",
+   "aliases": [
+    "펌프실",
+    "유틸리티실"
+   ],
+   "rects": [
+    [
+     45.64,
+     -29.39,
+     57.96,
+     -19.99
+    ]
+   ],
+   "center": [
+    51.65,
+    -24.05
+   ],
+   "bounds": [
+    45.64,
+    -29.39,
+    57.96,
+    -19.99
+   ],
+   "free_m2": 78.7
+  },
+  {
+   "id": "warehouse_aisle",
+   "label": "Warehouse main aisle",
+   "kind": "aisle",
+   "aliases": [
+    "창고 통로",
+    "주 통로"
+   ],
+   "rects": [
+    [
+     -12.18,
+     -6.02,
+     35.7,
+     -1.0
+    ],
+    [
+     9.47,
+     -19.05,
+     13.16,
+     12.28
+    ]
+   ],
+   "center": [
+    11.75,
+    -3.55
+   ],
+   "bounds": [
+    -11.9,
+    -19.2,
+    35.9,
+    12.2
+   ],
+   "free_m2": 295.2
+  },
+  {
+   "id": "bridge",
+   "label": "Warehouse-office bridge",
+   "kind": "aisle",
+   "aliases": [
+    "연결 통로"
+   ],
+   "rects": [
+    [
+     35.82,
+     -5.15,
+     39.6,
+     -2.02
+    ]
+   ],
+   "center": [
+    37.75,
+    -3.55
+   ],
+   "bounds": [
+    35.8,
+    -5.3,
+    39.6,
+    -1.7
+   ],
+   "free_m2": 13.3
+  },
+  {
+   "id": "office_corridor",
+   "label": "Office corridor",
+   "kind": "aisle",
+   "aliases": [
+    "사무동 복도"
+   ],
+   "rects": [
+    [
+     39.57,
+     -5.57,
+     62.9,
+     -1.65
+    ],
+    [
+     49.6,
+     -15.5,
+     53.78,
+     8.38
+    ]
+   ],
+   "center": [
+    51.55,
+    -3.55
+   ],
+   "bounds": [
+    39.4,
+    -15.4,
+    63.3,
+    8.2
+   ],
+   "free_m2": 147.6
+  },
+  {
+   "id": "pump_passage",
+   "label": "Pump room passage",
+   "kind": "aisle",
+   "aliases": [
+    "펌프실 통로"
+   ],
+   "rects": [
+    [
+     49.71,
+     -20.05,
+     53.5,
+     -15.48
+    ]
+   ],
+   "center": [
+    51.75,
+    -17.65
+   ],
+   "bounds": [
+    50.0,
+    -19.9,
+    53.5,
+    -15.4
+   ],
+   "free_m2": 15.0
+  }
+ ],
+ "edges": [
+  {
+   "a": "material_storage",
+   "b": "warehouse_aisle",
+   "door": [
+    3.15,
+    -1.2
+   ],
+   "width_m": 35.0,
+   "length_m": 16.43
+  },
+  {
+   "a": "assembly_line",
+   "b": "warehouse_aisle",
+   "door": [
+    19.95,
+    -1.4
+   ],
+   "width_m": 35.9,
+   "length_m": 15.31
+  },
+  {
+   "a": "inspection",
+   "b": "warehouse_aisle",
+   "door": [
+    2.95,
+    -5.6
+   ],
+   "width_m": 35.0,
+   "length_m": 16.79
+  },
+  {
+   "a": "charging",
+   "b": "warehouse_aisle",
+   "door": [
+    20.05,
+    -5.8
+   ],
+   "width_m": 36.1,
+   "length_m": 16.33
+  },
+  {
+   "a": "office_workstations",
+   "b": "office_corridor",
+   "door": [
+    45.65,
+    -1.7
+   ],
+   "width_m": 1.8,
+   "length_m": 10.02
+  },
+  {
+   "a": "office_meeting",
+   "b": "office_corridor",
+   "door": [
+    57.75,
+    -1.8
+   ],
+   "width_m": 1.7,
+   "length_m": 10.13
+  },
+  {
+   "a": "office_lounge",
+   "b": "office_corridor",
+   "door": [
+    45.75,
+    -5.5
+   ],
+   "width_m": 1.6,
+   "length_m": 10.1
+  },
+  {
+   "a": "office_control",
+   "b": "office_corridor",
+   "door": [
+    57.65,
+    -5.6
+   ],
+   "width_m": 1.6,
+   "length_m": 9.59
+  },
+  {
+   "a": "pump_room",
+   "b": "pump_passage",
+   "door": [
+    51.75,
+    -19.9
+   ],
+   "width_m": 3.6,
+   "length_m": 6.4
+  },
+  {
+   "a": "warehouse_aisle",
+   "b": "bridge",
+   "door": [
+    35.8,
+    -3.45
+   ],
+   "width_m": 3.5,
+   "length_m": 26.0
+  },
+  {
+   "a": "bridge",
+   "b": "office_corridor",
+   "door": [
+    39.6,
+    -3.35
+   ],
+   "width_m": 3.5,
+   "length_m": 13.81
+  },
+  {
+   "a": "office_corridor",
+   "b": "pump_passage",
+   "door": [
+    51.65,
+    -15.4
+   ],
+   "width_m": 3.4,
+   "length_m": 14.1
+  }
+ ],
+ "anchors": [
+  {
+   "id": "main_aisle_crossing",
+   "label": "Main aisle crossing",
+   "xy": [
+    11.29,
+    -3.58
+   ],
+   "place": "warehouse_aisle"
+  },
+  {
+   "id": "warehouse_office_bridge",
+   "label": "Warehouse-office bridge",
+   "xy": [
+    37.69,
+    -3.63
+   ],
+   "place": "bridge"
+  },
+  {
+   "id": "office_entrance",
+   "label": "Office entrance",
+   "xy": [
+    39.84,
+    -3.65
+   ],
+   "place": "office_corridor"
+  },
+  {
+   "id": "pump_room_entrance",
+   "label": "Pump room entrance",
+   "xy": [
+    51.56,
+    -20.04
+   ],
+   "place": "pump_room"
+  }
+ ],
+ "objects": [],
+ "aisle_segments": {
+  "warehouse_aisle": [
+   -11.9,
+   -19.2,
+   35.9,
+   12.2
+  ],
+  "bridge": [
+   35.8,
+   -5.3,
+   39.6,
+   -1.7
+  ],
+  "office_corridor": [
+   39.4,
+   -15.4,
+   63.3,
+   8.2
+  ],
+  "pump_passage": [
+   50.0,
+   -19.9,
+   53.5,
+   -15.4
+  ]
+ }
+}

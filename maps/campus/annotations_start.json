@@ -1,0 +1,289 @@
+{
+ "format": "g1-map-annotations/1",
+ "frame": "map",
+ "map": {
+  "image": "map.pgm",
+  "resolution": 0.1,
+  "origin": [
+   -14.7,
+   -32.6
+  ]
+ },
+ "zones": [
+  {
+   "id": "material_storage",
+   "label": "Material storage",
+   "aliases": [
+    "자재 창고",
+    "원자재 보관"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     -12.15,
+     -1.17,
+     9.71,
+     12.45
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "assembly_line",
+   "label": "Assembly line",
+   "aliases": [
+    "조립 라인",
+    "생산 라인"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     13.05,
+     -1.37,
+     35.81,
+     12.25
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "inspection",
+   "label": "Quality inspection",
+   "aliases": [
+    "품질 검사",
+    "검사 구역",
+    "비전 검사"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     -12.28,
+     -19.02,
+     9.57,
+     -5.65
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "charging",
+   "label": "Charging station",
+   "aliases": [
+    "충전 구역",
+    "충전 도크"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     12.92,
+     -19.22,
+     35.67,
+     -5.85
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "office_workstations",
+   "label": "Engineering workstations",
+   "aliases": [
+    "업무실",
+    "엔지니어링 사무실"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     39.7,
+     -1.62,
+     49.68,
+     8.45
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "office_meeting",
+   "label": "Meeting room",
+   "aliases": [
+    "회의실"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     53.85,
+     -1.72,
+     62.88,
+     8.34
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "office_lounge",
+   "label": "Staff lounge",
+   "aliases": [
+    "휴게실",
+    "탕비실"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     39.6,
+     -15.32,
+     49.57,
+     -5.55
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "office_control",
+   "label": "Operations control",
+   "aliases": [
+    "관제실",
+    "통제실",
+    "서버실"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     53.75,
+     -15.42,
+     62.77,
+     -5.66
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "pump_room",
+   "label": "Pump room",
+   "aliases": [
+    "펌프실",
+    "유틸리티실"
+   ],
+   "kind": "room",
+   "rects": [
+    [
+     45.64,
+     -29.39,
+     57.96,
+     -19.99
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "warehouse_aisle",
+   "label": "Warehouse main aisle",
+   "aliases": [
+    "창고 통로",
+    "주 통로"
+   ],
+   "kind": "corridor",
+   "rects": [
+    [
+     -12.18,
+     -6.02,
+     35.7,
+     -1.0
+    ],
+    [
+     9.47,
+     -19.05,
+     13.16,
+     12.28
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "bridge",
+   "label": "Warehouse-office bridge",
+   "aliases": [
+    "연결 통로"
+   ],
+   "kind": "corridor",
+   "rects": [
+    [
+     35.82,
+     -5.15,
+     39.6,
+     -2.02
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "office_corridor",
+   "label": "Office corridor",
+   "aliases": [
+    "사무동 복도"
+   ],
+   "kind": "corridor",
+   "rects": [
+    [
+     39.57,
+     -5.57,
+     62.9,
+     -1.65
+    ],
+    [
+     49.6,
+     -15.5,
+     53.78,
+     8.38
+    ]
+   ],
+   "entrance": null
+  },
+  {
+   "id": "pump_passage",
+   "label": "Pump room passage",
+   "aliases": [
+    "펌프실 통로"
+   ],
+   "kind": "corridor",
+   "rects": [
+    [
+     49.71,
+     -20.05,
+     53.5,
+     -15.48
+    ]
+   ],
+   "entrance": null
+  }
+ ],
+ "anchors": [
+  {
+   "label": "Main aisle crossing",
+   "xy": [
+    11.29,
+    -3.58
+   ]
+  },
+  {
+   "label": "Warehouse-office bridge",
+   "xy": [
+    37.69,
+    -3.63
+   ]
+  },
+  {
+   "label": "Office entrance",
+   "xy": [
+    39.84,
+    -3.65
+   ]
+  },
+  {
+   "label": "Pump room entrance",
+   "xy": [
+    51.56,
+    -20.04
+   ]
+  }
+ ],
+ "note": "configs/annotations_campus.json moved into this map's frame; to be checked against the walls"
+}
