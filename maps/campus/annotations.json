@@ -186,7 +186,7 @@
      -12.18,
      -6.02,
      35.7,
-     -1
+     -1.0
     ],
     [
      9.47,
@@ -284,5 +284,6 @@
     -20.04
    ]
   }
- ]
+ ],
+ "note": "configs/annotations_campus.json moved into this map's frame; to be checked against the walls"
 }
