@@ -8,6 +8,9 @@ Reads maps/<name>/map.yaml and annotations.json (tools/map_annotator.html), writ
   topology.png       the annotated map with places, doorways and the place graph, to check by eye
   annotation_check.json  simulation only (semantic_truth.json present): rooms, doorways and anchors against the
                      simulator's semantic map
+A map the robot could not route on writes no semantic_map.json (and removes an older one), only topology.png, and
+says why: no free cells (an Isaac map made with code older than the 2026-11-02 LiDAR fix), a named place with no
+floor under it, no doorways, or places with no path to the others.
 """
 from __future__ import annotations
 
@@ -82,19 +85,31 @@ def main():
     args = parser.parse_args()
     folder = args.folder
     grid, origin, res = S.read_map_yaml(folder/"map.yaml")
-    semantic = P.build_semantic(grid, origin, res, P.load_annotations(args.annotations or folder/"annotations.json"))
-    (folder/"semantic_map.json").write_text(json.dumps(semantic, indent=1, ensure_ascii=False), encoding="utf-8")
+    annotations = args.annotations or folder/"annotations.json"
+    if not annotations.is_file():
+        sys.exit(f"{annotations} is missing: draw the rooms on the map with tools/map_annotator.html and save it there")
+    semantic = P.build_semantic(grid, origin, res, P.load_annotations(annotations))
     topology_figure(grid, origin, res, semantic).save(folder/"topology.png")
     report = {"rooms": len(semantic["zones"]), "places": len(semantic["places"]), "doorways": len(semantic["edges"]),
               "anchors": len(semantic["anchors"]),
-              "unnamed_areas": [p["label"] for p in semantic["places"] if p["kind"] == "area"]}
+              "unnamed_areas": [p["label"] for p in semantic["places"] if p["kind"] == "area"],
+              "anchors_off_floor": [a["id"] for a in semantic["anchors"] if not a.get("place")]}
+    print(json.dumps(report, ensure_ascii=False))
+    problems = P.check_semantic(grid, origin, res, semantic)
+    if problems:
+        stale = folder/"semantic_map.json"
+        removed = stale.exists()
+        stale.unlink(missing_ok=True)  # an older one no longer matches this map and these annotations
+        sys.exit("semantic_map.json not written"+(" (the previous one was removed)" if removed else "")+":\n  - "
+                 + "\n  - ".join(problems)+f"\nlook at {folder/'topology.png'}")
+    (folder/"semantic_map.json").write_text(json.dumps(semantic, indent=1, ensure_ascii=False), encoding="utf-8")
     truth_path = folder/"semantic_truth.json"
     if truth_path.is_file():
         truth = json.loads(truth_path.read_text(encoding="utf-8"))
         check = P.compare_with_truth(semantic, truth)
         (folder/"annotation_check.json").write_text(json.dumps(check, indent=1, ensure_ascii=False))
-        report["check"] = {k: check[k] for k in ("room_iou_mean", "rooms_with_doorway", "doorway_error_m")}
-    print(json.dumps(report, ensure_ascii=False))
+        print(json.dumps({"check": {k: check[k] for k in ("room_iou_mean", "rooms_with_doorway", "doorway_error_m")}},
+                         ensure_ascii=False))
 
 
 if __name__ == "__main__":

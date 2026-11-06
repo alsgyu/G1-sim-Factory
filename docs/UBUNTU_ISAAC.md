@@ -416,6 +416,8 @@ cat maps/campus/evaluation.json
 bash scripts/g1_docker.sh python3 scripts/build_map_package.py maps/campus
 ```
 
+출력의 `doorways`가 0보다 크고 `topology.png`의 바닥이 흰색이어야 합니다. 로봇이 길을 찾을 수 없는 지도면 `semantic_map.json`을 쓰지 않고 이유를 출력합니다(문제 해결 표).
+
 지도 묶음으로 VLN 실행(점유 지도, 구역, 기준점, 토폴로지 모두 지도 묶음에서):
 
 ```bash
@@ -442,6 +444,9 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py task:=check_tank_
 | 매핑 `waypoint 17/24 plan_failed: goal pose is inside or too close to an obstacle` (펌프실 경유점 17-20) | Isaac 장면이 펌프실 추가 전에 내보낸 것 → 2.3의 USD 내보내기를 다시 실행 |
 | 매핑 `waiting for SLAM scans`가 이어지다 `SLAM did not start` | 메시지에 적힌 원인대로: `fast_lio` 패키지 없음 = 이미지 다시 빌드(2.1), IMU 없음 = 시뮬레이터 확인 |
 | `evaluation.json`에서 `obstacle_precision` 약 0.72, `free_marked_free` 0 (`map.png`에 걸어간 길을 따라 장애물 줄, 흰 바닥 없음) | 2026-11-02 이전 코드로 만든 Isaac 지도. LiDAR를 흉내 내는 깊이 카메라에 로봇 몸이 찍혔고(어깨·팔, 센서 아래 0.26-0.37 m), SLAM이 벽과 비스듬히 시작하면 바닥에 격자 구멍이 났음 → `git pull` 후 지도를 다시 만듦 (같은 이름이면 덮어씀). 정상 지도는 정밀도 0.95 이상, `free_marked_free` 0.8 안팎 |
+| `build_map_package.py`나 `export_map_bundle.py`가 `the map has no free cells`로 멈춤 | 바로 위 줄과 같은 예전 Isaac 지도. `grep -o '"free_marked_free": [0-9.]*' maps/campus/evaluation.json`이 0이면 지도를 다시 만들고, 새 지도에 주석을 다시 맞춘 뒤 묶음을 만듦 |
+| `export_map_bundle.py`가 `semantic_map.json was built on another map`으로 멈춤 | 지도를 다시 만든 뒤 묶음을 다시 만들지 않음 → 주석을 새 지도에 맞추고 `build_map_package.py`부터 다시 실행 |
+| `no free floor under …` / `no path from the other places to …` | 그 방·통로의 사각형이 이 지도의 바닥 위에 없거나, 벽·닫힌 문·보이지 않은 바닥으로 다른 장소와 끊김 → `topology.png`에서 그 장소를 보고 주석을 고치거나 다시 매핑 |
 | `failed to fulfil mount request: open /run/nvidia-persistenced/socket: no such file or directory` | `--gpus all`이 `nvidia-persistenced` 데몬의 소켓을 마운트하려는데 데몬이 꺼져 있음 → `sudo systemctl enable --now nvidia-persistenced` 후 `docker run --rm --gpus all g1-sim-ros2:humble nvidia-smi`로 확인. 서비스가 없으면 드라이버 버전에 맞는 `nvidia-compute-utils-<버전>` 설치, 드라이버를 바꾼 뒤 재부팅하지 않았으면 재부팅, CDI 방식이면 `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml` 후 `sudo systemctl restart docker`. GPU가 필요 없는 명령(`build_map_package.py`, 단위 테스트 등)은 `G1_GPU=0 bash scripts/g1_docker.sh …`로 바로 실행 가능 |
 | `PermissionError` (`outputs/…`, `external/…`) | 예전에 `sudo docker …`로 만든 root 소유 파일 → `sudo chown -R $USER:$USER outputs external` 후 `scripts/g1_docker.sh`로 다시 실행 |
 | `run_isaac_sim.sh`가 캐시 소유자 안내 후 종료 | 3절의 `mkdir`·`chown` |

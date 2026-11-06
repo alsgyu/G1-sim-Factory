@@ -8,6 +8,8 @@ maps/<name>/
   semantic_map.json  built here (build_semantic): rooms for the VLN, places and doorways (topology), anchors
 Simulation only: map_world.yaml, evaluation.json (world_from_map), semantic_truth.json.
 For an external agent, export_bundle copies what a robot would have of it (scripts/export_map_bundle.py).
+check_semantic says why a package cannot be routed on (no floor, no doorways, places cut off, built on another
+map); scripts/build_map_package.py and export_bundle refuse such a package.
 
 Topology is automatic: every free cell of the SLAM map gets the place of the annotated rectangle it lies in (rooms
 before corridors), grown 0.6 m through free cells to cover rectangles drawn a little inside the walls; free space
@@ -222,6 +224,56 @@ def _entrance(zone, places, index, edges, labels, origin, res, inside_m=0.8):
     return [round(float(v), 2) for v in pts[np.argmin(np.linalg.norm(pts-point, axis=1))]]
 
 
+def check_semantic(grid, origin, res, semantic: dict) -> list:
+    """Why a semantic map cannot be used to route on this grid; empty when it can.
+
+    A map with no free cells (an Isaac map made with code older than the 2026-11-02 LiDAR fix 47e3fef, whose floor
+    was never seen) still gives a
+    topology.png that looks right, the rectangles being drawn on its walls, but no place has floor, there are no
+    doorways and no route goes anywhere. A named place with no floor under it was drawn on another map; one with no
+    path to the others is cut off by a wall or by floor that was not seen. A semantic map whose occupancy bounds are
+    not this grid's was built on another map (the package was remapped and not rebuilt).
+    """
+    h, w = grid.shape
+    bounds = [round(origin[0], 3), round(origin[1], 3), round(origin[0]+w*res, 3), round(origin[1]+h*res, 3)]
+    built_on = semantic.get("occupancy", {}).get("bounds")
+    if built_on is not None and not np.allclose(built_on, bounds, atol=res/2):
+        return [f"semantic_map.json was built on another map (bounds {built_on}, this map {bounds}): "
+                "run scripts/build_map_package.py again"]
+    if not (grid == S.FREE).any():
+        return ["the map has no free cells, only obstacles and unknown: its floor was never seen. An Isaac map made "
+                "with code older than the 2026-11-02 LiDAR fix (47e3fef) looks like this; remap it with the current "
+                "code (docs/UBUNTU_ISAAC.md, troubleshooting)"]
+    problems = []
+    places, edges = semantic.get("places", []), semantic.get("edges", [])
+    named = [p["id"] for p in places if p["kind"] != "area"]
+    floorless = [p["id"] for p in places if p["kind"] != "area" and not p.get("free_m2")]
+    if floorless:
+        problems.append(f"no free floor under {', '.join(floorless)}: drawn on another map, or that floor was not seen")
+    if len(places) > 1 and not edges:
+        problems.append("no doorways: no two places touch through free floor")
+        return problems
+    parent = {p["id"]: p["id"] for p in places}
+
+    def root(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for e in edges:
+        parent[root(e["a"])] = root(e["b"])
+    groups = {}
+    for pid in named:
+        if pid not in floorless:
+            groups.setdefault(root(pid), []).append(pid)
+    if len(groups) > 1:
+        main = max(groups.values(), key=len)
+        cut = [pid for g in groups.values() if g is not main for pid in g]
+        problems.append(f"no path from the other places to {', '.join(cut)}: a wall, a shut door or unseen floor "
+                        "cuts them off (see topology.png)")
+    return problems
+
+
 # ------------------------------------------------------------------ loading for the VLN
 def world_from_map(folder: Path) -> np.ndarray:
     w = json.loads((Path(folder)/"evaluation.json").read_text())["world_from_map"]
@@ -297,6 +349,10 @@ def export_bundle(folder, out, commit: str = "") -> dict:
     semantic = json.loads((folder/"semantic_map.json").read_text(encoding="utf-8"))
     if semantic.get("frame") != "map" or semantic.get("objects"):
         raise ValueError(f"{folder/'semantic_map.json'} is not a package semantic map (map frame, no objects)")
+    grid, origin, res = S.read_map_yaml(folder/"map.yaml")
+    problems = check_semantic(grid, origin, res, semantic)
+    if problems:
+        raise ValueError(f"{folder} is not ready to hand over:\n  - "+"\n  - ".join(problems))
     if out.exists() and any(out.iterdir()):
         raise FileExistsError(f"{out} is not empty")
     out.mkdir(parents=True, exist_ok=True)
@@ -310,8 +366,7 @@ def export_bundle(folder, out, commit: str = "") -> dict:
     digest = hashlib.sha256()
     for name in VERSIONED:
         digest.update(name.encode()+b"\0"+(folder/name).read_bytes())
-    grid, origin, res = S.read_map_yaml(folder/"map.yaml")
-    manifest = {"format": "g1-map-handoff/1", "name": meta["name"], "version": digest.hexdigest()[:12],
+    manifest ={"format": "g1-map-handoff/1", "name": meta["name"], "version": digest.hexdigest()[:12],
                 "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "source": folder.as_posix(), "source_commit": commit,
                 "frame": meta.get("frame", "map"), "resolution_m": res, "origin": [round(v, 3) for v in origin],

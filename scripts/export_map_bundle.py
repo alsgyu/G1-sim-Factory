@@ -9,7 +9,8 @@ Writes outputs/handoff/<name>_<version>/ and the same as a .zip next to it:
   README.md        frame, places with names and aliases, doorways, anchors, how to send instructions
   manifest.json    name, version (SHA-256 of map.yaml, map.pgm, semantic_map.json), SHA-256 of every file
   SHA256SUMS       for `sha256sum -c SHA256SUMS` on the receiving side
-Run scripts/build_map_package.py first; a new map or new annotations give a new version.
+Run scripts/build_map_package.py first; a new map or new annotations give a new version. A package the robot could
+not route on (no free cells, no doorways, places cut off, semantic map built on another map) is not exported.
 """
 from __future__ import annotations
 
@@ -42,7 +43,11 @@ def main():
     package = Path(args.package)
     staging = ROOT/"outputs"/"handoff"/f".{package.name}_staging"
     shutil.rmtree(staging, ignore_errors=True)
-    manifest = P.export_bundle(package, staging, git_commit())
+    try:
+        manifest = P.export_bundle(package, staging, git_commit())
+    except (FileNotFoundError, ValueError) as e:
+        shutil.rmtree(staging, ignore_errors=True)
+        sys.exit(f"not exported: {e}")
     out = Path(args.out) if args.out else ROOT/"outputs"/"handoff"/f"{manifest['name']}_{manifest['version']}"
     if out.exists():
         shutil.rmtree(staging)

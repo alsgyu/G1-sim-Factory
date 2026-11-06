@@ -44,7 +44,7 @@ G1 머리에는 Livox MID-360(360도 LiDAR, 내장 IMU)이 있습니다. 이 센
    - 빈 공간은 바닥 점이 보였고, 걸어온 경로에서 몸 높이로 직선이 닿는 칸입니다. 선반 아래 팔레트 틈으로 보인 바닥처럼 로봇이 들어갈 수 없는 곳은 빈 공간으로 치지 않습니다. 나머지는 미확인입니다.
 5. 다 걸으면 `maps/<이름>/`에 저장합니다.
 6. 사람이 주석 도구(`tools/map_annotator.html`)로 방과 통로, 기준점을 그려 `annotations.json`으로 저장합니다.
-7. `scripts/build_map_package.py`가 주석과 지도에서 장소 그래프와 출입구를 자동으로 만들어 `semantic_map.json`에 씁니다.
+7. `scripts/build_map_package.py`가 주석과 지도에서 장소 그래프와 출입구를 자동으로 만들어 `semantic_map.json`에 씁니다. 로봇이 그 지도로 길을 찾을 수 없으면 `semantic_map.json`을 쓰지 않고(예전 것은 지움) `topology.png`만 남긴 채 이유를 출력하고 멈춥니다. 멈추는 경우는 네 가지입니다. 지도에 빈 칸이 없을 때(2026-11-02 수정 전 코드로 만든 Isaac 지도), 바닥이 하나도 없는 방·통로가 있을 때(다른 지도에 그린 주석), 출입구가 하나도 없을 때, 다른 장소와 이어지지 않는 방·통로가 있을 때(벽, 닫힌 문, 보이지 않은 바닥)입니다.
 8. VLN은 `map_package:=maps/<이름>`으로 이 묶음 하나만 읽습니다. 외부 에이전트에게는 이 폴더를 그대로 주거나 ROS 토픽으로 보냅니다.
 
 ## 주석 도구
@@ -111,6 +111,7 @@ bash scripts/g1_docker.sh python3 scripts/export_map_bundle.py maps/campus
 - 결과: `outputs/handoff/<이름>_<버전>/`와 같은 내용의 `.zip`. zip 하나를 전달합니다.
 - 들어가는 것: `map.yaml`·`map.pgm`, `semantic_map.json`, `annotations.json`, `map.png`·`topology.png`, 좌표계와 SLAM 정보만 남긴 `meta.json`, 받는 쪽 설명서 `README.md`(좌표계, 장소 이름·별칭, 출입구, 기준점, 지시 형식), `manifest.json`, `SHA256SUMS`.
 - 빠지는 것: `semantic_truth.json`, `map_world.*`, `evaluation.json`, `trajectory_truth.csv`, `meta.json`의 시뮬레이터 자세와 지도 점수, `cloud.pcd`, `trajectory.csv`. `semantic_map.json`에 물체가 들어 있으면 내보내지 않습니다.
+- 내보내기 전에 지도를 다시 검사합니다. `build_map_package.py`가 멈추는 경우와 같거나, `semantic_map.json`이 다른 지도로 만든 것이면(지도를 다시 만들고 `build_map_package.py`를 다시 돌리지 않음) `not exported:`와 이유를 출력하고 아무것도 만들지 않습니다.
 - 버전: `map.yaml`·`map.pgm`·`semantic_map.json`의 SHA-256 앞 12자리. 지도를 다시 만들거나 주석을 고치면 버전이 바뀌니 새로 내보내 다시 전달합니다. 받는 쪽은 `sha256sum -c SHA256SUMS`로 확인합니다.
 - 실행 중에는 `map_package:=maps/<이름> package_frame:=map`으로 띄워야 `/slam_map`·`/slam/semantic_map`이 전달한 파일과 같은 좌표로 나갑니다(`package_frame:=world`면 시뮬레이터 좌표로 옮겨짐). 시뮬레이터가 내는 `/map`·`/semantic_map`은 정답이므로 외부 에이전트에 쓰지 않게 합니다.
 

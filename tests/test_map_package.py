@@ -129,3 +129,33 @@ def test_export_bundle_gives_an_external_agent_the_map_but_no_simulator_truth(tm
     (pkg/"semantic_map.json").unlink()
     with pytest.raises(FileNotFoundError, match="build_map_package"):
         P.export_bundle(pkg, tmp_path/"none")
+
+
+def test_a_package_the_robot_cannot_route_on_is_refused(tmp_path):
+    grid, o = campus_grid(), (0.0, 0.0)
+    sem = P.build_semantic(grid, o, 0.1, ANNOTATIONS)
+    assert P.check_semantic(grid, o, 0.1, sem) == []
+    # an Isaac map from before the LiDAR fixes: walls only, the floor never seen. topology.png still looks right.
+    walls = np.where(grid == S.OCCUPIED, S.OCCUPIED, S.UNKNOWN).astype(np.int8)
+    old = P.build_semantic(walls, o, 0.1, ANNOTATIONS)
+    assert old["edges"] == [] and all(p["free_m2"] == 0 and p["center"] is None for p in old["places"])
+    problems = P.check_semantic(walls, o, 0.1, old)
+    assert len(problems) == 1 and "no free cells" in problems[0]
+    # the west door shut: the west room has no route from the others
+    shut = grid.copy()
+    shut[30, 40:52] = S.OCCUPIED
+    problems = P.check_semantic(shut, o, 0.1, P.build_semantic(shut, o, 0.1, ANNOTATIONS))
+    assert len(problems) == 1 and "no path from the other places to west:" in problems[0]
+    # a room drawn where this map has no floor
+    ghost = {**ANNOTATIONS, "zones": ANNOTATIONS["zones"]+[{"id": "ghost", "kind": "room", "rects": [[30, 30, 35, 35]]}]}
+    problems = P.check_semantic(grid, o, 0.1, P.build_semantic(grid, o, 0.1, ghost))
+    assert problems == ["no free floor under ghost: drawn on another map, or that floor was not seen"]
+    # remapped and not rebuilt: the semantic map of the old map does not fit the new one
+    assert "built on another map" in P.check_semantic(grid, (1.0, 0.0), 0.1, sem)[0]
+    pkg = tmp_path/"campus"
+    pkg.mkdir()
+    S.write_map_yaml(pkg, walls, o, 0.1)
+    (pkg/"semantic_map.json").write_text(json.dumps(old))
+    with pytest.raises(ValueError, match="not ready to hand over:\n  - the map has no free cells"):
+        P.export_bundle(pkg, tmp_path/"out")
+    assert not (tmp_path/"out").exists()
