@@ -100,6 +100,20 @@ bash scripts/g1_docker.sh python3 -m g1_factory.ros2.map_file_node --ros-args -p
 
 이 명령은 점유 지도를 `/slam_map`에, 시멘틱 맵 JSON을 `/slam/semantic_map`에 발행합니다.
 
+### 외부 에이전트에 넘기기
+
+외부 에이전트 팀이 지도로 상황을 계산하고 지시문을 보내려면, 로봇이 아는 것만 담은 묶음을 따로 만들어 전달합니다. 시뮬레이터 정답이 섞이면 실제 로봇에서는 불가능한 계산이 되기 때문입니다. `build_map_package.py` 다음에 실행합니다.
+
+```bash
+bash scripts/g1_docker.sh python3 scripts/export_map_bundle.py maps/campus
+```
+
+- 결과: `outputs/handoff/<이름>_<버전>/`와 같은 내용의 `.zip`. zip 하나를 전달합니다.
+- 들어가는 것: `map.yaml`·`map.pgm`, `semantic_map.json`, `annotations.json`, `map.png`·`topology.png`, 좌표계와 SLAM 정보만 남긴 `meta.json`, 받는 쪽 설명서 `README.md`(좌표계, 장소 이름·별칭, 출입구, 기준점, 지시 형식), `manifest.json`, `SHA256SUMS`.
+- 빠지는 것: `semantic_truth.json`, `map_world.*`, `evaluation.json`, `trajectory_truth.csv`, `meta.json`의 시뮬레이터 자세와 지도 점수, `cloud.pcd`, `trajectory.csv`. `semantic_map.json`에 물체가 들어 있으면 내보내지 않습니다.
+- 버전: `map.yaml`·`map.pgm`·`semantic_map.json`의 SHA-256 앞 12자리. 지도를 다시 만들거나 주석을 고치면 버전이 바뀌니 새로 내보내 다시 전달합니다. 받는 쪽은 `sha256sum -c SHA256SUMS`로 확인합니다.
+- 실행 중에는 `map_package:=maps/<이름> package_frame:=map`으로 띄워야 `/slam_map`·`/slam/semantic_map`이 전달한 파일과 같은 좌표로 나갑니다(`package_frame:=world`면 시뮬레이터 좌표로 옮겨짐). 시뮬레이터가 내는 `/map`·`/semantic_map`은 정답이므로 외부 에이전트에 쓰지 않게 합니다.
+
 ## 실행 (Ubuntu, Isaac Sim)
 
 이미지에 FAST-LIO2가 추가되었으므로 처음 한 번 이미지를 다시 빌드합니다(UBUNTU_ISAAC.md 2.1).

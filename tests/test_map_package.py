@@ -91,3 +91,41 @@ def test_comparison_with_the_simulator_semantic_map():
     check = P.compare_with_truth(sem, truth)
     assert check["room_iou"]["west"] > 0.9 and check["rooms_with_doorway"] == "2/2"
     assert check["doorway_error_m"]["west"] < 0.5 and check["anchor_error_m"]["Corridor middle"] == 0.5
+
+
+def test_export_bundle_gives_an_external_agent_the_map_but_no_simulator_truth(tmp_path):
+    import hashlib
+    pkg, grid = tmp_path/"campus", campus_grid()
+    pkg.mkdir()
+    S.write_map_yaml(pkg, grid, (0.0, 0.0), 0.1)
+    S.write_map_yaml(pkg, grid, (-12.0, 3.8), 0.1, name="map_world")
+    (pkg/"annotations.json").write_text(json.dumps(ANNOTATIONS))
+    (pkg/"semantic_map.json").write_text(json.dumps(P.build_semantic(grid, (0.0, 0.0), 0.1, ANNOTATIONS)))
+    (pkg/"meta.json").write_text(json.dumps({"name": "campus", "frame": "map: start pose", "resolution_m": 0.1,
+                                             "world_from_map": {"x": -12.0, "y": 3.8, "yaw_rad": 0.0},
+                                             "trajectory": {"ate_rmse_m": 0.1}, "map": {"obstacle_precision": 0.98}}))
+    for truth in ("evaluation.json", "semantic_truth.json", "trajectory_truth.csv", "trajectory.csv", "cloud.pcd"):
+        (pkg/truth).write_text("{}")
+    m = P.export_bundle(pkg, tmp_path/"out", "abc1234")
+    out = tmp_path/"out"
+    assert sorted(p.name for p in out.iterdir()) == sorted(
+        ["map.yaml", "map.pgm", "semantic_map.json", "annotations.json", "meta.json", "README.md", "manifest.json",
+         "SHA256SUMS"])
+    assert json.loads((out/"meta.json").read_text()) == {"name": "campus", "frame": "map: start pose",
+                                                         "resolution_m": 0.1}
+    for line in (out/"SHA256SUMS").read_text().splitlines():
+        digest, name = line.split("  ")
+        assert hashlib.sha256((out/name).read_bytes()).hexdigest() == digest
+    readme = (out/"README.md").read_text()
+    assert "West room" in readme and "서쪽 방" in readme and m["version"] in readme and "abc1234" in readme
+    assert m["counts"] == {"zones": 2, "places": 4, "edges": 3, "anchors": 1} and m["size_cells"] == [200, 100]
+    assert P.export_bundle(pkg, tmp_path/"again")["version"] == m["version"]  # same map, same version
+    with pytest.raises(FileExistsError):
+        P.export_bundle(pkg, out)
+    sem = json.loads((pkg/"semantic_map.json").read_text())
+    (pkg/"semantic_map.json").write_text(json.dumps({**sem, "objects": [{"id": "tank", "center": [1, 2, 0]}]}))
+    with pytest.raises(ValueError):  # the simulator's objects never leave
+        P.export_bundle(pkg, tmp_path/"leak")
+    (pkg/"semantic_map.json").unlink()
+    with pytest.raises(FileNotFoundError, match="build_map_package"):
+        P.export_bundle(pkg, tmp_path/"none")

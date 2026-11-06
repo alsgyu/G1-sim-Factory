@@ -7,6 +7,7 @@ maps/<name>/
                      anchors = named landmarks (crossings, docks, entrances)
   semantic_map.json  built here (build_semantic): rooms for the VLN, places and doorways (topology), anchors
 Simulation only: map_world.yaml, evaluation.json (world_from_map), semantic_truth.json.
+For an external agent, export_bundle copies what a robot would have of it (scripts/export_map_bundle.py).
 
 Topology is automatic: every free cell of the SLAM map gets the place of the annotated rectangle it lies in (rooms
 before corridors), grown 0.6 m through free cells to cover rectangles drawn a little inside the walls; free space
@@ -16,10 +17,13 @@ that contact. Walls and glass are occupied cells, so rooms behind a wall are nev
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import hashlib
 import json
 import math
 from pathlib import Path
 import re
+import shutil
 
 import numpy as np
 
@@ -255,6 +259,140 @@ def vln_inputs(semantic: dict):
     anchors = {a["label"]: tuple(a["xy"][:2]) for a in semantic.get("anchors", [])}
     aliases = {z["id"]: list(z.get("aliases", [])) for z in rooms}
     return regions, labels, entrances, anchors, aliases
+
+
+# ------------------------------------------------------------------ handing the map to an external agent
+HANDOFF_FILES = {
+    "map.yaml": "점유 지도 설정 (ROS map_server·Nav2 형식: 해상도, 원점, 임계값)",
+    "map.pgm": "점유 지도 영상 (254 빈 공간, 0 장애물, 205 모름)",
+    "semantic_map.json": "방·통로 이름과 별칭, 장소 그래프(출입구), 기준점. 모든 좌표가 map 좌표",
+    "annotations.json": "사람이 지도에 그린 원본 주석 (semantic_map.json을 만든 입력)",
+    "map.png": "점유 지도 그림 (확인용)",
+    "topology.png": "장소·출입구·장소 그래프 그림 (확인용)",
+}
+HANDOFF_META = ("name", "frame", "resolution_m", "origin", "size_cells", "slam", "sensor", "obstacle_band_m",
+                "floor_levelling_deg", "wall_alignment_deg", "scans", "duration_s")
+VERSIONED = ("map.yaml", "map.pgm", "semantic_map.json")
+PLACE_KIND = {"zone": "방", "aisle": "통로", "area": "이름 없는 공간"}
+
+
+def sha256(path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def export_bundle(folder, out, commit: str = "") -> dict:
+    """Copy what a robot would have of a map package into out/ for an external agent; returns the manifest.
+
+    In: the occupancy grid, the person's annotations and the semantic map built from them, the pictures, meta.json
+    cut down to the map's frame and SLAM facts, README.md (frame, places, doorways, anchors, interface), manifest.json
+    (version = SHA-256 of map.yaml, map.pgm and semantic_map.json) and SHA256SUMS. Out: the simulator's truth
+    (semantic_truth.json, map_world.*, evaluation.json, trajectory_truth.csv, meta.json's pose and scores), the raw
+    cloud and the mapping trajectory.
+    """
+    folder, out = Path(folder), Path(out)
+    for name in VERSIONED:
+        if not (folder/name).exists():
+            hint = " (run scripts/build_map_package.py first)" if name == "semantic_map.json" else ""
+            raise FileNotFoundError(f"{folder/name} is missing{hint}")
+    semantic = json.loads((folder/"semantic_map.json").read_text(encoding="utf-8"))
+    if semantic.get("frame") != "map" or semantic.get("objects"):
+        raise ValueError(f"{folder/'semantic_map.json'} is not a package semantic map (map frame, no objects)")
+    if out.exists() and any(out.iterdir()):
+        raise FileExistsError(f"{out} is not empty")
+    out.mkdir(parents=True, exist_ok=True)
+    files = [name for name in HANDOFF_FILES if (folder/name).exists()]
+    for name in files:
+        shutil.copyfile(folder/name, out/name)
+    full = json.loads((folder/"meta.json").read_text(encoding="utf-8")) if (folder/"meta.json").exists() else {}
+    meta = {"name": folder.name, **{k: full[k] for k in HANDOFF_META if k in full}}
+    (out/"meta.json").write_text(json.dumps(meta, indent=1, ensure_ascii=False)+"\n", encoding="utf-8")
+    files.append("meta.json")
+    digest = hashlib.sha256()
+    for name in VERSIONED:
+        digest.update(name.encode()+b"\0"+(folder/name).read_bytes())
+    grid, origin, res = S.read_map_yaml(folder/"map.yaml")
+    manifest = {"format": "g1-map-handoff/1", "name": meta["name"], "version": digest.hexdigest()[:12],
+                "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "source": folder.as_posix(), "source_commit": commit,
+                "frame": meta.get("frame", "map"), "resolution_m": res, "origin": [round(v, 3) for v in origin],
+                "size_cells": [grid.shape[1], grid.shape[0]],
+                "counts": {k: len(semantic.get(k, [])) for k in ("zones", "places", "edges", "anchors")}}
+    (out/"README.md").write_text(handoff_readme(manifest, semantic, files), encoding="utf-8")
+    files.append("README.md")
+    manifest["files"] = {name: sha256(out/name) for name in files}
+    (out/"manifest.json").write_text(json.dumps(manifest, indent=1, ensure_ascii=False)+"\n", encoding="utf-8")
+    files.append("manifest.json")
+    (out/"SHA256SUMS").write_text("".join(f"{sha256(out/n)}  {n}\n" for n in files), encoding="utf-8")
+    return manifest
+
+
+def handoff_readme(manifest: dict, semantic: dict, files: list) -> str:
+    """README.md of an exported map: what the files are, the frame, the places to name in instructions."""
+    m = manifest
+    w, h = m["size_cells"]
+    xy = lambda p: f"({p[0]:.2f}, {p[1]:.2f})" if p else "-"
+    lines = [
+        f"# 지도 묶음 `{m['name']}` (버전 `{m['version']}`)", "",
+        "G1 로봇이 LiDAR SLAM으로 만든 점유 지도, 사람이 그 위에 그린 방·통로·기준점, 둘에서 자동으로 만든 장소 "
+        "그래프입니다. 로봇의 VLN이 실행 중에 쓰는 것과 같은 지도입니다. 외부 에이전트는 이 지도로 상황을 계산하고 "
+        "지시문을 만듭니다.", "",
+        f"- 내보낸 시각: {m['exported_at']} (UTC), 원본: `{m['source']}` (저장소 커밋 `{m['source_commit'] or '-'}`)",
+        "- 버전: `map.yaml`·`map.pgm`·`semantic_map.json`의 SHA-256 앞 12자리. 지도를 다시 만들거나 주석을 고치면 "
+        "바뀌고, 그때 새 묶음을 받습니다.",
+        "- 받은 뒤 확인: `sha256sum -c SHA256SUMS` (모든 줄이 `OK`)", "",
+        "## 파일", "", "| 파일 | 내용 |", "|---|---|",
+        *[f"| `{n}` | {HANDOFF_FILES[n]} |" for n in files if n in HANDOFF_FILES],
+        "| `meta.json` | 지도 좌표계 정의, 해상도·원점·크기, SLAM과 센서 |",
+        "| `manifest.json` | 이름, 버전, 파일별 SHA-256 (프로그램용) |", "",
+        "## 좌표계", "",
+        f"- `{m['frame']}`",
+        f"- 단위 m, 각도 rad (반시계 방향이 +). 점유 지도 {m['resolution_m']} m 칸, {w} × {h} 칸 "
+        f"({w*m['resolution_m']:.1f} × {h*m['resolution_m']:.1f} m), 왼쪽 아래 칸의 모서리 = 원점 {xy(m['origin'])}.",
+        "- `semantic_map.json`의 모든 좌표(`bounds` = [x 최소, y 최소, x 최대, y 최대], `center`, `door`, `xy`, "
+        "`entrance`)가 이 map 좌표입니다.", "",
+        f"## 장소 ({len(semantic.get('places', []))})", "",
+        "지시문에서는 장소를 좌표가 아니라 이름, 별칭, id로 가리킵니다.", "",
+        "| id | 이름 | 종류 | 별칭 | 중심 | 빈 공간 m² |", "|---|---|---|---|---|---|",
+        *[f"| `{p['id']}` | {p['label']} | {PLACE_KIND.get(p['kind'], p['kind'])} | {', '.join(p.get('aliases', []))} "
+          f"| {xy(p.get('center'))} | {p.get('free_m2', '-')} |" for p in semantic.get("places", [])], "",
+        f"## 출입구 ({len(semantic.get('edges', []))})", "",
+        "두 장소의 빈 공간이 맞닿은 곳입니다. 장소 그래프의 간선이며, 벽 너머의 방끼리는 연결되지 않습니다.", "",
+        "| 장소 A | 장소 B | 출입구 위치 | 맞닿은 폭 m | 중심 → 출입구 → 중심 m |", "|---|---|---|---|---|",
+        *[f"| `{e['a']}` | `{e['b']}` | {xy(e['door'])} | {e['width_m']} | {e['length_m']} |"
+          for e in semantic.get("edges", [])], "",
+        f"## 기준점 ({len(semantic.get('anchors', []))})", "",
+        "| id | 이름 | 위치 | 장소 |", "|---|---|---|---|",
+        *[f"| `{a['id']}` | {a.get('label', '')} | {xy(a['xy'])} | `{a.get('place')}` |"
+          for a in semantic.get("anchors", [])], "",
+        "## `semantic_map.json` 구조", "",
+        "- `zones`: 방 (`id`, `label`, `aliases`, `bounds`, `rects` 사람이 그린 사각형, `entrance` 방 안쪽 진입 지점)",
+        "- `places`: 방·통로·이름 없는 공간 전부 (`kind`: `zone` 방, `aisle` 통로, `area` 이름 없는 공간; `center`, "
+        "`bounds`, `free_m2`)",
+        "- `edges`: 출입구 (`a`, `b`, `door`, `width_m`, `length_m`)",
+        "- `anchors`: 이름 붙은 지점 (`label`, `xy`, `place`)",
+        "- `objects`: 비어 있음. 설비·물체의 위치는 지도에 없고, 로봇이 카메라로 찾습니다.", "",
+        "## 지시 보내기 (ROS 2)", "",
+        "- `/vln/instruction` (`std_msgs/msg/String`, Reliable·Volatile·KeepLast 10)으로 보냅니다:", "",
+        "```text",
+        "조립 라인으로 가서 컨베이어 위에 상자가 놓여 있는지 확인해.",
+        '{"task_id": "t1", "instruction": "Go to the charging area and check whether the free dock is empty."}',
+        '{"task_id": "t2", "steps": [{"goal": "enter the staff lounge", "region": "office_lounge"},',
+        '                            {"goal": "find the vending machine and stand in front of it", "region": "office_lounge"}],',
+        ' "target": "vending machine", "question": "자판기가 정상적으로 서 있는지 확인해", "language": "ko"}',
+        '{"cancel": true}',
+        "```", "",
+        "  `steps`는 단계를 직접 나눈 경우이고, `region`에는 위 장소 id를 씁니다. 좌표 목표는 받지 않습니다.",
+        "- 진행과 결과: `/vln/feedback` (`std_msgs/msg/String` JSON: `accepted → planned → decision … → arrived → "
+        "inspecting → done | failed`), 판정 근거 영상 `/vln/inspection_image` (`sensor_msgs/msg/CompressedImage`).",
+        f"- 실행 중 같은 지도: 로봇을 `map_package:={m['source']} package_frame:=map`으로 실행하면 `/slam_map` "
+        "(`nav_msgs/msg/OccupancyGrid`)과 `/slam/semantic_map` (`std_msgs/msg/String` JSON)이 이 파일과 같은 내용, "
+        "같은 좌표로 발행됩니다 (Reliable·TransientLocal: 늦게 구독해도 받음).",
+        "- 시뮬레이션의 `/map`·`/semantic_map`은 시뮬레이터 정답(물체 위치 포함)이므로 쓰지 않습니다.", "",
+        "## 넣지 않은 것", "",
+        "시뮬레이터 정답(`semantic_truth.json`, `map_world.*`, `evaluation.json`, `trajectory_truth.csv`, `meta.json`의 "
+        "시뮬레이터 자세와 지도 평가 점수), 3차원 점군 `cloud.pcd`, 매핑 경로 `trajectory.csv`. 실제 로봇에는 없거나 "
+        "지시를 만드는 데 필요 없는 것입니다.", ""]
+    return "\n".join(lines)
 
 
 # ------------------------------------------------------------------ simulation check against ground truth

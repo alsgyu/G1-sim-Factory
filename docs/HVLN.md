@@ -117,7 +117,7 @@ flowchart TD
 - `/vln/feedback` (`std_msgs/String` JSON) 상태: `accepted → planned → decision … step_done … target_located → arrived → inspecting → done | failed`. 그 외 `detour`, `blocked`, `preempted`, `canceled`.
 - `done.result`: `{"observed", "target_visible", "verdict": "yes|no|unknown", "status", "answer"}` + `final_pose`, `target_xy`(VLN이 영상으로 찾은 대상 위치), `vlm_calls`.
 - `/vln/inspection_image` (`sensor_msgs/CompressedImage` JPEG): 판정에 쓴 바로 그 프레임.
-- 지도 묶음으로 실행: launch 인자 `map_package:=maps/<이름>`(콘솔은 `VLN_MAP_PACKAGE=...`). 로봇이 SLAM으로 만든 점유 지도, 사람이 그 지도에 그린 구역·기준점, 자동으로 만든 장소 그래프를 모두 지도 묶음에서 읽고 시뮬레이터 정답은 평가에만 씀. 점유 지도만 바꾸려면 `map_file:=maps/<이름>/map_world.yaml`. 지도 만들기와 주석은 [SLAM_MAPPING.md](SLAM_MAPPING.md).
+- 지도 묶음으로 실행: launch 인자 `map_package:=maps/<이름>`(콘솔은 `VLN_MAP_PACKAGE=...`). 로봇이 SLAM으로 만든 점유 지도, 사람이 그 지도에 그린 구역·기준점, 자동으로 만든 장소 그래프를 모두 지도 묶음에서 읽고 시뮬레이터 정답은 평가에만 씀. 점유 지도만 바꾸려면 `map_file:=maps/<이름>/map_world.yaml`. 지도 만들기와 주석은 [SLAM_MAPPING.md](SLAM_MAPPING.md), 외부 에이전트 팀에 지도를 넘기는 묶음은 같은 문서 "외부 에이전트에 넘기기"(`scripts/export_map_bundle.py`).
 - 지도 안에서 위치 찾기: `package_frame:=map`이면 시뮬레이터 시작 자세 대신 `localizer`가 LiDAR 스캔을 지도 묶음의 점유 지도에 맞춰 map→odom을 발행(초기 자세 `initial_pose:=x,y,yaw`나 RViz `/initialpose`, 시뮬레이션은 `spawn`). `vln_navigator`·`vln_agent`·`path_follower`는 `/odom`에 map→odom을 곱한 map 좌표 자세를 쓰고(`g1_factory/ros2/frames.py`), 위치를 찾기 전에는 움직이지 않음. 설계와 결과는 [SLAM_MAPPING.md](SLAM_MAPPING.md) "지도 안에서 위치 찾기".
 - 대화형 콘솔: `bash scripts/vln_console.sh` → `지시>`에 직접 입력, 결정과 판정을 실시간 표시, 지시마다 `outputs/console/…`에 기록([UBUNTU_ISAAC.md](UBUNTU_ISAAC.md) 7.1절).
 - 명령행 클라이언트: `python3 scripts/send_instruction.py "검사 구역 2번 검사대에 부품이 있는지 확인해"`.

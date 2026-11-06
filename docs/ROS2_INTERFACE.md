@@ -42,7 +42,7 @@
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | `g1_sim` → `vln_navigator`, `vln_agent` |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `g1_sim` → `use_sim_time` 노드 전부 |
 | `/sim/status` | `std_msgs/msg/String` (JSON) | `g1_sim` → `external_agent` (시뮬레이터 전용) |
-| `/semantic_map` | `std_msgs/msg/String` (JSON) | `g1_sim`(Isaac) → `vln_navigator`(토폴로지 경로 힌트), 외부 에이전트·시각화 (시멘틱·토폴로지 레이어, `g1_factory/semantic_world.py`) |
+| `/semantic_map` | `std_msgs/msg/String` (JSON) | `g1_sim`(Isaac) → `vln_navigator`(토폴로지 경로 힌트), 외부 에이전트·시각화 (시멘틱·토폴로지 레이어, `g1_factory/semantic_world.py`). 시뮬레이터 정답(물체 위치 포함)이므로 지도 묶음으로 실행할 때 외부 에이전트는 `/slam/semantic_map`을 씀 |
 
 ### 1.3 VLN·계획·제어
 
