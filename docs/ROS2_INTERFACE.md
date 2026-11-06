@@ -188,6 +188,7 @@ QoS 선택 이유:
 | `path_follower` | `/plan` | Reliable / Volatile / KeepLast(1) | 경로 교체(같은 id면 우회로 처리). 1점 경로 = 제자리 정렬·유지 |
 | | `/odom` | Reliable / Volatile / KeepLast(10) | 0.5 s 이상 끊기면 정지 |
 | `g1_sim` | `/cmd_vel` | Reliable / Volatile / KeepLast(10) | 0.5 s 이상 명령이 없으면 0 명령. 보행 정책은 50 Hz로 최신 명령 사용 |
+| | `/vln/feedback` (Isaac `--video`만) | Reliable / Volatile / KeepLast(50) | `accepted`~`done`·`failed`·`canceled` 2 s 뒤 = 1·3인칭 프레임 녹화 구간(`g1_factory/media.py`) |
 | `external_agent` | `/vln/feedback`, `/vln/inspection_image`, `/vln/decision_image`, `/odom`, `/plan`, `/nav/status`, `/sim/status`, `/map` | 발행 측과 동일 | 기록·평가(`summary.json`, `decisions/*.jpg`) |
 | 모든 sim-time 노드 | `/clock` | BestEffort / Volatile / KeepLast(1) | rclpy TimeSource 기본 |
 

@@ -302,6 +302,38 @@ bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=
 - 주기가 95 % 미만이면 `FAIL` → 5절 `sysctl`(소켓 버퍼)과 디스크 쓰기 속도를 확인하고 다시 녹화.
 - 같은 이름의 폴더가 있으면 시작하지 않습니다. 시간으로 끊으려면 `bash scripts/record_bag.sh <이름> 300`(벽시계 300초 뒤 스스로 멈춤).
 
+### 7.3 환경 그림과 주행 영상 (1인칭·3인칭)
+
+환경 그림 — 창고, 사무동, 펌프실을 모두 담은 3인칭 전경. ROS 없이 그림만 그리고 스스로 끝납니다(1–2분, 첫 실행은 셰이더 컴파일로 더 걸림):
+
+```bash
+bash scripts/run_isaac_sim.sh --overview campus,top
+```
+
+- 결과: `outputs/media/overview_campus.png`(남쪽 위에서 비스듬히 본 전경, 1920×1080), `outputs/media/overview_top.png`(바로 위에서 본 평면).
+- 다른 시점: `warehouse`, `office`, `pump_room`(예: `--overview campus,pump_room`). 더 크게: `--overview-size 3840 2160`.
+- 카메라는 건물 전체(벽 높이 6 m 포함)가 화면의 96 % 안에 들어오도록 자동으로 맞춥니다(`g1_factory/media.py`).
+
+주행 영상 — 터미널 1에 `--video <이름>`을 붙이면 VLN 과제마다 머리 카메라(1인칭, 640×480)와 로봇 뒤 위쪽에서 따라가는 카메라(3인칭, 1280×720) 프레임을 저장합니다. 터미널 2는 7절과 같습니다:
+
+```bash
+bash scripts/run_isaac_sim.sh --spawn -12 3.8 0 --video conveyor                        # 터미널 1
+bash scripts/g1_docker.sh ros2 launch launch/g1_hvln.launch.py sim:=false task:=inspect_conveyor  # 터미널 2
+```
+
+- 녹화 구간: VLN이 지시를 받은 순간(`accepted`)부터 `done`·`failed`·`canceled` 2초 뒤까지. 터미널 1에 `video: recording 01_<task_id>`와 `video: 01_<task_id> closed (done), N frames`가 나옵니다. 7.1 콘솔에서는 지시마다 `02_…`, `03_…` 폴더가 이어서 생깁니다. 처음부터 끝까지 통째로 찍으려면 `--video-mode always`.
+- 영상 만들기(호스트, ffmpeg 한 번 설치: `sudo apt install ffmpeg`):
+
+```bash
+python3 scripts/make_videos.py outputs/media/conveyor
+```
+
+- 결과(과제 폴더마다): `fpv.mp4`(1인칭), `tpv.mp4`(3인칭), `side_by_side.mp4`(왼쪽 3인칭, 오른쪽 1인칭). H.264라 브라우저, QuickTime, Slack, PowerPoint에서 바로 재생됩니다. 시뮬레이션 시간 기준 30 fps(실제 속도)이고, 빠르게 보려면 `--speed 2`.
+- 용량: 프레임(JPEG)이 시뮬레이션 1초에 약 7 MB라 4분 과제면 약 1.7 GB, MP4는 수십 MB. 영상을 만든 뒤 `--delete-frames`로 프레임을 지울 수 있습니다.
+- 3인칭 카메라는 로봇 골반 2.8 m 뒤, 4.6 m 위에서 약 50도 내려다봅니다. 사무동(벽 3 m)과 펌프실(벽 4 m) 벽보다 높아서 문을 지난 직후에도 로봇이 거의 가리지 않습니다. 바꾸려면 `--chase 2.4 3.6`(뒤, 위), 해상도는 `--video-size 1920 1080`.
+- 카메라 하나를 더 렌더링하므로 시뮬레이션이 조금 느려집니다(실시간 대비 속도가 낮아짐). 토픽 주기는 시뮬레이션 시간 기준이라 그대로입니다.
+- 과제 도중 터미널 1을 끄면 그 과제 폴더에는 `frames.json`이 없지만, `make_videos.py`는 프레임 파일만으로도 30 fps로 영상을 만듭니다.
+
 ## 8. 실험 행렬
 
 먼저 작은 부분(8B, seed 0, 과제 11개 = Isaac 기동 포함 약 1.5–2.5시간):

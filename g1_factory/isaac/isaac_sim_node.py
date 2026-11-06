@@ -17,6 +17,9 @@ Run with Isaac Sim's Python (container: /isaac-sim/python.sh), see scripts/run_i
   frames, message layouts and QoS to the MuJoCo /g1_sim.
 * Collisions are reported with a footprint proxy against the mapped obstacle
   footprints (/sim/status collision_check = "footprint_proxy").
+* Media (g1_factory.media, files under --media-out): --overview renders still views of the
+  campus and exits; --video NAME records head-camera (first-person) and chase-camera
+  (third-person) frames of every VLN task during the ROS run, for scripts/make_videos.py.
 """
 from __future__ import annotations
 
@@ -32,6 +35,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from g1_factory import media  # noqa: E402  (numpy only: safe before SimulationApp)
 
 
 def parse_args():
@@ -56,7 +60,25 @@ def parse_args():
                    help="recognition capture: N poses per topological place (zones and aisles), no ROS")
     p.add_argument("--capture-out", type=Path, default=ROOT/"outputs/recognition/capture")
     p.add_argument("--capture-seed", type=int, default=0)
-    return p.parse_args()
+    p.add_argument("--media-out", type=Path, default=ROOT/"outputs/media", help="folder for --overview and --video")
+    p.add_argument("--overview", default="",
+                   help="still images, no ROS: comma list of " + ", ".join(media.VIEWS) + " -> overview_<view>.png")
+    p.add_argument("--overview-size", type=int, nargs=2, default=[1920, 1080], metavar=("W", "H"))
+    p.add_argument("--overview-warmup", type=int, default=120, help="rendered steps before the shot (textures, AA)")
+    p.add_argument("--video", default="", metavar="NAME",
+                   help="record first- and third-person frames of each VLN task into <media-out>/NAME/")
+    p.add_argument("--video-mode", choices=("task", "always"), default="task",
+                   help="task: from the agent's 'accepted' to 2 s after done/failed/canceled; always: whole run")
+    p.add_argument("--video-size", type=int, nargs=2, default=[1280, 720], metavar=("W", "H"),
+                   help="third-person (chase camera) resolution; first-person is the 640x480 head camera")
+    p.add_argument("--chase", type=float, nargs=2, default=[2.8, 4.6], metavar=("BACK", "HEIGHT"),
+                   help="chase camera: metres behind and above the pelvis")
+    args = p.parse_args()
+    args.overview = [v for v in args.overview.split(",") if v]
+    unknown = [v for v in args.overview if v not in media.VIEWS]
+    if unknown:
+        p.error(f"--overview: unknown view(s) {unknown}; choose from {list(media.VIEWS)}")
+    return args
 
 
 ARGS = parse_args()
@@ -182,14 +204,25 @@ def make_camera(path, translation, rotation, width, height):
                   resolution=(width, height))
 
 
-def setup_camera(cam, width, height, hfov):
-    """After World.reset() (Isaac Sim camera examples): render product, intrinsics, depth annotator."""
+def setup_view_camera(cam, width, height, hfov, far=100.0):
+    """After World.reset() (Isaac Sim camera examples): render product and intrinsics."""
     cam.initialize()
     cam.set_focal_length(1.0)
     cam.set_horizontal_aperture(2*math.tan(hfov/2))
     cam.set_vertical_aperture(2*math.tan(hfov/2)*height/width)
-    cam.set_clipping_range(0.05, 100.0)
+    cam.set_clipping_range(0.05, far)
+
+
+def setup_camera(cam, width, height, hfov):
+    """Sensor camera: as setup_view_camera, plus the depth annotator."""
+    setup_view_camera(cam, width, height, hfov)
     cam.add_distance_to_image_plane_to_frame()
+
+
+def aim(cam, eye, target):
+    """Move a world-fixed camera (chase view) to eye, looking at target."""
+    cam.set_world_pose(position=np.asarray(eye, float), orientation=quat_from_matrix(media.look_at(eye, target)),
+                       camera_axes="world")
 
 
 def depth_of(cam):
@@ -246,10 +279,24 @@ class IsaacG1:
         self.lidar_rot = [rot_z(k*math.pi/2)@rot_y(LIDAR_CAM_PITCH) for k in range(4)]
         self.lidar_cams = [make_camera(f"{self.pelvis}/livox_cam_{k}", LIDAR_XYZ, r, LIDAR_CAM_RES, LIDAR_CAM_RES)
                            for k, r in enumerate(self.lidar_rot)]
+        # Media cameras stand in the world, not on the robot: the chase view (--video) and still views (--overview).
+        self.chase = make_camera("/World/media_chase", (0.0, 0.0, 10.0), np.eye(3), *ARGS.video_size) \
+            if ARGS.video else None
+        width, height = ARGS.overview_size
+        self.views = {}
+        for name in ARGS.overview:
+            region, azimuth, elevation, hfov = media.VIEWS[name]
+            eye, target = media.fit_view(media.view_bounds(self.meta, region), azimuth, elevation, hfov, width/height)
+            self.views[name] = (make_camera(f"/World/media_view_{name}", eye, media.look_at(eye, target), width,
+                                            height), math.radians(hfov))
         self.world.reset()
         setup_camera(self.camera, 640, 480, CAMERA_HFOV)
         for cam in self.lidar_cams:
             setup_camera(cam, LIDAR_CAM_RES, LIDAR_CAM_RES, LIDAR_CAM_FOV)
+        if self.chase is not None:
+            setup_view_camera(self.chase, *ARGS.video_size, math.radians(70.0), far=300.0)
+        for cam, hfov in self.views.values():
+            setup_view_camera(cam, width, height, hfov, far=1000.0)
         names = list(self.robot.dof_names)
         missing = [n for n in JOINT_NAMES if n not in names]
         if missing:
@@ -347,20 +394,38 @@ def smoke_test(sim: IsaacG1):
     return report
 
 
-_view = {}
+_gui_view = media.ChaseCamera(back=3.6, height=2.4, ahead=1.5, target_dz=0.6)
 
 
 def follow_camera(pos, rot):
     """--gui: keep the viewport camera behind and above the walking robot (smoothed)."""
     from isaacsim.core.utils.viewports import set_camera_view
-    forward = np.array([rot[0, 0], rot[1, 0], 0.0])
-    forward /= max(np.linalg.norm(forward), 1e-6)
-    eye = np.asarray(pos)-3.6*forward+np.array([0.0, 0.0, 2.4])
-    target = np.asarray(pos)+1.5*forward+np.array([0.0, 0.0, 0.6])
-    if "eye" in _view:
-        eye, target = 0.85*_view["eye"]+0.15*eye, 0.85*_view["target"]+0.15*target
-    _view["eye"], _view["target"] = eye, target
+    eye, target = _gui_view.update(pos, rot)
     set_camera_view(eye=eye, target=target, camera_prim_path="/OmniverseKit_Persp")
+
+
+def video_recorder(node, sim):
+    """--video: frame recorder driven by the VLN agent's /vln/feedback events (task start and end).
+
+    Only /vln/feedback is subscribed: a /vln/instruction subscriber would make the external agent believe the VLN
+    agent is listening (it sends once it sees a subscriber) and the instruction could be lost."""
+    from std_msgs.msg import String
+    from g1_factory.ros2.qos import TOPICS
+    os.umask(0)  # files stay removable by the host user (container runs as uid 1234)
+    recorder = media.FrameRecorder(ARGS.media_out/ARGS.video, ARGS.video_mode, fps=ARGS.camera_rate,
+                                   log=node.get_logger().info)
+
+    def on_feedback(msg):
+        try:
+            event = json.loads(msg.data)
+        except ValueError:
+            return
+        if isinstance(event, dict):
+            recorder.on_feedback(event, sim.t)
+
+    node.create_subscription(String, "/vln/feedback", on_feedback, TOPICS["/vln/feedback"][1])
+    node.get_logger().info(f"video: {ARGS.video_mode} mode -> {ARGS.media_out/ARGS.video}")
+    return recorder
 
 
 def run_ros(sim: IsaacG1):
@@ -375,6 +440,8 @@ def run_ros(sim: IsaacG1):
     semantic_path = ARGS.meta.parent/"semantic_map.json"
     semantic = semantic_path.read_text() if semantic_path.is_file() else None
     topics.publish_static(0.0, CAMERA_XYZ, CAMERA_PITCH, LIDAR_XYZ, grid, semantic, map_tf=not ARGS.no_map_tf)
+    recorder = video_recorder(node, sim) if ARGS.video else None
+    chase = media.ChaseCamera(*ARGS.chase)
     node.get_logger().info(f"Isaac Sim G1 ready at {ARGS.spawn}; robot {sim.root}")
     collision_events, prev_hit, fallen, travelled = 0, False, False, 0.0
     last_xy = sim.base_state()[0][:2].copy()
@@ -405,6 +472,12 @@ def run_ros(sim: IsaacG1):
                     frame = sim.rgbd()
                     if frame is not None:
                         topics.publish_camera(t, frame[0], frame[1], sim.fx, sim.fx, 319.5, 239.5)
+                    if recorder is not None:
+                        if recorder.wants_frame(t) and frame is not None:
+                            tpv = media.as_rgb8(sim.chase.get_rgba())
+                            if tpv is not None:
+                                recorder.add(t, frame[0], tpv)
+                        aim(sim.chase, *chase.update(pos, rot))  # pose for the next render
                 if lidar_due:
                     xyz, refl, line, index = sim.lidar()
                     period_ns = 1e9/ARGS.lidar_rate
@@ -441,6 +514,8 @@ def run_ros(sim: IsaacG1):
             node.get_logger().error("G1 fell; simulation stopped")
         time.sleep(1.0)  # let DDS deliver the last status
     finally:
+        if recorder is not None:
+            recorder.shutdown()
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
@@ -490,10 +565,39 @@ def capture(sim: IsaacG1):
     print(f"CAPTURE DONE {len(index)} frames -> {out}", flush=True)
 
 
+def overview(sim: IsaacG1):
+    """--overview: still images of the campus from cameras framed by g1_factory.media.fit_view, no ROS.
+
+    The robot stands at --spawn. Rendering a number of steps first lets textures stream in and the RTX
+    anti-aliasing settle; a view that still returns nothing is reported and skipped."""
+    os.umask(0)
+    ARGS.media_out.mkdir(parents=True, exist_ok=True)
+    zero = np.zeros(3, np.float32)
+    for _ in range(ARGS.overview_warmup):
+        sim.step(zero, render=True)
+    done = 0
+    for name, (cam, _) in sim.views.items():
+        rgb = None
+        for _ in range(30):
+            rgb = media.as_rgb8(cam.get_rgba())
+            if rgb is not None and rgb.max() > 0:
+                break
+            sim.step(zero, render=True)
+        if rgb is None:
+            print(f"OVERVIEW {name} FAIL: the camera returned no image", flush=True)
+            continue
+        path = media.save_image(ARGS.media_out/f"overview_{name}.png", rgb)
+        done += 1
+        print(f"OVERVIEW {name} -> {path} ({rgb.shape[1]}x{rgb.shape[0]})", flush=True)
+    print(f"OVERVIEW DONE {done}/{len(sim.views)}", flush=True)
+
+
 def main():
     sim = IsaacG1()
     try:
-        if ARGS.capture > 0:
+        if ARGS.overview:
+            overview(sim)
+        elif ARGS.capture > 0:
             capture(sim)
         elif ARGS.smoke_test > 0:
             report = smoke_test(sim)
